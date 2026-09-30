@@ -49,7 +49,7 @@ INSTRUCCIONES IMPORTANTES:
 5. DESCARGO OBLIGATORIO AL FINAL:
 "⚠️ Esta información es solo orientativa y educativa. No reemplaza la consulta con un veterinario profesional."`;
 
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    let groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,6 +62,24 @@ INSTRUCCIONES IMPORTANTES:
         max_tokens: 1200,
       }),
     });
+
+    // En caso de saturación o límite de peticiones (429/503), reintentar con el modelo de alta velocidad llama-3.1-8b-instant
+    if (!groqRes.ok && (groqRes.status === 429 || groqRes.status === 503)) {
+      console.warn('Groq 70B ocupado o rate limit, reintentando con llama-3.1-8b-instant...');
+      groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${groqKey}`,
+        },
+        body: JSON.stringify({
+          model: 'llama-3.1-8b-instant',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.7,
+          max_tokens: 1200,
+        }),
+      });
+    }
 
     if (!groqRes.ok) {
       const errText = await groqRes.text();
