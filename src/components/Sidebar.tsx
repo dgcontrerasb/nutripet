@@ -8,7 +8,6 @@ import {
   Stethoscope, 
   Bell, 
   Tag, 
-  Sparkles, 
   BookOpen, 
   ChevronLeft, 
   ChevronRight,
@@ -74,7 +73,6 @@ const MENU_SECTIONS: MenuSection[] = [
     icon: '✨',
     items: [
       { id: 'recipes', label: 'Dietas BARF & Recetas', icon: Utensils, isPro: true },
-      { id: 'ai', label: 'Asistente IA (Groq)', icon: Sparkles, isPro: true },
       { id: 'sheet', label: 'Ficha & QR Emergencia', icon: FileText, isPro: true },
       { id: 'medical', label: 'Expediente & Peso', icon: Stethoscope, isPro: true },
       { id: 'reminders', label: 'Vacunas y Notificaciones', icon: Bell, isPro: true },
@@ -211,7 +209,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             { id: 'calculator', label: 'Porciones', icon: Calculator },
             { id: 'foods', label: 'Alimentos', icon: AlertTriangle },
             { id: 'sheet', label: 'Ficha', icon: FileText, isPro: true },
-            { id: 'ai', label: 'IA', icon: Sparkles, isPro: true },
+            { id: 'medical', label: 'Salud', icon: Stethoscope, isPro: true },
           ].map(item => {
             const isActive = activeTab === item.id;
             const Icon = item.icon;

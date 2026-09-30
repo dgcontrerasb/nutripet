@@ -1,7 +1,6 @@
 import express, { Request, Response } from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
-import nutritionAdvisorHandler from './api/ai/nutrition-advisor.ts';
 import initializeTrialHandler from './api/initialize-trial.ts';
 
 dotenv.config();
@@ -15,10 +14,6 @@ async function startServer() {
   app.use(express.json());
 
   // Mount API endpoints
-  app.all('/api/ai/nutrition-advisor', (req: Request, res: Response) => {
-    return (nutritionAdvisorHandler as any)(req, res);
-  });
-
   app.all('/api/initialize-trial', (req: Request, res: Response) => {
     return (initializeTrialHandler as any)(req, res);
   });

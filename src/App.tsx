@@ -60,7 +60,6 @@ import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { RegistrationLockModal } from './components/RegistrationLockModal';
 import { InstallPwaBanner } from './components/InstallPwaBanner';
 import { NutriPetLogo } from './components/NutriPetLogo';
-import { AiNutritionAdvisor } from './components/AiNutritionAdvisor';
 import { BarfRecipeGenerator } from './components/BarfRecipeGenerator';
 import { Sidebar } from './components/Sidebar';
 import { BackToTopButton } from './components/BackToTopButton';
@@ -1637,13 +1636,6 @@ export default function App() {
         {activeTab === 'recipes' && (
           <div className="space-y-6">
             <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
-          </div>
-        )}
-
-        {/* VISTA IA: ASISTENTE NUTRICIONAL VETERINARIO CON GROQ IA */}
-        {activeTab === 'ai' && (
-          <div className="space-y-6">
-            <AiNutritionAdvisor onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
           </div>
         )}
 

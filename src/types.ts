@@ -215,7 +215,6 @@ export type AppTab =
   | 'sheet' 
   | 'medical' 
   | 'reminders' 
-  | 'ai' 
   | 'recipes'
   | 'advisor' 
   | 'foods' 

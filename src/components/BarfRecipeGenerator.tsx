@@ -3,7 +3,6 @@ import { usePets } from '../context/PetContext';
 import { ProFeatureLock } from './ProFeatureLock';
 import { 
   Utensils, 
-  Sparkles, 
   CheckCircle2, 
   AlertCircle, 
   ChefHat, 
@@ -194,7 +193,7 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const handleGenerateAiCustomRecipe = async (e: React.FormEvent) => {
+  const handleGenerateCustomRecipe = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isPro) {
       onOpenSubscriptionModal();
@@ -206,40 +205,19 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }
     setAiGenerating(true);
     setAiRecipeResult(null);
 
-    try {
-      const res = await fetch('/api/ai/nutrition-advisor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          petName: activePet.name,
-          petType: activePet.type,
-          weightKg: activePet.weightKg,
-          ageMonths: activePet.ageMonths,
-          question: `Genera una receta casera o BARF equilibrada usando exactamente estos ingredientes que tengo disponible: "${customIngredients}". Indica las cantidades exactas en gramos considerando que necesita aprox ${estimatedDailyGrams}g de comida diaria total.`,
-          isPro
-        })
-      });
-
-      const data = await res.json();
-      if (res.ok && data.answer) {
-        setAiRecipeResult(data.answer);
-      } else {
-        throw new Error('Fallback a base de datos');
-      }
-    } catch (e) {
-      // Fallback silencioso a la plantilla base si Groq está saturado
+    setTimeout(() => {
+      const primaryIng = customIngredients.split(',')[0]?.trim() || 'Carne magra / Pechuga';
       setAiRecipeResult(`👨‍🍳 RECETA CASERA PERSONALIZADA PARA ${activePet.name.toUpperCase()} (${estimatedDailyGrams}g totales):
 
-Basado en tus ingredientes (${customIngredients}) y en nuestro catálogo balanceado para ${activePet.type === 'dog' ? 'caninos' : 'felinos'} de ${activePet.weightKg}kg:
+Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC para ${activePet.type === 'dog' ? 'caninos' : 'felinos'} de ${activePet.weightKg}kg:
 
-1. Pechuga / Carne magra: ${Math.round(estimatedDailyGrams * 0.65)}g (Cocinar al agua sin sal)
-2. Auyama / Vegetales aptos: ${Math.round(estimatedDailyGrams * 0.25)}g (Hervir y triturar)
-3. Complemento / Aceite: ${Math.round(estimatedDailyGrams * 0.10)}g (Añadir en frío)
+1. Base de proteína magra (${primaryIng}): ${Math.round(estimatedDailyGrams * 0.65)}g (Cocinar al vapor o agua sin sal)
+2. Fibra y vegetales aptos: ${Math.round(estimatedDailyGrams * 0.25)}g (Hervir y triturar en puré)
+3. Ácidos grasos y complementos (Aceite de oliva virgen o salmón): ${Math.round(estimatedDailyGrams * 0.10)}g (Añadir en crudo al servir)
 
-💡 Consejo: Asegúrate de retirar semillas y nunca agregar sal, cebolla ni ajo.`);
-    } finally {
+💡 Consejo: Asegúrate de retirar semillas y huesos cocidos. Nunca agregues cebolla, ajo, uvas ni sal.`);
       setAiGenerating(false);
-    }
+    }, 200);
   };
 
   return (
@@ -355,18 +333,18 @@ Basado en tus ingredientes (${customIngredients}) y en nuestro catálogo balance
             })}
           </div>
 
-          {/* Formulario Generador por IA */}
+          {/* Formulario Generador con tus Ingredientes */}
           <div className="bg-white border border-stone-200 rounded-2xl p-4 space-y-3 shadow-2xs">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-amber-500" />
+              <ChefHat className="w-4 h-4 text-emerald-600" />
               <h4 className="font-heading font-extrabold text-stone-900 text-xs uppercase tracking-wider">
-                Personalizar con tus Ingredientes (Groq IA)
+                Personalizar con tus Ingredientes
               </h4>
             </div>
             <p className="text-[11px] text-stone-500 leading-tight">
-              Escribe qué alimentos tienes en casa y la IA los adaptará a la ración de {activePet.name}:
+              Escribe qué alimentos tienes en casa y calcularemos la proporción balanceada para {activePet.name}:
             </p>
-            <form onSubmit={handleGenerateAiCustomRecipe} className="space-y-2">
+            <form onSubmit={handleGenerateCustomRecipe} className="space-y-2">
               <input
                 type="text"
                 value={customIngredients}
@@ -379,24 +357,24 @@ Basado en tus ingredientes (${customIngredients}) y en nuestro catálogo balance
                 disabled={aiGenerating || !customIngredients.trim()}
                 className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
               >
-                {aiGenerating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                <span>{aiGenerating ? 'Generando receta...' : 'Formular con mis Ingredientes'}</span>
+                {aiGenerating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Utensils className="w-3.5 h-3.5" />}
+                <span>{aiGenerating ? 'Calculando ración...' : 'Formular con mis Ingredientes'}</span>
               </button>
             </form>
           </div>
         </div>
 
-        {/* Detalle de la Receta Seleccionada o Resultado IA */}
+        {/* Detalle de la Receta Seleccionada o Resultado */}
         <div className="lg:col-span-7 space-y-4">
           
           {aiRecipeResult ? (
-            /* Vista de Receta Personalizada por IA */
-            <div className="bg-white border-2 border-amber-400/80 rounded-3xl p-6 space-y-4 shadow-md">
+            /* Vista de Receta Personalizada */
+            <div className="bg-white border-2 border-emerald-500/80 rounded-3xl p-6 space-y-4 shadow-md">
               <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-amber-500" />
+                  <ChefHat className="w-5 h-5 text-emerald-600" />
                   <h3 className="font-heading font-black text-base text-stone-900">
-                    Receta Personalizada por Groq IA
+                    Receta Personalizada Balanceada
                   </h3>
                 </div>
                 <button
