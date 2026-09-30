@@ -884,6 +884,16 @@ export default function App() {
                       </h2>
                       <p className="text-xs text-stone-500 dark:text-stone-400">Personaliza los datos para la ración exacta</p>
                     </div>
+
+                    {activePet && (
+                      <button
+                        type="button"
+                        onClick={() => setIsBiometricsExpanded(prev => !prev)}
+                        className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-750 transition-all cursor-pointer shadow-2xs shrink-0"
+                      >
+                        {isBiometricsExpanded ? '✕ Ocultar' : '✏️ Editar'}
+                      </button>
+                    )}
                   </div>
 
                 {/* Subir Foto de la Mascota */}
