@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Calculator, 
@@ -99,6 +99,24 @@ export const Sidebar: React.FC<SidebarProps> = ({
     return localStorage.getItem('nutripet_sidebar_collapsed') === 'true';
   });
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      // Si baja más de 10px, ocultar. Si sube o está cerca de arriba, mostrar.
+      if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('nutripet_sidebar_collapsed', String(isCollapsed));
@@ -200,7 +218,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* 📱 ISLA FLOTANTE INFERIOR MODERNA (Acceso ergonómico directo sin tapar laterales) */}
       <nav 
         aria-label="Navegación rápida móvil"
-        className="lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 no-print"
+        className={`lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 no-print transition-transform duration-300 ease-in-out ${
+          isVisible ? 'translate-y-0' : 'translate-y-28 pointer-events-none'
+        }`}
       >
         <div className="flex items-center gap-1 px-2.5 py-1.5 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/90 dark:border-stone-800 rounded-full shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
           

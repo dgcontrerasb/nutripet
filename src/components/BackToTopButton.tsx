@@ -32,7 +32,7 @@ export const BackToTopButton: React.FC = () => {
       onClick={scrollToTop}
       title="Volver arriba"
       aria-label="Volver arriba"
-      className="fixed bottom-6 right-6 z-40 p-3 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl hover:shadow-emerald-500/30 hover:scale-110 active:scale-95 transition-all duration-300 border border-white/25 backdrop-blur-md flex items-center justify-center group cursor-pointer animate-fade-in no-print"
+      className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 lg:bottom-6 lg:right-6 z-30 p-3 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl hover:shadow-emerald-500/30 hover:scale-110 active:scale-95 transition-all duration-300 border border-white/25 backdrop-blur-md flex items-center justify-center group cursor-pointer animate-fade-in no-print"
     >
       <ChevronUp className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
     </button>
