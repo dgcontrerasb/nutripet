@@ -1,0 +1,22 @@
+{
+  "name": "NutriPet",
+  "short_name": "NutriPet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#059669",
+  "description": "Plataforma integral de nutrición y salud para mascotas.",
+  "icons": [
+    {
+      "src": "/logo-icon.png",
+      "sizes": "192x192 512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
