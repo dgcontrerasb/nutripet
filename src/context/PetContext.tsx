@@ -142,6 +142,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingDebouncePetIdRef = useRef<string | null>(null);
   const deletedPetIdsRef = useRef<Set<string>>(new Set());
+  const loadedPetsRef = useRef<Set<string>>(new Set());
   const trialStartDateSyncedRef = useRef<boolean>(false);
 
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number>(0);
@@ -293,15 +294,15 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [activePetId]);
 
   useEffect(() => {
-    if (!user) {
-      try {
-        localStorage.setItem(LOCAL_STORAGE_RECORDS_KEY, JSON.stringify(medicalRecords));
-        localStorage.setItem(LOCAL_STORAGE_REMINDERS_KEY, JSON.stringify(reminders));
-        localStorage.setItem(LOCAL_STORAGE_WEIGHTS_KEY, JSON.stringify(weightLogs));
-        localStorage.setItem(LOCAL_STORAGE_BATHS_KEY, JSON.stringify(bathLogs));
-      } catch {}
+    try {
+      localStorage.setItem(LOCAL_STORAGE_RECORDS_KEY, JSON.stringify(medicalRecords));
+      localStorage.setItem(LOCAL_STORAGE_REMINDERS_KEY, JSON.stringify(reminders));
+      localStorage.setItem(LOCAL_STORAGE_WEIGHTS_KEY, JSON.stringify(weightLogs));
+      localStorage.setItem(LOCAL_STORAGE_BATHS_KEY, JSON.stringify(bathLogs));
+    } catch (err) {
+      console.warn('Error guardando registros en localStorage:', err);
     }
-  }, [medicalRecords, reminders, weightLogs, bathLogs, user]);
+  }, [medicalRecords, reminders, weightLogs, bathLogs]);
 
   const prevAnonUidRef = useRef<string | null>(null);
 
@@ -406,6 +407,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (prevAnonUid && prevAnonUid !== currentUser.uid && !currentUser.isAnonymous) {
           await mergeUserData(prevAnonUid, currentUser.uid);
           prevAnonUidRef.current = null;
+          loadedPetsRef.current.clear();
         }
 
         if (currentUser.isAnonymous) {
@@ -439,6 +441,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
         setTrialDaysRemaining(0);
         setIsProState(false);
+        loadedPetsRef.current.clear();
       }
     });
 
@@ -557,6 +560,14 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     if (!user || !activePetId) return;
+
+    // Si los registros de esta mascota ya se cargaron en el estado durante la sesión actual,
+    // se leen directamente de la memoria / localStorage para evitar reconexión masiva y lecturas redundantes
+    if (loadedPetsRef.current.has(activePetId)) {
+      return;
+    }
+
+    loadedPetsRef.current.add(activePetId);
 
     const recordsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'medicalRecords');
     const unsubscribeRecords = onSnapshot(recordsRef, (snap) => {
@@ -835,6 +846,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // 2. Marcar el ID como eliminado en memoria antes de borrar para bloquear re-escrituras
     deletedPetIdsRef.current.add(petId);
+    loadedPetsRef.current.delete(petId);
 
     // 2. Cancelar cualquier debounce de guardado pendiente para ese ID
     if (saveTimeoutRef.current && pendingDebouncePetIdRef.current === petId) {
