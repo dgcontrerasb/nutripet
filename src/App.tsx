@@ -293,6 +293,15 @@ export default function App() {
   };
 
   const [activeTab, setActiveTab] = React.useState<AppTab>('calculator');
+
+  // Control de colapso de biométricos para optimizar espacio en móvil
+  const [isBiometricsExpanded, setIsBiometricsExpanded] = React.useState<boolean>(() => !activePet);
+
+  React.useEffect(() => {
+    if (activePet) {
+      setIsBiometricsExpanded(false);
+    }
+  }, [activePet?.id]);
   const [saveSuccessMessage, setSaveSuccessMessage] = React.useState<string | null>(null);
 
   const [isLoggingOut, setIsLoggingOut] = React.useState(false);
