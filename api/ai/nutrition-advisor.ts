@@ -41,23 +41,34 @@ INSTRUCCIONES IMPORTANTES:
 5. DESCARGO OBLIGATORIO AL FINAL:
 ⚠️ Esta información es solo orientativa y educativa. No reemplaza la consulta con un veterinario profesional.`;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${geminiKey}`;
-
-    const apiRes = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 1000
-        }
-      })
+    const requestBody = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 1000
+      }
     });
 
-    if (!apiRes.ok) {
-      const errText = await apiRes.text();
-      return res.status(500).json({ error: `Error Gemini: ${errText}` });
+    const modelsToTry = ['gemini-3.8-flash', 'gemini-flash-latest', 'gemini-3.5-flash'];
+    let apiRes: Response | null = null;
+    let lastError = '';
+
+    for (const model of modelsToTry) {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${geminiKey}`;
+      apiRes = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: requestBody
+      });
+
+      if (apiRes.ok) break;
+
+      lastError = await apiRes.text();
+      console.warn(`Modelo ${model} no disponible (${apiRes.status}), probando alternativa...`);
+    }
+
+    if (!apiRes || !apiRes.ok) {
+      return res.status(500).json({ error: `Error Gemini: ${lastError}` });
     }
 
     const data = await apiRes.json();
