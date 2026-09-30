@@ -200,9 +200,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
       {/* 📱 ISLA FLOTANTE INFERIOR MODERNA (Acceso ergonómico directo sin tapar laterales) */}
       <nav 
         aria-label="Navegación rápida móvil"
-        className="lg:hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-40 no-print"
+        className="lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 no-print"
       >
-        <div className="flex items-center gap-1.5 px-3 py-2 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/90 dark:border-stone-800 rounded-full shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
+        <div className="flex items-center gap-1 px-2.5 py-1.5 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/90 dark:border-stone-800 rounded-full shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
           
           {/* Accesos directos más usados */}
           {[
@@ -220,21 +220,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 onClick={() => handleSelectTab(item.id as AppTab)}
                 title={item.label}
                 aria-label={item.label}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-90 relative ${
+                className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-90 relative ${
                   isActive 
                     ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
                     : 'text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-stone-100 dark:hover:bg-stone-800'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-5 h-5" />
                 {item.isPro && !isActive && (
-                  <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-400 ring-1 ring-white dark:ring-stone-900" />
+                  <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-amber-400 ring-1 ring-white dark:ring-stone-900" />
                 )}
               </button>
             );
           })}
 
-          <div className="w-px h-5 bg-stone-200 dark:border-stone-800 mx-1" />
+          <div className="w-px h-5 bg-stone-200 dark:bg-stone-800 mx-0.5" />
 
           {/* Botón para desplegar el cajón completo */}
           <button
@@ -242,9 +242,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
             onClick={() => setIsMobileOpen(true)}
             title="Abrir menú completo"
             aria-label="Abrir menú completo"
-            className="w-10 h-10 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-stone-700 dark:text-stone-200 hover:text-emerald-600 flex items-center justify-center cursor-pointer transition-all active:scale-90 shadow-2xs"
+            className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 text-stone-700 dark:text-stone-200 hover:text-emerald-600 flex items-center justify-center cursor-pointer transition-all active:scale-90 shadow-2xs"
           >
-            <Menu className="w-4 h-4" />
+            <Menu className="w-5 h-5" />
           </button>
 
         </div>

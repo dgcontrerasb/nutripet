@@ -798,7 +798,7 @@ export default function App() {
       )}
 
       {/* Cuerpo Principal a la Derecha */}
-      <main className="flex-grow flex-1 w-full px-4 sm:px-6 py-6 sm:py-8 space-y-8 overflow-x-hidden">
+      <main className="flex-grow flex-1 w-full px-4 sm:px-6 pt-6 sm:pt-8 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-32 lg:pb-12 space-y-8 overflow-x-hidden">
         
         {/* VISTA 1: CALCULADORA NUTRICIONAL Y FICHA CON FOTO */}
         {activeTab === 'calculator' && (
