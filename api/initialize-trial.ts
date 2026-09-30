@@ -1,6 +1,17 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+type ApiRequest = {
+  method?: string;
+  [key: string]: any;
+};
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+type ApiResponse = {
+  setHeader: (name: string, value: string) => any;
+  status: (code: number) => {
+    json: (data: any) => any;
+    end: () => any;
+  };
+};
+
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   // Configuración de cabeceras CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
