@@ -1,0 +1,8 @@
+{
+  "name": "NutriPet",
+  "description": "Calculadora de porciones, salud y nutrición para mascotas.",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
