@@ -41,7 +41,7 @@ INSTRUCCIONES IMPORTANTES:
 5. DESCARGO OBLIGATORIO AL FINAL:
 ⚠️ Esta información es solo orientativa y educativa. No reemplaza la consulta con un veterinario profesional.`;
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`;
 
     const apiRes = await fetch(endpoint, {
       method: 'POST',
