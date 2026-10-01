@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { usePets } from '../context/PetContext';
+import { ProFeatureLock } from './ProFeatureLock';
 import { 
   Plus, 
   Trash2, 
@@ -21,8 +22,47 @@ import {
 } from 'lucide-react';
 import { MedicalRecord, WeightLog } from '../types';
 
-export const MedicalHistory: React.FC = () => {
-  const { activePet, medicalRecords, weightLogs, addMedicalRecord, deleteMedicalRecord, addWeightLog, deleteWeightLog } = usePets();
+interface Props {
+  onOpenSubscriptionModal?: () => void;
+}
+
+export const MedicalHistory: React.FC<Props> = ({ onOpenSubscriptionModal = () => {} }) => {
+  const { activePet, medicalRecords, weightLogs, addMedicalRecord, deleteMedicalRecord, addWeightLog, deleteWeightLog, isProOrTrial } = usePets();
+
+  // 🔒 Bloqueo si no tiene Pro o no ha iniciado sesión
+  if (!isProOrTrial) {
+    return (
+      <div className="space-y-6">
+        <ProFeatureLock
+          featureName="Expediente Clínico & Control de Peso"
+          description="Lleva el historial veterinario completo de tu mascota: consultas médicas, cirugías, diagnósticos, fórmulas farmacológicas y monitoreo de peso corporal."
+          benefits={[
+            "Registro ordenado de consultas, cirugías, exámenes y tratamientos",
+            "Monitoreo gráfico y registro histórico de peso corporal con variaciones",
+            "Acceso inmediato a fórmulas médicas e indicaciones veterinarias"
+          ]}
+          onOpenSubscriptionModal={onOpenSubscriptionModal}
+        />
+      </div>
+    );
+  }
+
+  // Si es Pro pero aún no ha creado o seleccionado una mascota:
+  if (!activePet) {
+    return (
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-10 text-center space-y-3 max-w-lg mx-auto my-8">
+        <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 mx-auto flex items-center justify-center">
+          <Stethoscope className="w-6 h-6" />
+        </div>
+        <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
+          No hay ninguna mascota seleccionada
+        </h3>
+        <p className="text-xs text-stone-500 dark:text-stone-400">
+          Selecciona o registra una mascota en la barra superior para gestionar su expediente clínico.
+        </p>
+      </div>
+    );
+  }
 
   const [activeSubTab, setActiveSubTab] = useState<'records' | 'weights'>('records');
   const [filterType, setFilterType] = useState<string>('all');
