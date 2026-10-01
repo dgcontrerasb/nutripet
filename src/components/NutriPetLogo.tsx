@@ -1,11 +1,9 @@
 import React from 'react';
 
-
 interface NutriPetLogoProps {
   className?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 }
-
 
 export const NutriPetLogo: React.FC<NutriPetLogoProps> = ({ 
   className = "", 
@@ -20,14 +18,12 @@ export const NutriPetLogo: React.FC<NutriPetLogoProps> = ({
     xl: { height: "h-24 sm:h-32", width: "w-auto" }   // Antes: h-20 sm:h-28
   };
 
-
   const selectedSize = sizeMap[size];
-
 
   return (
     <div className={`flex items-center shrink-0 ${className}`}>
       <img
-        src="/logo-icon.png"
+        src="/logo.png"
         alt="NutriPet"
         className={`${selectedSize.height} ${selectedSize.width} object-contain select-none drop-shadow-lg`}
         loading="eager"
@@ -35,7 +31,6 @@ export const NutriPetLogo: React.FC<NutriPetLogoProps> = ({
     </div>
   );
 };
-
 
 export const NutriPetIcon: React.FC<NutriPetLogoProps> = (props) => {
   return <NutriPetLogo {...props} />;

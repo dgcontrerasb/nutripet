@@ -531,8 +531,8 @@ export default function App() {
       </header>
 
       {/* Estructura con Sidebar Lateral Desplegable con padding top para compensar la barra fija */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full mx-auto max-w-7xl items-start pt-20 sm:pt-24">
-        <div className="w-full lg:w-auto lg:sticky lg:top-24 lg:self-start z-30 shrink-0">
+      <div className="flex-grow flex flex-col lg:flex-row w-full mx-auto max-w-7xl items-start pt-24 sm:pt-28 lg:pt-32">
+        <div className="w-full lg:w-auto lg:sticky lg:top-32 lg:self-start z-30 shrink-0">
           <Sidebar 
             activeTab={activeTab}
             onSelectTab={setActiveTab}
