@@ -896,6 +896,29 @@ export default function App() {
                     )}
                   </div>
 
+                {!isBiometricsExpanded && activePet ? (
+                  <div className="p-4 rounded-2xl bg-stone-50/90 dark:bg-stone-800/70 border border-stone-200 dark:border-stone-750 flex items-center justify-between gap-3 animate-fade-in">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-black text-stone-900 dark:text-stone-100">{profile.name}</span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
+                          {profile.type === 'dog' ? '🐶 Perro' : '🐱 Gato'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-stone-600 dark:text-stone-400">
+                        {profile.weightKg} kg • {profile.condition === 'ideal' ? 'Peso Ideal' : profile.condition === 'overweight' ? 'Sobrepeso' : 'Bajo Peso'} • {profile.diet === 'kibble' ? 'Croquetas' : 'BARF'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsBiometricsExpanded(true)}
+                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-stone-700 border border-stone-200 dark:border-stone-600 text-emerald-700 dark:text-emerald-300 text-xs font-bold shadow-2xs hover:bg-emerald-50 dark:hover:bg-stone-650 transition-all cursor-pointer whitespace-nowrap"
+                    >
+                      Modificar ✏️
+                    </button>
+                  </div>
+                ) : (
+                  <>
                 {/* Subir Foto de la Mascota */}
                 <div className="p-4 bg-stone-50/80 dark:bg-stone-800/60 rounded-2xl border border-stone-200 dark:border-stone-750 space-y-3">
                   <div className="flex items-center justify-between">
@@ -1269,6 +1292,8 @@ export default function App() {
                     </div>
                   )}
                 </div>
+                  </>
+                )}
               </div>
             </div>
 
