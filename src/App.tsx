@@ -142,7 +142,6 @@ export default function App() {
   const { activePet, updatePetLocal, savePet, updateSubscription, isProOrTrial, trialDaysRemaining, user, isSavingPet } = usePets();
   const isAdminUser = user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
 
-  // Función de prueba accesible desde consola: testWompi()
   React.useEffect(() => {
     (window as any).testWompi = async () => {
       console.log('🧪 Ejecutando simulación de verificación Wompi...');
@@ -168,7 +167,6 @@ export default function App() {
     };
   }, [updateSubscription]);
 
-  // Modo Oscuro / Claro (Modo claro por defecto)
   const [darkMode, setDarkMode] = React.useState<boolean>(() => {
     const saved = localStorage.getItem('nutripet_dark_mode');
     if (saved !== null) return saved === 'true';
@@ -187,11 +185,8 @@ export default function App() {
     setDarkMode(prev => !prev);
   };
 
-  // Escuchar retorno de transacciones (Wompi o PayPal en la URL)
   React.useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    
-    // 1. Retorno de Wompi (?id=... o ?transaction_id=... en la URL)
     const wompiTxId = urlParams.get('id') || urlParams.get('transaction_id');
     if (wompiTxId) {
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -211,7 +206,6 @@ export default function App() {
       }
     }
 
-    // 2. Retorno de PayPal (?token=... o ?PayerID=... en la URL)
     const paypalToken = urlParams.get('token');
     const payerId = urlParams.get('PayerID');
     if (paypalToken && payerId) {
@@ -250,7 +244,6 @@ export default function App() {
     }
   }, [updateSubscription]);
 
-  // Perfil temporal de borrador para la calculadora si aún no hay mascotas reales
   const [localDraftProfile, setLocalDraftProfile] = React.useState<PetProfile>({
     id: 'defaultpet',
     name: '',
@@ -306,7 +299,6 @@ export default function App() {
     if (prevUserRef.current && !user) {
       setIsLoggingOut(true);
       setActiveTab('calculator');
-      
       try {
         localStorage.removeItem('nutripet_local_pets_v2');
         localStorage.removeItem('nutripet_active_pet_v2');
@@ -496,7 +488,7 @@ export default function App() {
       />
       
       {/* Cabecera Superior Fija Permanente */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
         <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium">
           <span className="inline-flex items-center gap-1.5 text-emerald-400">
             <Sparkles className="w-3.5 h-3.5" /> Referencias generales de alimentación y bienestar para mascotas
@@ -514,9 +506,11 @@ export default function App() {
         />
       </header>
 
-      {/* Estructura con Sidebar Lateral Desplegable con padding top para compensar la barra fija */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full mx-auto max-w-7xl items-start pt-32 sm:pt-36 lg:pt-36">
-        <div className="w-full lg:w-auto lg:sticky lg:top-36 lg:self-start z-30 shrink-0">
+      {/* Contenedor Principal: Despeja la cabecera fija exactamente con 104px en movil y 112px en escritorio */}
+      <div className="flex-grow flex flex-col lg:flex-row w-full mx-auto max-w-7xl items-start pt-[104px] sm:pt-[112px]">
+        
+        {/* Contenedor del Sidebar: En móvil no se oculta para no romper el drawer ni el nav inferior */}
+        <div className="w-full lg:w-auto lg:sticky lg:top-[112px] z-30 shrink-0">
           <Sidebar 
             activeTab={activeTab}
             onSelectTab={setActiveTab}
@@ -533,7 +527,7 @@ export default function App() {
           />
         </div>
 
-        {/* Modal / Selector de Fondo e Imagen */}
+        {/* Modal Selector de Fondo e Imagen */}
         {showBgModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs no-print animate-fade-in overflow-y-auto">
             <div className="bg-white dark:bg-stone-900 rounded-3xl p-5 sm:p-7 max-w-md w-full shadow-2xl border border-stone-200 dark:border-stone-800 space-y-4 sm:space-y-5 max-h-[90vh] overflow-y-auto my-auto transition-colors">
@@ -593,7 +587,7 @@ export default function App() {
                 )}
               </div>
 
-              {/* Fondos y Temas Preestablecidos */}
+              {/* Temas Listos */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                   Temas y Texturas Listas
@@ -731,7 +725,7 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Selector de Nivel de Notoriedad / Intensidad */}
+              {/* Intensidad */}
               <div className="space-y-1.5 pt-1 border-t border-stone-100 dark:border-stone-800">
                 <label className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400 flex flex-wrap justify-between gap-1">
                   <span>Notoriedad del Fondo</span>
@@ -786,14 +780,13 @@ export default function App() {
           </div>
         )}
 
-        {/* Cuerpo Principal a la Derecha */}
-        <main className="flex-grow flex-1 w-full px-4 sm:px-6 pt-6 sm:pt-8 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-32 lg:pb-12 space-y-8 overflow-x-hidden">
+        {/* Contenido Principal */}
+        <main className="flex-grow flex-1 w-full px-4 sm:px-6 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-32 lg:pb-12 space-y-8 overflow-x-hidden">
           
           {/* VISTA 1: CALCULADORA NUTRICIONAL Y FICHA CON FOTO */}
           {activeTab === 'calculator' && (
             <div className="space-y-8">
               
-              {/* Banner Destacado con Gradiente y Barra de Progreso de Pasos Centrados */}
               <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-teal-900 to-stone-900 text-white p-6 sm:p-8 shadow-lg border border-emerald-800/40 dark:shadow-[0_0_25px_rgba(16,185,129,0.12)] no-print text-center">
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="relative z-10 max-w-3xl mx-auto space-y-3 flex flex-col items-center">
@@ -808,7 +801,6 @@ export default function App() {
                     Configura el perfil de tu mascota para calcular sus requerimientos calóricos exactos y generar su carnet impreso.
                   </p>
 
-                  {/* 📊 Indicador Progresivo de Pasos (Centrado) */}
                   <div className="pt-2 w-full flex justify-center">
                     <div className="flex flex-wrap sm:flex-nowrap items-center justify-center gap-2 max-w-xl mx-auto">
                       <div className="flex-1 min-w-[100px] bg-white/10 backdrop-blur-md rounded-xl p-2 sm:p-2.5 border border-white/15 flex items-center justify-center gap-2">
@@ -839,12 +831,11 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Cuadrícula Principal: Formulario + Ficha */}
+              {/* Formulario + Ficha */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
                 
-                {/* Panel de Configuración (Izquierda) */}
+                {/* Panel Izquierdo */}
                 <div className="lg:col-span-5 space-y-4">
-                  
                   <div className="flex items-center justify-between px-1 no-print">
                     <span className="text-xs font-bold text-stone-600 dark:text-stone-300">
                       Configuración de la Mascota
@@ -855,7 +846,6 @@ export default function App() {
                   </div>
 
                   <div className="glass-card dark:bg-stone-900/90 dark:border-stone-800 dark:shadow-[0_0_20px_rgba(16,185,129,0.06)] rounded-3xl p-6 sm:p-7 shadow-bento space-y-6 no-print transition-all">
-                    
                     <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
                       <div>
                         <h2 className="font-heading font-extrabold text-lg text-stone-900 dark:text-stone-100 flex items-center gap-2">
@@ -869,7 +859,7 @@ export default function App() {
                         <button
                           type="button"
                           onClick={() => setIsBiometricsExpanded(prev => !prev)}
-                          className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-755 transition-all cursor-pointer shadow-2xs shrink-0"
+                          className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-750 transition-all cursor-pointer shadow-2xs shrink-0"
                         >
                           {isBiometricsExpanded ? '✕ Ocultar' : '✏️ Editar'}
                         </button>
@@ -898,7 +888,7 @@ export default function App() {
                     </div>
                   ) : (
                     <>
-                  {/* Subir Foto de la Mascota */}
+                  {/* Foto de la Mascota */}
                   <div className="p-4 bg-stone-50/80 dark:bg-stone-800/60 rounded-2xl border border-stone-200 dark:border-stone-750 space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
@@ -954,7 +944,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Especie: Perro o Gato */}
+                  {/* Especie */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                       Especie
@@ -989,7 +979,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Nombre y Selección de Raza */}
+                  {/* Nombre y Raza */}
                   <div className="space-y-3">
                     <div className="space-y-1.5">
                       <label htmlFor="pet-name-input" className="text-xs font-bold uppercase tracking-wider text-stone-500">
@@ -1172,7 +1162,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Esterilizado y Dieta */}
+                  {/* Esterilizado */}
                   <div className="flex items-center justify-between p-3.5 rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-800/50">
                     <div className="space-y-0.5">
                       <span className="text-xs font-bold text-stone-900 dark:text-stone-100 block">¿Esterilizado / Castrado?</span>
@@ -1193,7 +1183,7 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Tipo de Dieta */}
+                  {/* Dieta */}
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
                     <button
                       type="button"
@@ -1219,7 +1209,7 @@ export default function App() {
                     </button>
                   </div>
 
-                  {/* Botón de Guardar */}
+                  {/* Guardar Cambios */}
                   <div className="pt-3 border-t border-stone-100 dark:border-stone-800 space-y-2">
                     <button
                       type="button"
@@ -1273,9 +1263,8 @@ export default function App() {
                 </div>
               </div>
 
-                {/* Panel de la Ficha Personalizada con Foto (Derecha) */}
+                {/* Panel Derecho */}
                 <div className="lg:col-span-7 space-y-4">
-                  
                   <div className="flex items-center justify-between px-1 no-print">
                     <span className="text-xs font-bold text-stone-600 dark:text-stone-300">
                       Ficha Técnica & Raciones Oficiales
@@ -1290,7 +1279,7 @@ export default function App() {
                     className="glass-card dark:bg-stone-900/90 dark:border-stone-800 dark:shadow-[0_0_25px_rgba(16,185,129,0.08)] border-2 border-emerald-500/10 rounded-3xl p-6 sm:p-8 shadow-bento space-y-6 relative overflow-hidden transition-all print:bg-white print:border print:border-black print:p-4 print:shadow-none"
                   >
                     
-                    {/* Cabecera con Foto y Datos de la Mascota */}
+                    {/* Cabecera Mascota */}
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-stone-100 dark:border-stone-800 gap-4">
                       <div className="flex items-center gap-4">
                         <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-stone-100 dark:bg-stone-800 border-2 border-emerald-500/40 overflow-hidden shrink-0 shadow-xs flex items-center justify-center">
@@ -1337,7 +1326,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* 1. PLATO RECOMENDADO */}
+                    {/* Ración */}
                     {profile.diet === 'kibble' ? (
                       <div className="space-y-4 bg-gradient-to-b from-stone-50 to-emerald-50/30 dark:from-stone-850 dark:to-emerald-950/20 p-5 sm:p-6 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-2xs">
                         <div className="flex items-center justify-between">
@@ -1446,7 +1435,7 @@ export default function App() {
                       </div>
                     )}
 
-                    {/* 2. BLOQUE DE MÉTRICAS ENERGÉTICAS */}
+                    {/* Métricas Energéticas */}
                     <div className="space-y-4 pt-1 animate-fade-in">
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70">
@@ -1480,7 +1469,7 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* SECCIÓN ESPECIAL: MARCAS SUGERIDAS */}
+                      {/* Marcas Sugeridas */}
                       {selectedBreedInfo && (
                         <div className="space-y-3 pt-2 border-t border-stone-100">
                           <div className="flex items-center gap-2">
@@ -1617,7 +1606,7 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTA ORGANIZADOR DE RUTINA Y HORARIOS */}
+          {/* VISTA ORGANIZADOR DE RUTINA */}
           {activeTab === 'routine' && (
             <div className="space-y-6">
               <RoutineSchedule
@@ -1627,42 +1616,42 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTA 2: FICHA TÉCNICA Y REGISTRO DETALLADO */}
+          {/* VISTA 2: FICHA TÉCNICA */}
           {activeTab === 'sheet' && (
             <div className="space-y-6">
               <PetTechSheet onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
             </div>
           )}
 
-          {/* VISTA 3: EXPEDIENTE MÉDICO Y EVOLUCIÓN */}
+          {/* VISTA 3: EXPEDIENTE MÉDICO */}
           {activeTab === 'medical' && (
             <div className="space-y-6">
               <MedicalHistory />
             </div>
           )}
 
-          {/* VISTA 4: RECORDATORIOS DE MEDICACIÓN Y VACUNAS */}
+          {/* VISTA 4: RECORDATORIOS */}
           {activeTab === 'reminders' && (
             <div className="space-y-6">
               <RemindersModule />
             </div>
           )}
 
-          {/* VISTA RECETAS: GENERADOR BARF & RECETAS CASERAS */}
+          {/* VISTA RECETAS */}
           {activeTab === 'recipes' && (
             <div className="space-y-6">
               <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
             </div>
           )}
 
-          {/* VISTA 5: MARCAS POR PAÍS & GUÍA DE DIETA MIXTA */}
+          {/* VISTA 5: MARCAS POR PAÍS */}
           {activeTab === 'advisor' && (
             <div className="space-y-6">
               <CountryFoodAdvisor onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
             </div>
           )}
 
-          {/* VISTA 6: GUÍA COMPLETA DE RAZAS Y MARCAS */}
+          {/* VISTA 6: GUÍA DE RAZAS */}
           {activeTab === 'breeds' && (
             <div className="space-y-6">
               <BreedEncyclopedia
@@ -1679,12 +1668,12 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTA: SEMÁFORO DE ALIMENTOS TÓXICOS Y SEGUROS */}
+          {/* VISTA: SEMÁFORO DE ALIMENTOS */}
           {activeTab === 'foods' && (
             <FoodTrafficLight />
           )}
 
-          {/* VISTA: TIPS, GUÍAS CLÍNICAS Y PRIMEROS AUXILIOS */}
+          {/* VISTA: TIPS Y PRIMEROS AUXILIOS */}
           {activeTab === 'guides' && (
             <TipsAndGuidesModule />
           )}
@@ -1692,7 +1681,7 @@ export default function App() {
         </main>
       </div>
 
-      {/* Footer y Descargo de Responsabilidad */}
+      {/* Footer */}
       <footer className="mt-auto border-t border-stone-200 bg-white/90 py-8 no-print">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-3 text-xs text-stone-500">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">

@@ -255,12 +255,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
 
-      {/* 💻 MENÚ LATERAL DE ESCRITORIO */}
+      {/* 💻 Menú lateral de escritorio con z-50 fijo desde arriba */}
       <aside 
-        className={`hidden lg:flex flex-col border border-stone-200 bg-white rounded-2xl shadow-xs shrink-0 select-none no-print transition-all duration-300 sticky top-28 ${
+        className={`hidden lg:flex flex-col border-r border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-sm shrink-0 select-none no-print transition-all duration-300 fixed top-0 left-0 bottom-0 z-50 ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}
-        style={{ height: 'calc(100vh - 8rem)', maxHeight: 'calc(100vh - 8rem)' }}
       >
         {/* Cabecera Sidebar con Logo */}
         <div className="p-4 border-b border-stone-100 flex items-center justify-between gap-2 overflow-hidden h-16 shrink-0">
