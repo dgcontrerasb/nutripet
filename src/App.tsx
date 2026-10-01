@@ -578,7 +578,7 @@ export default function App() {
                         setCustomBgImage(null);
                         setBgTheme('paws');
                       }}
-                      className="text-red-500 hover:text-red-700 dark:hover:text-red-400 font-bold cursor-pointer"
+                      className="text-red-500 hover:text-red-700 dark:hover:red-400 font-bold cursor-pointer"
                     >
                       Eliminar
                     </button>
@@ -1632,11 +1632,11 @@ export default function App() {
           {/* VISTA 4: RECORDATORIOS */}
           {activeTab === 'reminders' && (
             <div className="space-y-6">
-              <RemindersModule />
+              <RemindersModule onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
             </div>
           )}
 
-          {/* VISTA RECETAS */}
+          {/* VISTA RECETAS BARF */}
           {activeTab === 'recipes' && (
             <div className="space-y-6">
               <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />

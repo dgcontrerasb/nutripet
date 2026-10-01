@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePets } from '../context/PetContext';
+import { ProFeatureLock } from './ProFeatureLock';
 import { 
   Bell, 
   Plus, 
@@ -24,9 +25,14 @@ import { Reminder, BathLog } from '../types';
 import { RemindersCalendar } from './RemindersCalendar';
 
 
-export const RemindersModule: React.FC = () => {
+interface Props {
+  onOpenSubscriptionModal?: () => void;
+}
+
+export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () => {} }) => {
   const { 
     activePet, 
+    isProOrTrial, 
     reminders, 
     addReminder, 
     toggleReminder, 
@@ -126,7 +132,36 @@ export const RemindersModule: React.FC = () => {
     };
   }, [isAnyModalOpen]);
 
-  if (!activePet) return null;
+  // 🔒 Bloqueo si no tiene Pro o no ha iniciado sesión
+  if (!isProOrTrial) {
+    return (
+      <div className="space-y-6">
+        <ProFeatureLock
+          featureName="Calendario de Vacunas & Recordatorios Inteligentes"
+          description="Lleva el control de vacunación, desparasitación interna y externa, antipulgas y citas veterinarias con alertas automáticas para no olvidar ninguna fecha clave."
+          benefits={[
+            "Esquema completo de vacunación y refuerzos anuales para perros y gatos",
+            "Control y registro de desparasitaciones periódicas",
+            "Historial de aplicaciones y próximas fechas programadas"
+          ]}
+          onOpenSubscriptionModal={onOpenSubscriptionModal}
+        />
+      </div>
+    );
+  }
+
+  if (!activePet) {
+    return (
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-10 text-center space-y-3 max-w-lg mx-auto my-8">
+        <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
+          No hay ninguna mascota seleccionada
+        </h3>
+        <p className="text-xs text-stone-500 dark:text-stone-400">
+          Selecciona o registra una mascota para programar sus vacunas y recordatorios.
+        </p>
+      </div>
+    );
+  }
 
 
   const todayStr = new Date().toISOString().split('T')[0];
