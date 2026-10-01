@@ -1622,10 +1622,10 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTA 3: EXPEDIENTE MÉDICO */}
+          {/* VISTA 3: EXPEDIENTE MÉDICO Y EVOLUCIÓN */}
           {activeTab === 'medical' && (
             <div className="space-y-6">
-              <MedicalHistory />
+              <MedicalHistory onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
             </div>
           )}
 
