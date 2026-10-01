@@ -897,7 +897,10 @@ export default function App() {
                   </div>
 
                 {!isBiometricsExpanded && activePet ? (
-                  <div className="p-4 rounded-2xl bg-stone-50/90 dark:bg-stone-800/70 border border-stone-200 dark:border-stone-750 flex items-center justify-between gap-3 animate-fade-in">
+                  <div 
+                    onClick={() => setIsBiometricsExpanded(true)}
+                    className="p-4 rounded-2xl bg-stone-50/90 dark:bg-stone-800/70 border border-stone-200 dark:border-stone-750 flex items-center justify-between gap-3 animate-fade-in cursor-pointer hover:bg-stone-100/90 dark:hover:bg-stone-800 transition-colors"
+                  >
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-black text-stone-900 dark:text-stone-100">{profile.name}</span>
@@ -909,13 +912,9 @@ export default function App() {
                         {profile.weightKg} kg • {profile.condition === 'ideal' ? 'Peso Ideal' : profile.condition === 'overweight' ? 'Sobrepeso' : 'Bajo Peso'} • {profile.diet === 'kibble' ? 'Croquetas' : 'BARF'}
                       </p>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsBiometricsExpanded(true)}
-                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-stone-700 border border-stone-200 dark:border-stone-600 text-emerald-700 dark:text-emerald-300 text-xs font-bold shadow-2xs hover:bg-emerald-50 dark:hover:bg-stone-650 transition-all cursor-pointer whitespace-nowrap"
-                    >
-                      Modificar ✏️
-                    </button>
+                    <span className="text-xs text-stone-400 dark:text-stone-500 font-semibold select-none">
+                      Toca para ver o editar →
+                    </span>
                   </div>
                 ) : (
                   <>
