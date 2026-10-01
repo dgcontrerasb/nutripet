@@ -488,7 +488,7 @@ export default function App() {
       />
       
       {/* Cabecera Superior Fija Permanente */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
+      <header className="fixed top-0 right-0 left-0 lg:left-64 z-40 no-print shadow-xs bg-white dark:bg-stone-900 transition-all duration-300">
         <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium">
           <span className="inline-flex items-center gap-1.5 text-emerald-400">
             <Sparkles className="w-3.5 h-3.5" /> Referencias generales de alimentación y bienestar para mascotas
@@ -506,11 +506,10 @@ export default function App() {
         />
       </header>
 
-      {/* Contenedor Principal: Despeja la cabecera fija exactamente con 104px en movil y 112px en escritorio */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full mx-auto max-w-7xl items-start pt-[104px] sm:pt-[112px]">
+      {/* Contenedor Principal: con margen izquierdo en escritorio para dar espacio al sidebar fijo */}
+      <div className="flex-grow flex flex-col lg:flex-row w-full lg:pl-64 items-start pt-[104px] sm:pt-[112px]">
         
-        {/* Contenedor del Sidebar: En móvil no se oculta para no romper el drawer ni el nav inferior */}
-        <div className="w-full lg:w-auto lg:sticky lg:top-[112px] z-30 shrink-0">
+        <div className="w-full lg:w-auto shrink-0">
           <Sidebar 
             activeTab={activeTab}
             onSelectTab={setActiveTab}
