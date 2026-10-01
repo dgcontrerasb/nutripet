@@ -105,7 +105,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      // Si baja más de 10px, ocultar. Si sube o está cerca de arriba, mostrar.
       if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
         setIsVisible(false);
       } else {
@@ -137,18 +136,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
     };
   }, [isMobileOpen]);
 
-  // Cerrar cajón móvil al seleccionar pestaña
   const handleSelectTab = (tab: AppTab) => {
     onSelectTab(tab);
     setIsMobileOpen(false);
-  };
-
-  const getActiveTabTitle = () => {
-    for (const sec of MENU_SECTIONS) {
-      const match = sec.items.find(i => i.id === activeTab);
-      if (match) return match.label;
-    }
-    return 'NutriPet';
   };
 
   const renderNavLinks = (onClickHandler: (tab: AppTab) => void, showText: boolean) => {
@@ -197,7 +187,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       </span>
                     )}
 
-                    {/* Tooltip flotante si está colapsado */}
                     {!showText && (
                       <div className="absolute left-14 scale-0 group-hover:scale-100 opacity-0 group-hover:opacity-100 transition-all bg-stone-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-lg whitespace-nowrap shadow-md z-40 pointer-events-none select-none">
                         {item.label}
@@ -215,7 +204,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* 📱 ISLA FLOTANTE INFERIOR MODERNA (Acceso ergonómico directo sin tapar laterales) */}
+      {/* 📱 ISLA FLOTANTE INFERIOR MODERNA */}
       <nav 
         aria-label="Navegación rápida móvil"
         className={`lg:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 z-40 no-print transition-transform duration-300 ease-in-out ${
@@ -223,8 +212,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         }`}
       >
         <div className="flex items-center gap-1 px-2.5 py-1.5 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/90 dark:border-stone-800 rounded-full shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
-          
-          {/* Accesos directos más usados */}
           {[
             { id: 'calculator', label: 'Porciones', icon: Calculator },
             { id: 'foods', label: 'Alimentos', icon: AlertTriangle },
@@ -256,7 +243,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
           <div className="w-px h-5 bg-stone-200 dark:bg-stone-800 mx-0.5" />
 
-          {/* Botón para desplegar el cajón completo */}
           <button
             type="button"
             onClick={() => setIsMobileOpen(true)}
@@ -266,18 +252,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
           >
             <Menu className="w-5 h-5" />
           </button>
-
         </div>
       </nav>
 
-      {/* 💻 MENÚ LATERAL DE ESCRITORIO (Fijo, colapsable) */}
+      {/* 💻 MENÚ LATERAL DE ESCRITORIO */}
       <aside 
-        className={`hidden lg:flex flex-col border-r border-stone-200 bg-white shadow-xs shrink-0 select-none no-print transition-all duration-300 relative ${
+        className={`hidden lg:flex flex-col border border-stone-200 bg-white rounded-2xl shadow-xs shrink-0 select-none no-print transition-all duration-300 sticky top-28 ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}
-        style={{ minHeight: 'calc(100vh - 54px)' }}
+        style={{ height: 'calc(100vh - 8rem)', maxHeight: 'calc(100vh - 8rem)' }}
       >
-        {/* Cabecera Sidebar */}
+        {/* Cabecera Sidebar con Logo */}
         <div className="p-4 border-b border-stone-100 flex items-center justify-between gap-2 overflow-hidden h-16 shrink-0">
           {!isCollapsed ? (
             <motion.div 
@@ -331,7 +316,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Panel de Modos e Intensidad al fondo si no está colapsado */}
         {!isCollapsed && (
           <div className="p-3 border-t border-stone-100 bg-stone-50/50 space-y-2.5 shrink-0">
-            {/* Accesos rápidos a Fondo y Tema */}
             <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-stone-200/50 dark:border-stone-800">
               <button
                 type="button"
@@ -393,11 +377,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </aside>
 
-      {/* 📱 CAJÓN MÓVIL DESPLEGABLE CON COBERTURA TOTAL Y MÁXIMO Z-INDEX */}
+      {/* 📱 CAJÓN MÓVIL DESPLEGABLE */}
       <AnimatePresence>
         {isMobileOpen && (
-          <div className="fixed inset-0 z-[100] lg:hidden flex no-print">
-            {/* Telón de fondo con desenfoque */}
+          <div className="fixed inset-0 z-[120] lg:hidden flex no-print">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -406,15 +389,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
               className="fixed inset-0 bg-black/70 backdrop-blur-sm cursor-pointer z-0"
             />
 
-            {/* Panel lateral deslizante independiente */}
             <motion.div
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
-              className="relative w-72 max-w-[85vw] bg-white dark:bg-stone-900 h-full shadow-2xl flex flex-col z-10 border-r border-stone-200 dark:border-stone-800 overflow-hidden"
+              className="relative w-72 max-w-[85vw] bg-white dark:bg-stone-900 h-full shadow-2xl flex flex-col z-[130] border-r border-stone-200 dark:border-stone-800 overflow-hidden"
             >
-              {/* Cabecera limpia del cajón */}
               <div className="p-4 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2 h-16 shrink-0 bg-white dark:bg-stone-900">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 overflow-hidden flex items-center justify-center shrink-0">
@@ -440,14 +421,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               </div>
 
-              {/* Enlaces de Navegación */}
               <nav className="flex-1 overflow-y-auto p-4 space-y-5 scrollbar-none">
                 {renderNavLinks(handleSelectTab, true)}
               </nav>
 
-              {/* Pie Compacto del Cajón Móvil */}
               <div className="p-3 border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/90 space-y-2 shrink-0">
-                {/* Fondo y Modo en una sola fila compacta de 2 columnas */}
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
@@ -473,7 +451,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   )}
                 </div>
 
-                {/* Acceso exclusivo Admin en móvil */}
                 {onOpenAdminModal && (
                   <button
                     type="button"
@@ -488,7 +465,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 )}
 
-                {/* Estatus Pro en formato píldora delgada */}
                 <div 
                   onClick={() => {
                     if (!isProOrTrial) {
