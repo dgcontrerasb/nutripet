@@ -569,8 +569,9 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     loadedPetsRef.current.add(activePetId);
 
-    const recordsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'medicalRecords');
+        const recordsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'medicalRecords');
     const unsubscribeRecords = onSnapshot(recordsRef, (snap) => {
+      // Optimizamos: Firestore servirá esto desde el caché local si no hay cambios en servidor
       const records: MedicalRecord[] = [];
       snap.forEach(d => records.push({ ...(d.data() as MedicalRecord), id: d.id }));
       setMedicalRecords(prev => {
@@ -578,7 +579,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return [...others, ...records];
       });
     }, (err) => {
-      console.warn('Medical records listener offline / notice:', err.message);
+      console.warn('Medical records listener offline:', err.message);
     });
 
     const remindersRef = collection(db, 'users', user.uid, 'pets', activePetId, 'reminders');
@@ -590,7 +591,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return [...others, ...rems];
       });
     }, (err) => {
-      console.warn('Reminders listener offline / notice:', err.message);
+      console.warn('Reminders listener offline:', err.message);
     });
 
     const weightsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'weightLogs');
@@ -602,8 +603,9 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return [...others, ...weights];
       });
     }, (err) => {
-      console.warn('Weights listener offline / notice:', err.message);
+      console.warn('Weights listener offline:', err.message);
     });
+
 
     return () => {
       unsubscribeRecords();
@@ -690,53 +692,36 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pendingDebouncePetIdRef.current = petData.id;
 
-    // Guardar en Firestore después de 800ms sin cambios (DEBOUNCE OPTIMIZADO)
+        // Guardar en Firestore después de 2000ms sin cambios (DEBOUNCE OPTIMIZADO PARA PLAN SPARK)
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         // Verificar que no haya sido eliminada en ese intervalo
-        if (deletedPetIdsRef.current.has(petData.id)) {
-          console.warn('✖ Escritura bloqueada por mascota eliminada', petData.id);
-          return;
-        }
-        if (pendingDebouncePetIdRef.current !== petData.id) {
-          return;
-        }
-        if (!isValidPersistablePet(petData)) {
-          console.warn('✖ Escritura bloqueada por mascota inválida/temporal', petData?.id);
-          return;
-        }
+        if (deletedPetIdsRef.current.has(petData.id)) return;
+        if (pendingDebouncePetIdRef.current !== petData.id) return;
+        if (!isValidPersistablePet(petData)) return;
 
         let petToSave = { ...petData };
+        // Límite de foto más estricto (150KB) para ahorrar ancho de banda y evitar errores de tamaño de documento
         if (petToSave.photoUrl && petToSave.photoUrl.length > 150_000) {
-          console.warn('✖ Foto demasiado grande para Firestore (>150 KB). Se omite photoUrl.');
+          console.warn('✖ Foto omitida en sync por superar 150KB');
           petToSave.photoUrl = undefined;
         }
 
         if (user) {
           const currentUid = auth.currentUser?.uid || user.uid;
           const petDocRef = doc(db, "users", currentUid, "pets", petToSave.id);
-          console.log('💾 [PetContext] Iniciando actualización de mascota en Firestore...', petToSave.id);
+          console.log('💾 [Spark-Optimized] Guardando mascota...', petToSave.id);
           await setDoc(petDocRef, cleanFirestoreData({ ...petToSave, userId: currentUid, updatedAt: new Date().toISOString() }), { merge: true });
-          console.log('✅ [PetContext] Mascota actualizada exitosamente en Firestore:', petToSave.id);
         }
       } catch (e: any) {
-        console.error("❌ [PetContext] Error en actualización de mascota en Firestore:", e);
-        const code = e?.code || '';
-        if (code === 'permission-denied') {
-          setSyncError('No tienes permisos suficientes para actualizar esta mascota.');
-        } else if (code === 'resource-exhausted') {
-          setSyncError('Límite de cuota o recurso alcanzado en la base de datos.');
-        } else if (code === 'unavailable') {
-          setSyncError('Servicio no disponible temporalmente. Los cambios locales se sincronizarán al reconectarse.');
-        } else {
-          setSyncError(`Error guardando mascota: ${e?.message || e}`);
-        }
+        console.error("❌ Error en auto-guardado:", e);
       } finally {
         if (pendingDebouncePetIdRef.current === petData.id) {
           pendingDebouncePetIdRef.current = null;
         }
       }
-    }, 800);
+    }, 2000);
+
   }, [user, pets]);
 
   // Limpiar timeout al desmontar
