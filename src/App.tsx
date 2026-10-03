@@ -38,7 +38,8 @@ import {
   Loader2,
   Download,
   Check,
-  Save
+  Save,
+  Star
 } from 'lucide-react';
 import { PetProfile, CalculationResult, BreedInfo, AppTab } from './types';
 import { calculatePetNutrition, HEALTH_AND_NUTRITION_GUIDES, POPULAR_BREEDS } from './data';
@@ -65,6 +66,7 @@ import { Sidebar } from './components/Sidebar';
 import { BackToTopButton } from './components/BackToTopButton';
 import { ThemeToggleButton } from './components/ThemeToggleButton';
 import { LogoutTransitionModal } from './components/LogoutTransitionModal';
+import { FeedbackModal } from './components/FeedbackModal';
 import { usePets } from './context/PetContext';
 import { useBgPreferences } from './hooks/useBgPreferences';
 
@@ -329,6 +331,7 @@ export default function App() {
   const [showShareModal, setShowShareModal] = React.useState<boolean>(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = React.useState<boolean>(false);
   const [showAdminModal, setShowAdminModal] = React.useState<boolean>(false);
+  const [showFeedbackModal, setShowFeedbackModal] = React.useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
@@ -488,7 +491,7 @@ export default function App() {
       />
       
       {/* Cabecera Superior Fija Permanente */}
-      <header className="fixed top-0 right-0 left-0 lg:left-64 z-40 no-print shadow-xs bg-white dark:bg-stone-900 transition-all duration-300">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
         <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium">
           <span className="inline-flex items-center gap-1.5 text-emerald-400">
             <Sparkles className="w-3.5 h-3.5" /> Referencias generales de alimentación y bienestar para mascotas
@@ -506,10 +509,11 @@ export default function App() {
         />
       </header>
 
-      {/* Contenedor Principal: con margen izquierdo en escritorio para dar espacio al sidebar fijo */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full lg:pl-64 items-start pt-[104px] sm:pt-[112px]">
+      {/* Contenedor Principal */}
+      <div className="flex-grow flex flex-col lg:flex-row w-full mx-auto max-w-7xl items-start pt-[104px] sm:pt-[112px]">
         
-        <div className="w-full lg:w-auto shrink-0">
+        {/* Contenedor del Sidebar */}
+        <div className="w-full lg:w-auto lg:sticky lg:top-[112px] z-30 shrink-0">
           <Sidebar 
             activeTab={activeTab}
             onSelectTab={setActiveTab}
@@ -1681,19 +1685,27 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-stone-200 bg-white/90 py-8 no-print">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-3 text-xs text-stone-500">
+      <footer className="mt-auto border-t border-stone-200 dark:border-stone-800 bg-white/90 dark:bg-stone-900/90 py-8 no-print">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-3 text-xs text-stone-500 dark:text-stone-400">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <NutriPetLogo size="sm" />
               <span>•</span>
               <span>Herramienta informativa y de orientación para el cuidado de mascotas en el hogar</span>
             </div>
-            {user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com' && (
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-stone-400">
-                  Uso exclusivamente personal y orientativo
-                </span>
+
+            <div className="flex items-center gap-3">
+              {/* Botón integrado de Calificación y Opinión */}
+              <button
+                type="button"
+                onClick={() => setShowFeedbackModal(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 font-bold border border-amber-200 dark:border-amber-800 transition-all cursor-pointer text-xs"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                <span>Calificar y Opinión</span>
+              </button>
+
+              {user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com' && (
                 <button
                   type="button"
                   onClick={() => setShowAdminModal(true)}
@@ -1702,10 +1714,10 @@ export default function App() {
                 >
                   <Lock className="w-3 h-3" />
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-[11px] text-stone-600 leading-relaxed">
+          <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-800 text-[11px] text-stone-600 dark:text-stone-400 leading-relaxed">
             <strong>Aviso de exención de responsabilidad:</strong> Esta aplicación web es un recurso de consulta general y cálculo orientativo creado para amantes de las mascotas. La información, tablas y estimaciones aquí presentadas son solo de referencia general y <u>no constituyen asesoría médica, diagnóstico ni prescripción</u>. Cada perro o gato tiene necesidades individuales, condiciones preexistentes o alergias que requieren la valoración de un profesional de la salud animal. Ante cualquier duda, cambio de dieta o síntoma, consulta siempre a tu médico veterinario de confianza.
           </div>
         </div>
@@ -1726,6 +1738,10 @@ export default function App() {
       <AdminDashboardModal
         isOpen={showAdminModal}
         onClose={() => setShowAdminModal(false)}
+      />
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
       <RegistrationLockModal />
       <LogoutTransitionModal isOpen={isLoggingOut} />
