@@ -578,7 +578,7 @@ export default function App() {
                         setCustomBgImage(null);
                         setBgTheme('paws');
                       }}
-                      className="text-red-500 hover:text-red-700 dark:hover:red-400 font-bold cursor-pointer"
+                      className="text-red-500 hover:text-red-700 dark:hover:text-red-400 font-bold cursor-pointer"
                     >
                       Eliminar
                     </button>
@@ -1622,21 +1622,21 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTA 3: EXPEDIENTE MÉDICO Y EVOLUCIÓN */}
+          {/* VISTA 3: EXPEDIENTE MÉDICO */}
           {activeTab === 'medical' && (
             <div className="space-y-6">
-              <MedicalHistory onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+              <MedicalHistory />
             </div>
           )}
 
           {/* VISTA 4: RECORDATORIOS */}
           {activeTab === 'reminders' && (
             <div className="space-y-6">
-              <RemindersModule onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+              <RemindersModule />
             </div>
           )}
 
-          {/* VISTA RECETAS BARF */}
+          {/* VISTA RECETAS */}
           {activeTab === 'recipes' && (
             <div className="space-y-6">
               <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />

@@ -141,11 +141,7 @@ const PRESET_RECIPES: PresetRecipe[] = [
   }
 ];
 
-interface Props {
-  onOpenSubscriptionModal?: () => void;
-}
-
-export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal = () => {} }) => {
+export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
   const { activePet, isProOrTrial } = usePets();
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(PRESET_RECIPES[0].id);
   const [customIngredients, setCustomIngredients] = useState<string>('');
@@ -153,42 +149,10 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal =
   const [aiRecipeResult, setAiRecipeResult] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
-  // 🔒 1. Si no es Pro o no ha iniciado sesión, muestra la tarjeta de bloqueo
-  if (!isProOrTrial) {
-    return (
-      <div className="space-y-6">
-        <ProFeatureLock
-          featureName="Generador de Recetas BARF & Menús Caseros"
-          description="Diseña recetas de comida natural balanceadas al gramo según la edad, condición corporal y nivel de actividad física de tu mascota."
-          benefits={[
-            "Cálculo exacto de huesos carnosos, carne magra, vísceras y vegetales",
-            "Menús semanales listos para armar y porcionar sin complicaciones",
-            "Recomendaciones nutricionales seguras para evitar déficits alimentarios"
-          ]}
-          onOpenSubscriptionModal={onOpenSubscriptionModal}
-        />
-      </div>
-    );
-  }
-
-  // 🐾 2. Si es Pro pero no tiene mascota activa seleccionada
-  if (!activePet) {
-    return (
-      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-10 text-center space-y-3 max-w-lg mx-auto my-8">
-        <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
-          No hay ninguna mascota seleccionada
-        </h3>
-        <p className="text-xs text-stone-500 dark:text-stone-400">
-          Selecciona o registra una mascota para generar su receta nutricional personalizada.
-        </p>
-      </div>
-    );
-  }
+  if (!activePet) return null;
 
   const isPro = isProOrTrial;
   const currentRecipe = PRESET_RECIPES.find(r => r.id === selectedRecipeId) || PRESET_RECIPES[0];
-
-  
 
   // Cálculo de ración diaria estimada (aprox 2.5% a 3% del peso corporal para adultos)
   const estimatedDailyGrams = Math.round(activePet.weightKg * (activePet.type === 'cat' ? 35 : 28));
