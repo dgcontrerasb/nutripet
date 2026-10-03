@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { usePets } from '../context/PetContext';
+import { ProFeatureLock } from './ProFeatureLock';
 import { 
   Plus, 
   Trash2, 
@@ -30,8 +31,40 @@ interface Props {
   onOpenSubscriptionModal?: () => void;
 }
 
-export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
-  const { activePet, savePet, deletePet, pets, isSavingPet } = usePets();
+// Función auxiliar de cálculo de edad
+const calculateAge = (birthDateStr?: string) => {
+  if (!birthDateStr) return null;
+  const birth = new Date(birthDateStr);
+  if (isNaN(birth.getTime())) return null;
+
+  const now = new Date();
+  let years = now.getFullYear() - birth.getFullYear();
+  let months = now.getMonth() - birth.getMonth();
+
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+
+  if (years === 0 && months === 0) {
+    const diffTime = Math.abs(now.getTime() - birth.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return `${diffDays} días de nacido`;
+  }
+
+  if (years === 0) {
+    return `${months} ${months === 1 ? 'mes' : 'meses'}`;
+  }
+
+  if (months === 0) {
+    return `${years} ${years === 1 ? 'año' : 'años'}`;
+  }
+
+  return `${years} ${years === 1 ? 'año' : 'años'} y ${months} ${months === 1 ? 'mes' : 'meses'}`;
+};
+
+export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => {} }) => {
+  const { activePet, savePet, deletePet, pets, isSavingPet, isProOrTrial } = usePets();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<PetProfile | null>(activePet);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -43,45 +76,37 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
     setIsEditing(false);
   }, [activePet?.id]);
 
-  if (!activePet || !formData) {
+  // 🔒 1. Si no es Pro o no ha iniciado sesión, muestra la tarjeta de bloqueo
+  if (!isProOrTrial) {
     return (
-      <div className="p-8 text-center bg-white rounded-3xl border border-stone-200">
-        <p className="text-stone-500 font-medium">No hay ninguna mascota seleccionada.</p>
+      <div className="space-y-6">
+        <ProFeatureLock
+          featureName="Ficha Médica Imprimible & Código QR de Emergencia"
+          description="Genera la tarjeta de identificación médica oficial de tu mascota y el código QR para su collar en caso de pérdida o emergencia médica."
+          benefits={[
+            "Ficha clínica imprimible en formato profesional listo para guardarse en PDF",
+            "Código QR único para identificación inmediata con datos de contacto",
+            "Información vital de alergias, microchip y contacto de emergencia visible al instante"
+          ]}
+          onOpenSubscriptionModal={onOpenSubscriptionModal}
+        />
       </div>
     );
   }
 
-  // Cálculo automático de edad según fecha de nacimiento
-  const calculateAge = (birthDateStr?: string) => {
-    if (!birthDateStr) return null;
-    const birth = new Date(birthDateStr);
-    if (isNaN(birth.getTime())) return null;
-
-    const now = new Date();
-    let years = now.getFullYear() - birth.getFullYear();
-    let months = now.getMonth() - birth.getMonth();
-
-    if (months < 0) {
-      years--;
-      months += 12;
-    }
-
-    if (years === 0 && months === 0) {
-      const diffTime = Math.abs(now.getTime() - birth.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return `${diffDays} días de nacido`;
-    }
-
-    if (years === 0) {
-      return `${months} ${months === 1 ? 'mes' : 'meses'}`;
-    }
-
-    if (months === 0) {
-      return `${years} ${years === 1 ? 'año' : 'años'}`;
-    }
-
-    return `${years} ${years === 1 ? 'año' : 'años'} y ${months} ${months === 1 ? 'mes' : 'meses'}`;
-  };
+  // 🐾 2. Si es Pro pero no tiene mascota activa seleccionada
+  if (!activePet || !formData) {
+    return (
+      <div className="p-8 text-center bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 space-y-3 max-w-lg mx-auto my-8">
+        <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
+          No hay ninguna mascota seleccionada
+        </h3>
+        <p className="text-stone-500 dark:text-stone-400 text-xs">
+          Selecciona o registra una mascota para generar su ficha técnica y código QR.
+        </p>
+      </div>
+    );
+  }
 
   const autoAge = calculateAge(formData.birthDate);
 
@@ -94,8 +119,8 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 256;  // 🔽 Reducido de 400
-        const MAX_HEIGHT = 256;  // 🔽 Reducido de 400
+        const MAX_WIDTH = 256;
+        const MAX_HEIGHT = 256;
         let width = img.width;
         let height = img.height;
 
@@ -117,13 +142,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
-          // 🔽 Calidad reducida de 0.7 a 0.5
           const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
-          
-          // 🔍 Logging para verificar tamaño
-          const sizeInBytes = new Blob([compressedBase64]).size;
-          console.log('📸 Foto comprimida:', (sizeInBytes / 1024).toFixed(2), 'KB');
-          
           setFormData(prev => prev ? { ...prev, photoUrl: compressedBase64 } : null);
         }
       };
@@ -147,11 +166,9 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
   };
 
   const currentBreedInfo = POPULAR_BREEDS.find(b => b.id === formData.breedId);
-
   const suggestedIdealWeight = getSuggestedIdealWeight(formData);
   const effectiveIdealWeight = formData.idealWeightKg || suggestedIdealWeight;
 
-  // Estado del peso ideal comparado
   const getWeightStatus = () => {
     if (!effectiveIdealWeight || !formData.weightKg) return null;
     const diff = formData.weightKg - effectiveIdealWeight;
@@ -243,13 +260,12 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
           </div>
         </div>
 
-        {/* CONTENIDO DE LA FICHA: MODO VISTA O MODO EDICIÓN */}
+        {/* CONTENIDO DE LA FICHA */}
         {!isEditing ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-6">
-            
-            {/* Tarjeta 1: Identidad & Edad */}
+            {/* Tarjeta 1: Identidad */}
             <div className="p-4 rounded-2xl bg-stone-50/70 border border-stone-200/80 space-y-3">
-              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider block flex items-center gap-1.5">
+              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-emerald-600" /> Identidad y Registro
               </span>
               <div className="space-y-2 text-xs">
@@ -288,7 +304,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
 
             {/* Tarjeta 2: Físico y Peso */}
             <div className="p-4 rounded-2xl bg-stone-50/70 border border-stone-200/80 space-y-3">
-              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider block flex items-center gap-1.5">
+              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-emerald-600" /> Estado Físico y Peso
               </span>
               <div className="space-y-2 text-xs">
@@ -338,9 +354,9 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
               </div>
             </div>
 
-            {/* Tarjeta 3: Veterinario y Contacto */}
+            {/* Tarjeta 3: Veterinario */}
             <div className="p-4 rounded-2xl bg-stone-50/70 border border-stone-200/80 space-y-3">
-              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider block flex items-center gap-1.5">
+              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Veterinario de Cabecera
               </span>
               <div className="space-y-2 text-xs">
@@ -374,9 +390,9 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
               </div>
             </div>
 
-            {/* Tarjeta 4: Tutor Responsable & Contacto de Emergencia */}
+            {/* Tarjeta 4: Tutor & Contacto de Emergencia */}
             <div className="md:col-span-2 lg:col-span-3 p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-3">
-              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block flex items-center gap-1.5">
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-emerald-600" /> Tutor Responsable & Contactos de Emergencia
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
@@ -442,7 +458,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
 
           </div>
         ) : (
-          /* FORMULARIO DE EDICIÓN COMPLETO */
+          /* FORMULARIO DE EDICIÓN */
           <form onSubmit={handleSave} className="space-y-6 pt-6 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               
@@ -664,7 +680,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                 </div>
               </div>
 
-              {/* Datos del Propietario / Tutor y Contacto de Emergencia */}
+              {/* Datos del Propietario / Tutor y Emergencias */}
               <div className="space-y-4 p-4 bg-stone-50 rounded-2xl border border-stone-200 md:col-span-2 lg:col-span-3">
                 <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block">
                   Datos del Dueño / Tutor y Emergencias
