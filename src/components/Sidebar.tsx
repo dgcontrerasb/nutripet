@@ -279,7 +279,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="absolute -right-3.5 top-5 w-7 h-7 rounded-full bg-white dark:bg-stone-800 border-2 border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-600 dark:text-stone-300 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer shadow-md active:scale-90 transition-all z-50 hover:border-emerald-500"
+            className={`absolute top-4.5 w-7 h-7 rounded-full bg-white dark:bg-stone-800 border-2 border-stone-200 dark:border-stone-700 flex items-center justify-center text-stone-600 dark:text-stone-300 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer shadow-md active:scale-90 transition-all z-50 hover:border-emerald-500 ${
+              isCollapsed ? 'right-2' : '-right-3.5'
+            }`}
             title={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
           >
             {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}

@@ -503,10 +503,8 @@ export default function App() {
         darkMode={darkMode}
       />
       
-      {/* Cabecera Superior Fija: se ajusta automáticamente para respetar el Sidebar en PC */}
-      <header className={`fixed top-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900 transition-all duration-300 ${
-        isSidebarCollapsed ? 'lg:left-20 lg:w-[calc(100%-5rem)]' : 'lg:left-64 lg:w-[calc(100%-16rem)]'
-      }`}>
+      {/* Cabecera Superior Fija: cubre todo el ancho superior de extremo a extremo */}
+      <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
         <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium">
           <span className="inline-flex items-center gap-1.5 text-emerald-400">
             <Sparkles className="w-3.5 h-3.5" /> Referencias generales de alimentación y bienestar para mascotas
@@ -517,7 +515,14 @@ export default function App() {
           </span>
         </div>
         <PetHeaderBar 
-          onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} 
+          onOpenSubscriptionModal={() => {
+            const isAdmin = user?.email?.toLowerCase().trim() === 'dgcontrerasb@gmail.com';
+            if (isAdmin) {
+              setShowAdminModal(true);
+            } else {
+              setShowSubscriptionModal(true);
+            }
+          }} 
           onOpenAdminModal={() => setShowAdminModal(true)} 
           darkMode={darkMode}
           onToggleDarkMode={handleToggleDarkMode}
