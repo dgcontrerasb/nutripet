@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 import { db, auth } from './lib/firebase';
 import { 
@@ -144,7 +144,19 @@ export default function App() {
   const { activePet, updatePetLocal, savePet, updateSubscription, isProOrTrial, trialDaysRemaining, user, isSavingPet } = usePets();
   const isAdminUser = user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
 
-  React.useEffect(() => {
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
+    return localStorage.getItem('nutripet_sidebar_collapsed') === 'true';
+  });
+
+  useEffect(() => {
+    const handleToggle = () => {
+      setIsSidebarCollapsed(localStorage.getItem('nutripet_sidebar_collapsed') === 'true');
+    };
+    window.addEventListener('sidebar_toggle', handleToggle);
+    return () => window.removeEventListener('sidebar_toggle', handleToggle);
+  }, []);
+
+  useEffect(() => {
     (window as any).testWompi = async () => {
       console.log('🧪 Ejecutando simulación de verificación Wompi...');
       const fakeReference = `NP_TEST_${Date.now()}`;
@@ -169,12 +181,13 @@ export default function App() {
     };
   }, [updateSubscription]);
 
-  const [darkMode, setDarkMode] = React.useState<boolean>(() => {
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('nutripet_dark_mode');
     if (saved !== null) return saved === 'true';
     return false;
   });
-  React.useEffect(() => {
+
+  useEffect(() => {
     localStorage.setItem('nutripet_dark_mode', String(darkMode));
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -187,7 +200,7 @@ export default function App() {
     setDarkMode(prev => !prev);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const wompiTxId = urlParams.get('id') || urlParams.get('transaction_id');
     if (wompiTxId) {
@@ -246,7 +259,7 @@ export default function App() {
     }
   }, [updateSubscription]);
 
-  const [localDraftProfile, setLocalDraftProfile] = React.useState<PetProfile>({
+  const [localDraftProfile, setLocalDraftProfile] = useState<PetProfile>({
     id: 'defaultpet',
     name: '',
     type: 'dog',
@@ -284,20 +297,20 @@ export default function App() {
     }
   };
 
-  const [activeTab, setActiveTab] = React.useState<AppTab>('calculator');
-  const [isBiometricsExpanded, setIsBiometricsExpanded] = React.useState<boolean>(() => !activePet);
+  const [activeTab, setActiveTab] = useState<AppTab>('calculator');
+  const [isBiometricsExpanded, setIsBiometricsExpanded] = useState<boolean>(() => !activePet);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (activePet) {
       setIsBiometricsExpanded(false);
     }
   }, [activePet?.id]);
-  const [saveSuccessMessage, setSaveSuccessMessage] = React.useState<string | null>(null);
 
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
-  const prevUserRef = React.useRef(user);
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const prevUserRef = useRef(user);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (prevUserRef.current && !user) {
       setIsLoggingOut(true);
       setActiveTab('calculator');
@@ -322,29 +335,29 @@ export default function App() {
     prevUserRef.current = user;
   }, [user]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }, [activeTab]);
   
   const { bgTheme, setBgTheme, customBgImage, setCustomBgImage, bgIntensity, setBgIntensity } = useBgPreferences(user);
-  const [showBgModal, setShowBgModal] = React.useState<boolean>(false);
-  const [showShareModal, setShowShareModal] = React.useState<boolean>(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = React.useState<boolean>(false);
-  const [showAdminModal, setShowAdminModal] = React.useState<boolean>(false);
-  const [showFeedbackModal, setShowFeedbackModal] = React.useState<boolean>(false);
+  const [showBgModal, setShowBgModal] = useState<boolean>(false);
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState<boolean>(false);
+  const [showAdminModal, setShowAdminModal] = useState<boolean>(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
 
-  const result: CalculationResult = React.useMemo(() => {
+  const result: CalculationResult = useMemo(() => {
     return calculatePetNutrition(profile);
   }, [profile]);
 
-  const selectedBreedInfo: BreedInfo | undefined = React.useMemo(() => {
+  const selectedBreedInfo: BreedInfo | undefined = useMemo(() => {
     return POPULAR_BREEDS.find(b => b.id === profile.breedId);
   }, [profile.breedId]);
 
-  const availableBreeds = React.useMemo(() => {
+  const availableBreeds = useMemo(() => {
     return POPULAR_BREEDS.filter(b => b.type === profile.type);
   }, [profile.type]);
 
@@ -490,8 +503,10 @@ export default function App() {
         darkMode={darkMode}
       />
       
-      {/* Cabecera Superior Fija Permanente */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
+      {/* Cabecera Superior Fija: se ajusta automáticamente para respetar el Sidebar en PC */}
+      <header className={`fixed top-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900 transition-all duration-300 ${
+        isSidebarCollapsed ? 'lg:left-20 lg:w-[calc(100%-5rem)]' : 'lg:left-64 lg:w-[calc(100%-16rem)]'
+      }`}>
         <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium">
           <span className="inline-flex items-center gap-1.5 text-emerald-400">
             <Sparkles className="w-3.5 h-3.5" /> Referencias generales de alimentación y bienestar para mascotas
@@ -510,25 +525,23 @@ export default function App() {
       </header>
 
       {/* Contenedor Principal */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full mx-auto max-w-7xl items-start pt-[104px] sm:pt-[112px]">
+      <div className="flex-grow flex flex-col lg:flex-row w-full items-start pt-[104px] sm:pt-[112px]">
         
-        {/* Contenedor del Sidebar */}
-        <div className="w-full lg:w-auto lg:sticky lg:top-[112px] z-30 shrink-0">
-          <Sidebar 
-            activeTab={activeTab}
-            onSelectTab={setActiveTab}
-            isProOrTrial={isProOrTrial}
-            trialDaysRemaining={trialDaysRemaining}
-            onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
-            onOpenBgModal={() => setShowBgModal(true)}
-            onOpenAdminModal={isAdminUser ? () => setShowAdminModal(true) : undefined}
-            petName={profile.name}
-            petType={profile.type}
-            petPhotoUrl={profile.photoUrl}
-            darkMode={darkMode}
-            onToggleDarkMode={handleToggleDarkMode}
-          />
-        </div>
+        {/* Sidebar */}
+        <Sidebar 
+          activeTab={activeTab}
+          onSelectTab={setActiveTab}
+          isProOrTrial={isProOrTrial}
+          trialDaysRemaining={trialDaysRemaining}
+          onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
+          onOpenBgModal={() => setShowBgModal(true)}
+          onOpenAdminModal={isAdminUser ? () => setShowAdminModal(true) : undefined}
+          petName={profile.name}
+          petType={profile.type}
+          petPhotoUrl={profile.photoUrl}
+          darkMode={darkMode}
+          onToggleDarkMode={handleToggleDarkMode}
+        />
 
         {/* Modal Selector de Fondo e Imagen */}
         {showBgModal && (
@@ -783,8 +796,10 @@ export default function App() {
           </div>
         )}
 
-        {/* Contenido Principal */}
-        <main className="flex-grow flex-1 w-full px-4 sm:px-6 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-32 lg:pb-12 space-y-8 overflow-x-hidden">
+        {/* Contenido Principal con margen responsivo según colapso */}
+        <main className={`flex-grow flex-1 w-full px-4 sm:px-6 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-32 lg:pb-12 space-y-8 overflow-x-hidden transition-all duration-300 ${
+          isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-72'
+        }`}>
           
           {/* VISTA 1: CALCULADORA NUTRICIONAL Y FICHA CON FOTO */}
           {activeTab === 'calculator' && (
@@ -872,7 +887,7 @@ export default function App() {
                   {!isBiometricsExpanded && activePet ? (
                     <div 
                       onClick={() => setIsBiometricsExpanded(true)}
-                      className="p-4 rounded-2xl bg-stone-50/90 dark:bg-stone-800/70 border border-stone-200 dark:border-stone-750 flex items-center justify-between gap-3 animate-fade-in cursor-pointer hover:bg-stone-100/90 dark:hover:bg-stone-800 transition-colors"
+                      className="p-4 rounded-2xl bg-stone-50/90 dark:bg-stone-800/70 border border-stone-200 dark:border-stone-755 flex items-center justify-between gap-3 animate-fade-in cursor-pointer hover:bg-stone-100/90 dark:hover:bg-stone-800 transition-colors"
                     >
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
@@ -1629,14 +1644,14 @@ export default function App() {
           {/* VISTA 3: EXPEDIENTE MÉDICO */}
           {activeTab === 'medical' && (
             <div className="space-y-6">
-              <MedicalHistory />
+              <MedicalHistory onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
             </div>
           )}
 
           {/* VISTA 4: RECORDATORIOS */}
           {activeTab === 'reminders' && (
             <div className="space-y-6">
-              <RemindersModule />
+              <RemindersModule onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
             </div>
           )}
 

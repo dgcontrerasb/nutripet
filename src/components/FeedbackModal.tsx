@@ -28,12 +28,13 @@ export const FeedbackModal: React.FC<Props> = ({ isOpen, onClose }) => {
     try {
       await addDoc(collection(db, 'feedbacks'), {
         userId: user?.uid || 'anonimo',
-        userEmail: user?.email || 'Sin correo',
-        userName: user?.displayName || (activePet ? `Tutor de ${activePet.name}` : 'Usuario anónimo'),
-        rating,
+        userEmail: user?.email || 'Sin correo registrado',
+        userName: user?.displayName || (activePet ? `Tutor de ${activePet.name}` : 'Usuario NutriPet'),
+        rating: Number(rating),
         category,
         comment: comment.trim(),
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        device: typeof window !== 'undefined' && window.innerWidth < 768 ? 'movil' : 'pc'
       });
 
       setSentSuccess(true);
@@ -43,9 +44,9 @@ export const FeedbackModal: React.FC<Props> = ({ isOpen, onClose }) => {
         setRating(5);
         onClose();
       }, 1800);
-    } catch (error) {
-      console.error('Error guardando feedback:', error);
-      alert('Hubo un error al enviar tu comentario. Intenta nuevamente.');
+    } catch (error: any) {
+      console.error('Error detallado guardando feedback:', error);
+      alert('Error al enviar la calificación. Asegúrate de haber publicado las reglas en Firebase Console.');
     } finally {
       setSubmitting(false);
     }
@@ -68,7 +69,7 @@ export const FeedbackModal: React.FC<Props> = ({ isOpen, onClose }) => {
           <button 
             type="button" 
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 transition-colors"
+            className="p-1 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -146,7 +147,7 @@ export const FeedbackModal: React.FC<Props> = ({ isOpen, onClose }) => {
               <button
                 type="button"
                 onClick={onClose}
-                className="px-4 py-2 border border-stone-300 dark:border-stone-700 rounded-xl font-bold text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
+                className="px-4 py-2 border border-stone-300 dark:border-stone-700 rounded-xl font-bold text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
