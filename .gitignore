@@ -39,3 +39,4 @@ firestore-debug.log
 
 # Testing
 coverage/
+dev-dist/
