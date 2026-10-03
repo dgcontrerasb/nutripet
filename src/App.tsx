@@ -525,7 +525,7 @@ export default function App() {
       </header>
 
       {/* Contenedor Principal */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full items-start pt-[104px] sm:pt-[112px]">
+      <div className="flex-grow flex flex-col lg:flex-row w-full items-start pt-[84px] sm:pt-[90px]">
         
         {/* Sidebar */}
         <Sidebar 
@@ -535,14 +535,14 @@ export default function App() {
           trialDaysRemaining={trialDaysRemaining}
           onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
           onOpenBgModal={() => setShowBgModal(true)}
-          onOpenAdminModal={isAdminUser ? () => setShowAdminModal(true) : undefined}
+          onOpenAdminModal={user?.email?.toLowerCase().trim() === 'dgcontrerasb@gmail.com' ? () => setShowAdminModal(true) : undefined}
           petName={profile.name}
           petType={profile.type}
           petPhotoUrl={profile.photoUrl}
           darkMode={darkMode}
           onToggleDarkMode={handleToggleDarkMode}
         />
-
+        
         {/* Modal Selector de Fondo e Imagen */}
         {showBgModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs no-print animate-fade-in overflow-y-auto">

@@ -18,19 +18,19 @@ import {
   Trash2,
   Edit2,
   Download,
-  Eye
+  Eye,
+  MessageSquare,
+  Star
 } from 'lucide-react';
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { usePets } from '../context/PetContext';
 import { UserSubscription, SubscriptionTier } from '../types';
 
-
 interface AdminDashboardModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
 
 interface UserSummary {
   uid: string;
@@ -42,13 +42,22 @@ interface UserSummary {
   updatedAt?: string;
 }
 
+interface FeedbackItem {
+  id: string;
+  userName?: string;
+  userEmail?: string;
+  rating: number;
+  category: string;
+  comment: string;
+  device?: string;
+  createdAt?: any;
+}
 
 interface UserDetailsModalProps {
   user: UserSummary;
   onClose: () => void;
   onEdit: () => void;
 }
-
 
 // Modal de Detalles del Usuario
 const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose, onEdit }) => {
@@ -165,7 +174,6 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose, onEd
   );
 };
 
-
 // Modal de Edición de Suscripción
 interface EditSubscriptionModalProps {
   user: UserSummary;
@@ -261,18 +269,21 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({ user, onC
   );
 };
 
-
 export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen, onClose }) => {
   const { user, loginWithGoogle } = usePets();
   
   const ADMIN_EMAIL = 'dgcontrerasb@gmail.com';
   const isEmailAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
 
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'feedback'>('users');
   const [usersList, setUsersList] = useState<UserSummary[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [filterType, setFilterType] = useState<'all' | 'paying' | 'trial' | 'free'>('all');
+
+  const [feedbackList, setFeedbackList] = useState<FeedbackItem[]>([]);
+  const [loadingFeedback, setLoadingFeedback] = useState<boolean>(false);
 
   const [manualEmail, setManualEmail] = useState<string>('');
   const [manualPlan, setManualPlan] = useState<SubscriptionTier>('pro_monthly');
@@ -282,7 +293,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
   const [manualIncludeInRevenue, setManualIncludeInRevenue] = useState<boolean>(false);
   const [deletingUid, setDeletingUid] = useState<string | null>(null);
 
-  // Mejoras: Ver detalles y editar
   const [selectedUser, setSelectedUser] = useState<UserSummary | null>(null);
   const [editingUser, setEditingUser] = useState<UserSummary | null>(null);
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
@@ -401,15 +411,39 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     }
   };
 
+  const fetchFeedbacks = async () => {
+    setLoadingFeedback(true);
+    try {
+      const snap = await getDocs(collection(db, 'feedbacks'));
+      const items: FeedbackItem[] = [];
+      snap.forEach((d) => {
+        items.push({ id: d.id, ...d.data() } as FeedbackItem);
+      });
+      items.sort((a, b) => {
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+        return timeB - timeA;
+      });
+      setFeedbackList(items);
+    } catch (e) {
+      console.error('Error cargando feedbacks:', e);
+    } finally {
+      setLoadingFeedback(false);
+    }
+  };
+
   useEffect(() => {
     if (isOpen && user && isEmailAdmin) {
-      fetchUsers(false);
+      if (activeAdminTab === 'users') {
+        fetchUsers(false);
+      } else {
+        fetchFeedbacks();
+      }
     }
-  }, [isOpen, user, isEmailAdmin]);
+  }, [isOpen, user, isEmailAdmin, activeAdminTab]);
 
   if (!isOpen) return null;
 
-  // Si no es admin, muestra la pantalla de acceso restringido de forma segura
   if (!isEmailAdmin) {
     return (
       <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
@@ -433,7 +467,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     );
   }
 
-  // Exportar a CSV
   const exportToCSV = () => {
     const headers = ['Email', 'Nombre', 'Estado', 'Plan', 'Vigencia', 'Tipo', 'Fecha Registro'];
     const rows = usersList.map(u => {
@@ -460,7 +493,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     link.click();
   };
 
-  // Editar suscripción
   const handleEditSubscription = async (newSub: UserSubscription) => {
     if (!editingUser) return;
     
@@ -479,7 +511,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     }
   };
 
-  // Métricas
   const totalUsers = usersList.length;
   const payingSubscribers = usersList.filter((u) => {
     const sub = u.subscription;
@@ -490,7 +521,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
   const monthlySubscribers = payingSubscribers.filter(u => u.subscription?.tier === 'pro_monthly');
   const annualSubscribers = payingSubscribers.filter(u => u.subscription?.tier === 'pro_annual');
 
-  // Filtro de usuarios válidos para cómputo de ingresos
   const eligiblePayingSubscribers = payingSubscribers.filter(u => {
     const sub = u.subscription;
     if (!sub) return false;
@@ -500,7 +530,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     return true;
   });
 
-  // Identificar si una suscripción corresponde a PayPal / USD
   const isUsdTransaction = (sub: UserSubscription) => {
     const gateway = ((sub as any).gateway || (sub as any).paymentGateway || '').toLowerCase();
     const currency = ((sub as any).currency || '').toUpperCase();
@@ -508,7 +537,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     return gateway === 'paypal' || currency === 'USD' || planName.includes('paypal') || planName.includes('usd');
   };
 
-  // Segmentación por moneda
   const copMonthlySubscribers = eligiblePayingSubscribers.filter(u => u.subscription?.tier === 'pro_monthly' && !isUsdTransaction(u.subscription!));
   const copAnnualSubscribers = eligiblePayingSubscribers.filter(u => u.subscription?.tier === 'pro_annual' && !isUsdTransaction(u.subscription!));
 
@@ -520,7 +548,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     return (!sub || sub.tier === 'free') && u.trialStartDate;
   });
 
-  // Cálculo individual por pasarela/moneda sin duplicación
   const totalRevenueCop = (copMonthlySubscribers.length * 9900) + (copAnnualSubscribers.length * 69900);
   const totalRevenueUsd = (usdMonthlySubscribers.length * 2.99) + (usdAnnualSubscribers.length * 19.99);
 
@@ -543,7 +570,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     return true;
   });
 
-  // Activación manual
   const handleManualActivation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!manualEmail.trim()) return;
@@ -601,7 +627,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     }
   };
 
-  // Eliminar usuario manual
   const handleDeleteManualUser = async (targetUser: UserSummary) => {
     const sub = targetUser.subscription;
     const isManual = Boolean(sub?.isManual || sub?.planName?.toLowerCase().includes('manual') || targetUser.uid.startsWith('manual_'));
@@ -641,14 +666,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-heading font-extrabold text-stone-900 text-lg sm:text-xl">
-                  Panel de Suscriptores
+                  Panel de Administrador
                 </h3>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black tracking-wide uppercase">
                   Solo Propietario
                 </span>
               </div>
               <p className="text-xs text-stone-500">
-                Clientes activos, ingresos y métricas de NutriPet
+                Gestión de suscriptores, finanzas y retroalimentación de NutriPet
               </p>
             </div>
           </div>
@@ -660,339 +685,456 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
           </button>
         </div>
 
-        {/* Contenido */}
-        <div className="space-y-6">
-          {/* Métricas */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200">
-              <div className="flex items-center justify-between text-emerald-800 mb-1">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider">Pagando (Pro)</span>
-                <Crown className="w-4 h-4 text-emerald-600" />
+        {/* Selector de Pestañas */}
+        <div className="flex items-center gap-2 border-b border-stone-100 pb-3">
+          <button
+            type="button"
+            onClick={() => setActiveAdminTab('users')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeAdminTab === 'users'
+                ? 'bg-stone-900 text-white shadow-xs'
+                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Usuarios & Suscripciones</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveAdminTab('feedback')}
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+              activeAdminTab === 'feedback'
+                ? 'bg-amber-500 text-white shadow-xs'
+                : 'bg-stone-100 text-stone-600 hover:bg-stone-200'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span>Opiniones & Feedback</span>
+            {feedbackList.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-white text-stone-900 text-[10px] font-black">
+                {feedbackList.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        {/* Contenido según pestaña */}
+        {activeAdminTab === 'users' ? (
+          <div className="space-y-6">
+            {/* Métricas */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 border border-emerald-200">
+                <div className="flex items-center justify-between text-emerald-800 mb-1">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider">Pagando (Pro)</span>
+                  <Crown className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-emerald-950 font-heading">
+                  {payingSubscribers.length}
+                </div>
+                <div className="text-[10px] text-emerald-700 mt-1 font-medium">
+                  {monthlySubscribers.length} mensual(es) • {annualSubscribers.length} anual(es)
+                </div>
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-emerald-950 font-heading">
-                {payingSubscribers.length}
+
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
+                <div className="flex items-center justify-between text-amber-800 mb-1">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider">En Prueba</span>
+                  <Clock className="w-4 h-4 text-amber-600" />
+                </div>
+                <div className="text-2xl sm:text-3xl font-black text-amber-950 font-heading">
+                  {trialUsers.length}
+                </div>
+                <div className="text-[10px] text-amber-700 mt-1 font-medium">
+                  Potenciales compradores
+                </div>
               </div>
-              <div className="text-[10px] text-emerald-700 mt-1 font-medium">
-                {monthlySubscribers.length} mensual(es) • {annualSubscribers.length} anual(es)
+
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
+                <div className="flex items-center justify-between text-stone-600 mb-1">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider">Ingresos COP</span>
+                  <DollarSign className="w-4 h-4 text-emerald-600" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-stone-900 font-heading">
+                  ${totalRevenueCop.toLocaleString('es-CO')}
+                </div>
+                <div className="text-[10px] text-stone-500 mt-1 font-medium">
+                  Wompi / Nequi / PSE
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
+                <div className="flex items-center justify-between text-stone-600 mb-1">
+                  <span className="text-[11px] font-extrabold uppercase tracking-wider">Ingresos USD</span>
+                  <CreditCard className="w-4 h-4 text-blue-600" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-stone-900 font-heading">
+                  ${totalRevenueUsd.toFixed(2)}
+                </div>
+                <div className="text-[10px] text-stone-500 mt-1 font-medium">
+                  PayPal / Tarjeta Int.
+                </div>
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200">
-              <div className="flex items-center justify-between text-amber-800 mb-1">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider">En Prueba</span>
-                <Clock className="w-4 h-4 text-amber-600" />
+            {/* Barra de Búsqueda y Acciones */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-stone-50 p-3 rounded-2xl border border-stone-200">
+              <div className="relative flex-1">
+                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Buscar usuario por correo o nombre..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
               </div>
-              <div className="text-2xl sm:text-3xl font-black text-amber-950 font-heading">
-                {trialUsers.length}
-              </div>
-              <div className="text-[10px] text-amber-700 mt-1 font-medium">
-                Potenciales compradores
-              </div>
-            </div>
 
-            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
-              <div className="flex items-center justify-between text-stone-600 mb-1">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider">Ingresos COP</span>
-                <DollarSign className="w-4 h-4 text-emerald-600" />
-              </div>
-              <div className="text-xl sm:text-2xl font-black text-stone-900 font-heading">
-                ${totalRevenueCop.toLocaleString('es-CO')}
-              </div>
-              <div className="text-[10px] text-stone-500 mt-1 font-medium">
-                Wompi / Nequi / PSE
-              </div>
-            </div>
-
-            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
-              <div className="flex items-center justify-between text-stone-600 mb-1">
-                <span className="text-[11px] font-extrabold uppercase tracking-wider">Ingresos USD</span>
-                <CreditCard className="w-4 h-4 text-blue-600" />
-              </div>
-              <div className="text-xl sm:text-2xl font-black text-stone-900 font-heading">
-                ${totalRevenueUsd.toFixed(2)}
-              </div>
-              <div className="text-[10px] text-stone-500 mt-1 font-medium">
-                PayPal / Tarjeta Int.
-              </div>
-            </div>
-          </div>
-
-          {/* Barra de Búsqueda y Acciones */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-stone-50 p-3 rounded-2xl border border-stone-200">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Buscar usuario por correo o nombre..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 bg-white border border-stone-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex items-center gap-1.5 overflow-x-auto">
-              <button
-                type="button"
-                onClick={exportToCSV}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
-                title="Exportar lista a CSV"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>Exportar CSV</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setFilterType('all')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  filterType === 'all'
-                    ? 'bg-stone-900 text-white'
-                    : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
-                }`}
-              >
-                Todos ({usersList.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterType('paying')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
-                  filterType === 'paying'
-                    ? 'bg-emerald-700 text-white'
-                    : 'bg-white text-emerald-800 hover:bg-emerald-50 border border-emerald-200'
-                }`}
-              >
-                <Crown className="w-3 h-3 text-amber-400" />
-                <span>Pagando ({payingSubscribers.length})</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setFilterType('trial')}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  filterType === 'trial'
-                    ? 'bg-amber-600 text-white'
-                    : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200'
-                }`}
-              >
-                Prueba ({trialUsers.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => fetchUsers(true)}
-                disabled={isLoading}
-                title="Refrescar lista"
-                className="p-2 rounded-xl bg-white border border-stone-200 hover:bg-stone-100 text-stone-600 cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-          </div>
-
-          {loadError && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span className="font-medium leading-relaxed">{loadError}</span>
-              </div>
-              {!user && (
+              <div className="flex items-center gap-1.5 overflow-x-auto">
                 <button
                   type="button"
-                  onClick={loginWithGoogle}
-                  className="mt-2 py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                  onClick={exportToCSV}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                  title="Exportar lista a CSV"
                 >
-                  <UserCheck className="w-3.5 h-3.5" />
-                  <span>Iniciar sesión con Google</span>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Exportar CSV</span>
                 </button>
-              )}
-            </div>
-          )}
 
-          {/* Tabla de Usuarios */}
-          <div className="border border-stone-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
-            <div className="max-h-72 overflow-y-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead className="bg-stone-100 text-stone-600 sticky top-0 font-bold border-b border-stone-200">
-                  <tr>
-                    <th className="py-2.5 px-3">Usuario</th>
-                    <th className="py-2.5 px-3">Estado</th>
-                    <th className="py-2.5 px-3">Plan</th>
-                    <th className="py-2.5 px-3">Vigencia</th>
-                    <th className="py-2.5 px-3 text-right">Acciones</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-stone-100">
-                  {isLoading ? (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-stone-400">
-                        <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-600" />
-                        <span>Cargando suscriptores de Firebase...</span>
-                      </td>
-                    </tr>
-                  ) : filteredUsers.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-8 text-center text-stone-400">
-                        No se encontraron usuarios en esta categoría.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredUsers.map((u) => {
-                      const isProUser = u.subscription && u.subscription.tier !== 'free' && u.subscription.status === 'active';
-                      const isTrial = !isProUser && Boolean(u.trialStartDate);
-                      const isManualUser = Boolean(u.subscription?.isManual || u.subscription?.planName?.toLowerCase().includes('manual') || u.uid.startsWith('manual_'));
-
-                      return (
-                        <tr key={u.uid} className="hover:bg-stone-50/70 transition-colors">
-                          <td className="py-2.5 px-3">
-                            <div className="font-bold text-stone-900 truncate max-w-[200px]">{u.email}</div>
-                            <div className="text-[10px] text-stone-400">{u.displayName || 'Usuario'}</div>
-                          </td>
-                          <td className="py-2.5 px-3 whitespace-nowrap">
-                            {isProUser ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
-                                <Crown className="w-2.5 h-2.5 text-amber-500" />
-                                Activo (Paga)
-                              </span>
-                            ) : isTrial ? (
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
-                                <Clock className="w-2.5 h-2.5" />
-                                En Prueba
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[10px]">
-                                Gratuito
-                              </span>
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 whitespace-nowrap font-medium text-stone-700">
-                            {u.subscription?.planName || (isTrial ? 'Prueba Gratuita' : 'Plan Básico')}
-                          </td>
-                          <td className="py-2.5 px-3 whitespace-nowrap text-stone-500">
-                            {u.subscription?.validUntil ? (
-                              <span className="font-mono text-[11px] text-stone-800 font-bold">{u.subscription.validUntil}</span>
-                            ) : (
-                              '—'
-                            )}
-                          </td>
-                          <td className="py-2.5 px-3 whitespace-nowrap text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                type="button"
-                                onClick={() => setSelectedUser(u)}
-                                className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 cursor-pointer transition-all"
-                                title="Ver detalles"
-                              >
-                                <Eye className="w-3.5 h-3.5" />
-                              </button>
-                              
-                              {isManualUser && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingUser(u)}
-                                    className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 cursor-pointer transition-all"
-                                    title="Editar plan"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteManualUser(u)}
-                                    disabled={deletingUid === u.uid}
-                                    className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600 cursor-pointer transition-all disabled:opacity-50"
-                                    title="Eliminar"
-                                  >
-                                    {deletingUid === u.uid ? (
-                                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                    ) : (
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    )}
-                                  </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Activación Manual */}
-          <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-emerald-600" />
-                <h4 className="font-heading font-extrabold text-stone-900 text-xs sm:text-sm">
-                  Activar Suscripción Pro Manualmente
-                </h4>
+                <button
+                  type="button"
+                  onClick={() => setFilterType('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    filterType === 'all'
+                      ? 'bg-stone-900 text-white'
+                      : 'bg-white text-stone-600 hover:bg-stone-100 border border-stone-200'
+                  }`}
+                >
+                  Todos ({usersList.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterType('paying')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                    filterType === 'paying'
+                      ? 'bg-emerald-700 text-white'
+                      : 'bg-white text-emerald-800 hover:bg-emerald-50 border border-emerald-200'
+                  }`}
+                >
+                  <Crown className="w-3 h-3 text-amber-400" />
+                  <span>Pagando ({payingSubscribers.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFilterType('trial')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    filterType === 'trial'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-white text-amber-800 hover:bg-amber-50 border border-amber-200'
+                  }`}
+                >
+                  Prueba ({trialUsers.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fetchUsers(true)}
+                  disabled={isLoading}
+                  title="Refrescar lista"
+                  className="p-2 rounded-xl bg-white border border-stone-200 hover:bg-stone-100 text-stone-600 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
               </div>
-              <span className="text-[10px] text-stone-400">
-                Para clientes que te pagan por transferencia directa
-              </span>
             </div>
 
-            {manualSuccessMsg && (
-              <div className="p-2.5 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
-                <span>{manualSuccessMsg}</span>
+            {loadError && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl text-xs text-amber-900 space-y-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="font-medium leading-relaxed">{loadError}</span>
+                </div>
+                {!user && (
+                  <button
+                    type="button"
+                    onClick={loginWithGoogle}
+                    className="mt-2 py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
+                  >
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Iniciar sesión con Google</span>
+                  </button>
+                )}
               </div>
             )}
 
-            <form onSubmit={handleManualActivation} className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
-              <input
-                type="email"
-                placeholder="Correo del cliente (ej: cliente@gmail.com)"
-                value={manualEmail}
-                onChange={(e) => setManualEmail(e.target.value)}
-                required
-                className="sm:col-span-2 px-3 py-2 bg-white border border-stone-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
+            {/* Tabla de Usuarios */}
+            <div className="border border-stone-200 rounded-2xl overflow-hidden bg-white shadow-2xs">
+              <div className="max-h-72 overflow-y-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead className="bg-stone-100 text-stone-600 sticky top-0 font-bold border-b border-stone-200">
+                    <tr>
+                      <th className="py-2.5 px-3">Usuario</th>
+                      <th className="py-2.5 px-3">Estado</th>
+                      <th className="py-2.5 px-3">Plan</th>
+                      <th className="py-2.5 px-3">Vigencia</th>
+                      <th className="py-2.5 px-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-stone-100">
+                    {isLoading ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-stone-400">
+                          <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-600" />
+                          <span>Cargando suscriptores de Firebase...</span>
+                        </td>
+                      </tr>
+                    ) : filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-stone-400">
+                          No se encontraron usuarios en esta categoría.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredUsers.map((u) => {
+                        const isProUser = u.subscription && u.subscription.tier !== 'free' && u.subscription.status === 'active';
+                        const isTrial = !isProUser && Boolean(u.trialStartDate);
+                        const isManualUser = Boolean(u.subscription?.isManual || u.subscription?.planName?.toLowerCase().includes('manual') || u.uid.startsWith('manual_'));
 
-              <select
-                value={manualPlan}
-                onChange={(e) => {
-                  const val = e.target.value as SubscriptionTier;
-                  setManualPlan(val);
-                  setManualDays(val === 'pro_annual' ? 420 : 60);
-                }}
-                className="px-3 py-2 bg-white border border-stone-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              >
-                <option value="pro_monthly">Mensual 2x1 (60 días)</option>
-                <option value="pro_annual">Anual (14 meses / 420 días)</option>
-              </select>
-
-              <button
-                type="submit"
-                disabled={isActivatingManual}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50"
-              >
-                {isActivatingManual ? (
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                ) : (
-                  <UserCheck className="w-3.5 h-3.5" />
-                )}
-                <span>Activar Pro</span>
-              </button>
-
-              <div className="flex items-start gap-2.5 px-1 py-1.5 text-[11px] text-stone-600 font-bold select-none col-span-full">
-                <input
-                  type="checkbox"
-                  id="includeInRevenue"
-                  checked={manualIncludeInRevenue}
-                  onChange={(e) => setManualIncludeInRevenue(e.target.checked)}
-                  className="w-4 h-4 mt-0.5 rounded-sm border-stone-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <label htmlFor="includeInRevenue" className="cursor-pointer leading-normal flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                  <span>¿Sumar este pago manual a las métricas de ingresos del panel?</span>
-                  <span className="text-[10px] font-medium text-stone-400 font-sans">(Marca solo si el cliente ya te pagó el dinero real)</span>
-                </label>
+                        return (
+                          <tr key={u.uid} className="hover:bg-stone-50/70 transition-colors">
+                            <td className="py-2.5 px-3">
+                              <div className="font-bold text-stone-900 truncate max-w-[200px]">{u.email}</div>
+                              <div className="text-[10px] text-stone-400">{u.displayName || 'Usuario'}</div>
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap">
+                              {isProUser ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                                  <Crown className="w-2.5 h-2.5 text-amber-500" />
+                                  Activo (Paga)
+                                </span>
+                              ) : isTrial ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                  <Clock className="w-2.5 h-2.5" />
+                                  En Prueba
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-stone-100 text-stone-600 text-[10px]">
+                                  Gratuito
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap font-medium text-stone-700">
+                              {u.subscription?.planName || (isTrial ? 'Prueba Gratuita' : 'Plan Básico')}
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap text-stone-500">
+                              {u.subscription?.validUntil ? (
+                                <span className="font-mono text-[11px] text-stone-800 font-bold">{u.subscription.validUntil}</span>
+                              ) : (
+                                '—'
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3 whitespace-nowrap text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedUser(u)}
+                                  className="p-1.5 rounded-lg hover:bg-blue-50 text-blue-600 cursor-pointer transition-all"
+                                  title="Ver detalles"
+                                >
+                                  <Eye className="w-3.5 h-3.5" />
+                                </button>
+                                
+                                {isManualUser && (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingUser(u)}
+                                      className="p-1.5 rounded-lg hover:bg-amber-50 text-amber-600 cursor-pointer transition-all"
+                                      title="Editar plan"
+                                    >
+                                      <Edit2 className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteManualUser(u)}
+                                      disabled={deletingUid === u.uid}
+                                      className="p-1.5 rounded-lg hover:bg-rose-50 text-rose-600 cursor-pointer transition-all disabled:opacity-50"
+                                      title="Eliminar"
+                                    >
+                                      {deletingUid === u.uid ? (
+                                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                      ) : (
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
               </div>
-            </form>
-          </div>
+            </div>
 
-        </div>
+            {/* Activación Manual */}
+            <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  <h4 className="font-heading font-extrabold text-stone-900 text-xs sm:text-sm">
+                    Activar Suscripción Pro Manualmente
+                  </h4>
+                </div>
+                <span className="text-[10px] text-stone-400">
+                  Para clientes que te pagan por transferencia directa
+                </span>
+              </div>
+
+              {manualSuccessMsg && (
+                <div className="p-2.5 rounded-xl bg-emerald-100 border border-emerald-300 text-emerald-900 text-xs font-bold flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                  <span>{manualSuccessMsg}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleManualActivation} className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
+                <input
+                  type="email"
+                  placeholder="Correo del cliente (ej: cliente@gmail.com)"
+                  value={manualEmail}
+                  onChange={(e) => setManualEmail(e.target.value)}
+                  required
+                  className="sm:col-span-2 px-3 py-2 bg-white border border-stone-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+
+                <select
+                  value={manualPlan}
+                  onChange={(e) => {
+                    const val = e.target.value as SubscriptionTier;
+                    setManualPlan(val);
+                    setManualDays(val === 'pro_annual' ? 420 : 60);
+                  }}
+                  className="px-3 py-2 bg-white border border-stone-300 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                >
+                  <option value="pro_monthly">Mensual 2x1 (60 días)</option>
+                  <option value="pro_annual">Anual (14 meses / 420 días)</option>
+                </select>
+
+                <button
+                  type="submit"
+                  disabled={isActivatingManual}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50"
+                >
+                  {isActivatingManual ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <UserCheck className="w-3.5 h-3.5" />
+                  )}
+                  <span>Activar Pro</span>
+                </button>
+
+                <div className="flex items-start gap-2.5 px-1 py-1.5 text-[11px] text-stone-600 font-bold select-none col-span-full">
+                  <input
+                    type="checkbox"
+                    id="includeInRevenue"
+                    checked={manualIncludeInRevenue}
+                    onChange={(e) => setManualIncludeInRevenue(e.target.checked)}
+                    className="w-4 h-4 mt-0.5 rounded-sm border-stone-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <label htmlFor="includeInRevenue" className="cursor-pointer leading-normal flex flex-col sm:flex-row sm:items-center sm:gap-2">
+                    <span>¿Sumar este pago manual a las métricas de ingresos del panel?</span>
+                    <span className="text-[10px] font-medium text-stone-400 font-sans">(Marca solo si el cliente ya te pagó el dinero real)</span>
+                  </label>
+                </div>
+              </form>
+            </div>
+          </div>
+        ) : (
+          /* Vista de Opiniones & Feedback */
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-heading font-extrabold text-stone-900 text-sm">
+                  Opiniones y Calificaciones de Usuarios
+                </h4>
+                <p className="text-xs text-stone-500">
+                  Mensajes enviados directamente desde la opción "Calificar y Opinión"
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fetchFeedbacks}
+                disabled={loadingFeedback}
+                className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingFeedback ? 'animate-spin' : ''}`} />
+                <span>Actualizar Opiniones</span>
+              </button>
+            </div>
+
+            {loadingFeedback ? (
+              <div className="py-12 text-center text-stone-400 text-xs">
+                <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
+                Consultando comentarios en Firestore...
+              </div>
+            ) : feedbackList.length === 0 ? (
+              <div className="py-12 text-center text-stone-400 text-xs border border-stone-200 rounded-2xl bg-stone-50">
+                Aún no has recibido ningún comentario de tus usuarios.
+              </div>
+            ) : (
+              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                {feedbackList.map((item) => {
+                  let dateStr = 'Fecha desconocida';
+                  if (item.createdAt?.toDate) {
+                    dateStr = item.createdAt.toDate().toLocaleString('es-CO');
+                  } else if (item.createdAt) {
+                    dateStr = new Date(item.createdAt).toLocaleString('es-CO');
+                  }
+
+                  return (
+                    <div key={item.id} className="p-4 rounded-2xl border border-stone-200 bg-white space-y-2.5 shadow-2xs">
+                      <div className="flex items-center justify-between pb-2 border-b border-stone-100">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-stone-900 text-xs">{item.userName || 'Usuario Anónimo'}</span>
+                            <span className="text-[10px] bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full font-mono">
+                              {dateStr}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-stone-400 block">{item.userEmail}</span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-3.5 h-3.5 ${
+                                i < item.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <p className="text-xs text-stone-700 whitespace-pre-wrap leading-relaxed">
+                        "{item.comment}"
+                      </p>
+
+                      <div className="flex items-center justify-between pt-1 text-[10px] text-stone-400">
+                        <span className="bg-emerald-50 text-emerald-800 border border-emerald-200 px-2 py-0.5 rounded-md font-bold uppercase">
+                          {item.category === 'bug' ? '🐛 Error / Bug' : item.category === 'feature' ? '💡 Sugerencia' : item.category === 'recipe' ? '🥩 Porciones' : '⭐ Opinión General'}
+                        </span>
+                        <span>Dispositivo: <strong>{item.device === 'pc' ? '💻 Computador' : '📱 Celular'}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[11px] text-stone-400">
           <span>🔒 Acceso exclusivo para {ADMIN_EMAIL}</span>

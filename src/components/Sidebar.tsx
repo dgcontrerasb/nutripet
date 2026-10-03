@@ -18,7 +18,8 @@ import {
   Sun,
   Moon,
   Clock,
-  Utensils
+  Utensils,
+  ShieldCheck
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { NutriPetLogo } from './NutriPetLogo';
@@ -251,9 +252,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
 
-      {/* 💻 Menú lateral de escritorio: Fixed a la izquierda bajo la barra superior, sin solapamiento */}
+     {/* 💻 Menú lateral de escritorio: Ocupa toda la altura disponible eliminando el vacío */}
       <aside 
-        className={`hidden lg:flex flex-col border-r border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 shadow-md shrink-0 select-none no-print transition-all duration-300 fixed top-[104px] sm:top-[112px] left-0 bottom-0 z-30 ${
+        className={`hidden lg:flex flex-col border-r border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md shadow-sm shrink-0 select-none no-print transition-all duration-300 fixed top-[84px] sm:top-[90px] left-0 bottom-0 z-30 ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}
       >
@@ -274,7 +275,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
           )}
 
-          {/* Botón Colapsar Sidebar: z-50 siempre accesible en la esquina derecha */}
+          {/* Botón Colapsar Sidebar */}
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
@@ -286,9 +287,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Mascota Activa */}
-        <div className={`p-3 bg-stone-50 dark:bg-stone-850 border-b border-stone-100 dark:border-stone-800 shrink-0 ${isCollapsed ? 'text-center' : ''}`}>
+        <div className={`p-3 bg-stone-50/80 dark:bg-stone-850/80 border-b border-stone-100 dark:border-stone-800 shrink-0 ${isCollapsed ? 'text-center' : ''}`}>
           <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : ''}`}>
-            <div className="w-8 h-8 rounded-full bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-center overflow-hidden shrink-0">
+            <div className="w-8 h-8 rounded-full bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
               {petPhotoUrl ? (
                 <img src={petPhotoUrl} alt={petName} className="w-full h-full object-cover" />
               ) : (
@@ -304,15 +305,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Enlaces de Navegación con Scroll Propio */}
+        {/* Enlaces de Navegación con Scroll Suave */}
         <nav className="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-thin">
           {renderNavLinks(handleSelectTab, !isCollapsed)}
         </nav>
 
         {/* Panel de Configuración al fondo */}
         {!isCollapsed && (
-          <div className="p-3 border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-850/50 space-y-2.5 shrink-0">
-            <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-stone-200/50 dark:border-stone-800">
+          <div className="p-3 border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-850/50 space-y-2 shrink-0">
+            <div className="grid grid-cols-2 gap-1.5">
               <button
                 type="button"
                 onClick={onOpenBgModal}
@@ -334,6 +335,31 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Acceso Administrador en PC (Visible solo si eres Admin) */}
+        {onOpenAdminModal && (
+          <div className="px-3 pt-2 border-t border-stone-100 dark:border-stone-800 shrink-0">
+            {isCollapsed ? (
+              <button
+                type="button"
+                onClick={onOpenAdminModal}
+                className="w-10 h-10 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center mx-auto shadow-sm active:scale-95 cursor-pointer"
+                title="Panel Administrador"
+              >
+                <Crown className="w-5 h-5 text-amber-200" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenAdminModal}
+                className="w-full py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-colors active:scale-95"
+              >
+                <Crown className="w-4 h-4 text-amber-200" />
+                <span>👑 Panel Administrador</span>
+              </button>
+            )}
           </div>
         )}
 
@@ -373,7 +399,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </aside>
 
-      {/* 📱 Cajón modal móvil independiente (desplegado con botón hamburguesa) */}
+      {/* 📱 Cajón modal móvil independiente */}
       <AnimatePresence>
         {isMobileOpen && (
           <div className="fixed inset-0 z-[120] lg:hidden flex no-print">
