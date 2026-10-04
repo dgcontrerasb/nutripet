@@ -32,6 +32,7 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
 
   const isPro = subscription.tier !== 'free' && subscription.status === 'active';
   const isAdminUser = user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
+  const hasReachedPetLimit = pets.length >= 8;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -309,7 +310,9 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                 <div className="pt-2 border-t border-stone-100 dark:border-stone-800">
                   <button
                     type="button"
+                    disabled={hasReachedPetLimit}
                     onClick={() => {
+                      if (hasReachedPetLimit) return;
                       setIsDropdownOpen(false);
                       if (!isPro && pets.length >= 1) {
                         if (onOpenSubscriptionModal) onOpenSubscriptionModal();
@@ -317,10 +320,19 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                         setShowAddModal(true);
                       }
                     }}
-                    className="w-full py-2 px-3 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-700/70 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-98"
+                    className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-2xs ${
+                      hasReachedPetLimit
+                        ? 'border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed'
+                        : 'border-dashed border-emerald-300 dark:border-emerald-700/70 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 cursor-pointer active:scale-98'
+                    }`}
+                    title={hasReachedPetLimit ? 'Límite máximo alcanzado (8/8 mascotas)' : 'Registrar nueva mascota'}
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>Agregar Nueva Mascota {!isPro && pets.length >= 1 && '👑'}</span>
+                    <span>
+                      {hasReachedPetLimit 
+                        ? 'Límite alcanzado (8/8 mascotas)' 
+                        : `Agregar Nueva Mascota (${pets.length}/8)${!isPro && pets.length >= 1 ? ' 👑' : ''}`}
+                    </span>
                   </button>
                 </div>
               </div>

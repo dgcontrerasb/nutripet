@@ -62,7 +62,6 @@ const PetContext = createContext<PetContextType | null>(null);
 const sanitizePets = (petList: any[]): PetProfile[] => {
   return petList.map(p => {
     let photo = p.photoUrl || p.photoURL || undefined;
-    // Si la foto en base64 supera ~250KB (>300.000 caracteres), la descartamos para evitar superar el límite de 1MB de Firestore
     if (typeof photo === 'string' && photo.startsWith('data:image') && photo.length > 300000) {
       console.warn(`[NutriPet] Foto de mascota '${p.name || p.id}' demasiado grande (${Math.round(photo.length / 1024)} KB). Removida para sincronización.`);
       photo = undefined;
@@ -91,14 +90,12 @@ const LOCAL_STORAGE_RECORDS_KEY = 'nutripet_local_records_v2';
 const LOCAL_STORAGE_REMINDERS_KEY = 'nutripet_local_reminders_v2';
 const LOCAL_STORAGE_WEIGHTS_KEY = 'nutripet_local_weights_v2';
 const LOCAL_STORAGE_BATHS_KEY = 'nutripet_local_baths_v2';
-const LOCAL_STORAGE_SUBSCRIPTION_KEY = 'nutripet_subscription_v1';
-const LOCAL_STORAGE_TRIAL_KEY = 'nutripet_trial_start_v1';
+export const MAX_PETS_PER_USER = 8;
 
 export function cleanFirestoreData<T extends Record<string, any>>(obj: T): Record<string, any> {
   const cleaned: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
-      // Proteger contra campos con base64 excesivo que superen el límite de 1MB de Firestore
       if (typeof value === 'string' && value.startsWith('data:image') && value.length > 300000) {
         console.warn(`[Firestore] Campo '${key}' omitido por superar tamaño seguro (${Math.round(value.length / 1024)} KB).`);
         continue;
@@ -138,12 +135,10 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState<boolean>(true);
   const [syncError, setSyncError] = useState<string | null>(null);
 
-  // Referencias para control de guardados y prevención de condiciones de carrera
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingDebouncePetIdRef = useRef<string | null>(null);
   const deletedPetIdsRef = useRef<Set<string>>(new Set());
   const loadedPetsRef = useRef<Set<string>>(new Set());
-  const trialStartDateSyncedRef = useRef<boolean>(false);
 
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number>(0);
   const [isProState, setIsProState] = useState<boolean>(false);
@@ -193,7 +188,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       }
     } catch (err) {
-      console.warn('⚠️ [Trial] Error al consultar trial con backend:', err);
+      console.warn('⚠ [Trial] Error al consultar trial con backend:', err);
     }
   }, []);
 
@@ -253,7 +248,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   });
 
-  // OPTIMIZACIÓN: Memoizar valores derivados
   const filteredMedicalRecords = useMemo(() => 
     medicalRecords.filter(r => r.petId === activePetId),
     [medicalRecords, activePetId]
@@ -312,7 +306,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       const anonDocSnap = await getDoc(doc(db, 'users', anonUid));
       if (anonDocSnap.exists()) {
-        // Nota: Las funciones Full y el trial de 15 días son autorizados exclusivamente por el servidor para Google Auth.
+        // Autorizado exclusivamente por servidor
       }
 
       const petsColSnap = await getDocs(collection(db, 'users', anonUid, 'pets'));
@@ -353,7 +347,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    // Procesar retorno si el usuario inició sesión mediante signInWithRedirect
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
@@ -369,7 +362,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       const prevAnonUid = prevAnonUidRef.current;
       
-      // Limpiar localStorage si hay datos "sucios" de pruebas anteriores
       try {
         const savedPets = localStorage.getItem(LOCAL_STORAGE_PETS_KEY);
         if (savedPets) {
@@ -448,15 +440,21 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, [syncTrialFromBackend]);
 
+  // === CARGA OPTIMIZADA DE USUARIO Y SUSCRIPCIÓN (1 sola lectura puntual con getDoc) ===
   useEffect(() => {
     if (!user) return;
 
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribeUserDoc = onSnapshot(userDocRef, async (snap) => {
-      const isAdmin = user.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
+    let isMounted = true;
 
-      if (snap.exists()) {
+    const fetchUserData = async () => {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const snap = await getDoc(userDocRef);
+
+        if (!isMounted || !snap.exists()) return;
+
         const data = snap.data();
+        const isAdmin = user.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
 
         if (data.lastActivePetId) {
           setActivePetIdState(data.lastActivePetId);
@@ -476,7 +474,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const sub = data.subscription as UserSubscription;
           setSubscription(sub);
 
-          // Soporte para mapa anidado subscription.trialEndsAt / subscription.trialStartedAt con fallback a raíz
           const startedAtIso = sub?.trialStartedAt || data.trialStartedAt || trialStartedAt;
           if (startedAtIso) setTrialStartedAt(startedAtIso);
 
@@ -498,15 +495,20 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             setTrialDaysRemaining(30);
           }
         }
+      } catch (err: any) {
+        console.error('Error al obtener documento de usuario:', err);
+        setSyncError(`Error en usuario: ${err?.message || err}`);
       }
-    }, (err) => {
-      console.error('Error listening to user document:', err);
-      setSyncError(`Error en usuario: ${err.message}`);
-    });
+    };
 
-    return () => unsubscribeUserDoc();
+    fetchUserData();
+
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
+  // === SINCRONIZACIÓN EN TIEMPO REAL DE MASCOTAS ===
   useEffect(() => {
     if (!user) return;
 
@@ -523,7 +525,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           photoUrl: data.photoUrl || data.photoURL || undefined
         };
 
-        // Filtrar mascotas que hayan sido eliminadas recientemente en la sesión
         if (isValidPersistablePet(rawPet) && !deletedPetIdsRef.current.has(rawPet.id)) {
           cloudPets.push(rawPet);
         }
@@ -532,9 +533,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const sanitizedCloudPets = sanitizePets(cloudPets);
       console.log(`🐾 Firestore cargó ${sanitizedCloudPets.length} mascotas.`);
 
-      // FIRESTORE ES LA ÚNICA FUENTE DE VERDAD:
-      // Reemplazar estado React y caché de localStorage directamente.
-      // NUNCA hacer setDoc ni re-subir mascotas desde localStorage aquí.
       setPets(sanitizedCloudPets);
       try {
         localStorage.setItem(LOCAL_STORAGE_PETS_KEY, JSON.stringify(sanitizedCloudPets));
@@ -561,17 +559,14 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!user || !activePetId) return;
 
-    // Si los registros de esta mascota ya se cargaron en el estado durante la sesión actual,
-    // se leen directamente de la memoria / localStorage para evitar reconexión masiva y lecturas redundantes
     if (loadedPetsRef.current.has(activePetId)) {
       return;
     }
 
     loadedPetsRef.current.add(activePetId);
 
-        const recordsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'medicalRecords');
+    const recordsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'medicalRecords');
     const unsubscribeRecords = onSnapshot(recordsRef, (snap) => {
-      // Optimizamos: Firestore servirá esto desde el caché local si no hay cambios en servidor
       const records: MedicalRecord[] = [];
       snap.forEach(d => records.push({ ...(d.data() as MedicalRecord), id: d.id }));
       setMedicalRecords(prev => {
@@ -606,7 +601,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       console.warn('Weights listener offline:', err.message);
     });
 
-
     return () => {
       unsubscribeRecords();
       unsubscribeReminders();
@@ -622,11 +616,9 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [user]);
 
-  // === FUNCIÓN setPetPublicId: PERSISTENCIA TOTAL DEL ID PÚBLICO (REACT + LOCALSTORAGE + FIRESTORE) ===
   const setPetPublicId = useCallback(async (petId: string, publicId: string) => {
     if (!petId || !publicId) return;
 
-    // 1. Actualizar el estado React local de las mascotas y sincronizar inmediatamente localStorage
     setPets(prev => {
       const nextPets = prev.map(p => p.id === petId ? { ...p, publicId } : p);
       try {
@@ -637,7 +629,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return nextPets;
     });
 
-    // 2. Persistir en Firestore en users/{uid}/pets/{petId}
     if (user) {
       try {
         const currentUid = auth.currentUser?.uid || user.uid;
@@ -645,12 +636,11 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await setDoc(petDocRef, { publicId, updatedAt: new Date().toISOString() }, { merge: true });
         console.log('✅ [PetContext] publicId persistido para la mascota:', petId, publicId);
       } catch (e) {
-        console.warn('⚠️ [PetContext] Error persistiendo publicId en Firestore:', e);
+        console.warn('⚠ [PetContext] Error persistiendo publicId en Firestore:', e);
       }
     }
   }, [user]);
 
-  // === FUNCIÓN updatePetLocal: SOLO ACTUALIZA MASCOTAS EXISTENTES CON ID VÁLIDO ===
   const updatePetLocal = useCallback((petData: PetProfile) => {
     if (!isValidPersistablePet(petData)) {
       console.warn('✖ Escritura bloqueada por mascota inválida/temporal', petData?.id);
@@ -668,7 +658,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Cancelar cualquier debounce pendiente previo
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -679,7 +668,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: new Date().toISOString()
     };
 
-    // Actualizar estado local SOLO para la mascota existente
     setPets(prev => {
       const nextPets = prev.map(p => p.id === petData.id ? updatedPet : p);
       try {
@@ -692,16 +680,13 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     pendingDebouncePetIdRef.current = petData.id;
 
-        // Guardar en Firestore después de 2000ms sin cambios (DEBOUNCE OPTIMIZADO PARA PLAN SPARK)
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        // Verificar que no haya sido eliminada en ese intervalo
         if (deletedPetIdsRef.current.has(petData.id)) return;
         if (pendingDebouncePetIdRef.current !== petData.id) return;
         if (!isValidPersistablePet(petData)) return;
 
         let petToSave = { ...petData };
-        // Límite de foto más estricto (150KB) para ahorrar ancho de banda y evitar errores de tamaño de documento
         if (petToSave.photoUrl && petToSave.photoUrl.length > 150_000) {
           console.warn('✖ Foto omitida en sync por superar 150KB');
           petToSave.photoUrl = undefined;
@@ -724,7 +709,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   }, [user, pets]);
 
-  // Limpiar timeout al desmontar
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -733,7 +717,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // === FUNCIÓN savePet: CREACIÓN O ACTUALIZACIÓN EXPLÍCITA ===
+  // === FUNCIÓN savePet: CREACIÓN O ACTUALIZACIÓN CON LÍMITE DE 8 MASCOTAS ===
   const savePet = useCallback(async (petData: PetProfile) => {
     if (!isValidPersistablePet(petData)) {
       console.warn('✖ Escritura bloqueada por mascota inválida/temporal', petData?.id);
@@ -745,7 +729,16 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
 
-    // Cancelar cualquier debounce pendiente para esta mascota
+    const exists = pets.some(p => p.id === petData.id);
+
+    // 🔒 Límite estricto de 8 mascotas por usuario
+    if (!exists && pets.length >= MAX_PETS_PER_USER) {
+      const limitMessage = `Has alcanzado el límite máximo de ${MAX_PETS_PER_USER} mascotas permitidas.`;
+      console.warn(`⚠️ [PetContext] ${limitMessage}`);
+      setSyncError(limitMessage);
+      throw new Error(limitMessage);
+    }
+
     if (saveTimeoutRef.current && pendingDebouncePetIdRef.current === petData.id) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -763,12 +756,9 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updatedAt: new Date().toISOString()
     };
 
-    let isNewPet = false;
+    const isNewPet = !exists;
 
-    // Actualizar estado local inmediatamente
     setPets(prev => {
-      const exists = prev.some(p => p.id === updatedPet.id);
-      isNewPet = !exists;
       const nextPets = exists 
         ? prev.map(p => p.id === updatedPet.id ? updatedPet : p)
         : [...prev, updatedPet];
@@ -790,7 +780,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         console.log('💾 [PetContext] Guardando mascota en Firestore...', updatedPet.id);
         await setDoc(petDocRef, cleanFirestoreData({ ...updatedPet, userId: currentUid, updatedAt: new Date().toISOString() }), { merge: true });
         
-        // Sincronizar ficha pública si ya existía para esta mascota (sin duplicar)
         await syncPublicPetCardIfExists(updatedPet, auth.currentUser || user);
 
         if (isNewPet) {
@@ -816,31 +805,26 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } finally {
       setIsSavingPet(false);
     }
-  }, [user]);
+  }, [user, pets]);
 
-  // === FUNCIÓN deletePet: ELIMINACIÓN TOTAL Y SEGURA ===
   const deletePet = useCallback(async (petId: string) => {
     if (!petId || petId === 'temp_empty_pet' || petId.toLowerCase().includes('default')) {
       console.warn('⚠️ Intento de eliminar mascota con ID inválido/temporal bloqueado:', petId);
       return;
     }
 
-    // 1. Obtener la mascota antes de borrarla para conocer su publicId
     const petToDelete = pets.find(p => p.id === petId);
     const targetPublicId = petToDelete?.publicId || petId;
 
-    // 2. Marcar el ID como eliminado en memoria antes de borrar para bloquear re-escrituras
     deletedPetIdsRef.current.add(petId);
     loadedPetsRef.current.delete(petId);
 
-    // 2. Cancelar cualquier debounce de guardado pendiente para ese ID
     if (saveTimeoutRef.current && pendingDebouncePetIdRef.current === petId) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
       pendingDebouncePetIdRef.current = null;
     }
 
-    // 3. Eliminar el ID del estado React y de localStorage inmediatamente, determinando el siguiente ID activo sin valores obsoletos
     let nextActiveId = '';
     setPets(prev => {
       const remaining = prev.filter(p => p.id !== petId);
@@ -851,12 +835,10 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return remaining;
     });
 
-    // Limpiar expedientes, recordatorios y pesos asociados en memoria local
     setMedicalRecords(prev => prev.filter(r => r.petId !== petId));
     setReminders(prev => prev.filter(r => r.petId !== petId));
     setWeightLogs(prev => prev.filter(w => w.petId !== petId));
 
-    // 4. Actualizar activePetId si coincide con la eliminada de forma atómica
     setActivePetIdState(currentActiveId => {
       if (currentActiveId === petId) {
         try { localStorage.setItem(LOCAL_STORAGE_ACTIVE_KEY, nextActiveId); } catch {}
@@ -868,12 +850,10 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return currentActiveId;
     });
 
-    // 5. Eliminar explícitamente las subcolecciones y el documento en Firestore
     try {
       if (user) {
         const currentUid = auth.currentUser?.uid || user.uid;
 
-        // Limpiar subcolección medicalRecords
         try {
           const medSnap = await getDocs(collection(db, 'users', currentUid, 'pets', petId, 'medicalRecords'));
           for (const d of medSnap.docs) {
@@ -883,7 +863,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.warn('Nota limpiando medicalRecords en Firestore:', e);
         }
 
-        // Limpiar subcolección reminders
         try {
           const remSnap = await getDocs(collection(db, 'users', currentUid, 'pets', petId, 'reminders'));
           for (const d of remSnap.docs) {
@@ -893,7 +872,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.warn('Nota limpiando reminders en Firestore:', e);
         }
 
-        // Limpiar subcolección weightLogs
         try {
           const weightSnap = await getDocs(collection(db, 'users', currentUid, 'pets', petId, 'weightLogs'));
           for (const d of weightSnap.docs) {
@@ -903,10 +881,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           console.warn('Nota limpiando weightLogs en Firestore:', e);
         }
 
-        // Eliminar también la ficha pública asociada en publicPets/{targetPublicId}
         await deletePublicPetCard(targetPublicId, auth.currentUser || user);
-
-        // Eliminar documento principal de la mascota
         await deleteDoc(doc(db, 'users', currentUid, 'pets', petId));
       }
       console.log('🗑️ Mascota eliminada:', petId);
