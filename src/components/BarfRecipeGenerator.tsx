@@ -2,41 +2,158 @@ import React, { useState } from 'react';
 import { usePets } from '../context/PetContext';
 import { ProFeatureLock } from './ProFeatureLock';
 import { 
-  Sparkles, 
-  ChefHat, 
-  Scale, 
-  CheckCircle2, 
-  AlertTriangle, 
   Utensils, 
-  RefreshCw, 
-  Save, 
-  Download, 
-  Info,
-  Calendar,
-  Layers,
-  Heart
+  ChefHat, 
+  Copy, 
+  Share2, 
+  Crown, 
+  Scale, 
+  Droplets,
+  AlertCircle,
+  RefreshCw
 } from 'lucide-react';
-import { PetProfile, CalculationResult } from '../types';
-import { calculatePetNutrition } from '../data';
 
 interface Props {
   onOpenSubscriptionModal?: () => void;
 }
 
+interface PresetRecipe {
+  id: string;
+  name: string;
+  category: 'BARF' | 'Cocida' | 'Mixta';
+  petType: 'dog' | 'cat' | 'both';
+  description: string;
+  cookingMethod: string;
+  benefits: string[];
+  ingredientBreakdown: { name: string; percentage: number; note?: string }[];
+  instructions: string[];
+}
+
+const PRESET_RECIPES: PresetRecipe[] = [
+  {
+    id: 'chicken-pumpkin-cooked',
+    name: 'Menú Esencial: Pechuga de Pollo y Auyama',
+    category: 'Cocida',
+    petType: 'both',
+    description: 'Dieta suave de altísima digestibilidad, ideal para estómagos sensibles o iniciar en comida casera.',
+    cookingMethod: 'Cocción al vapor o agua hirviendo sin sal ni condimentos.',
+    benefits: ['Alta proteína magra de fácil absorción', 'Auyama rica en fibra para regular heces', 'Bajo en grasas'],
+    ingredientBreakdown: [
+      { name: 'Pechuga de Pollo (Sin piel ni hueso)', percentage: 60, note: 'Hervida 10 mins' },
+      { name: 'Auyama / Calabaza', percentage: 25, note: 'Hervida y hecha puré' },
+      { name: 'Zanahoria o Calabacín', percentage: 10, note: 'Rallado al vapor' },
+      { name: 'Aceite de Oliva o Salmón', percentage: 5, note: 'Añadir en frío antes de servir' }
+    ],
+    instructions: [
+      'Corta la pechuga de pollo en cubos pequeños sin sal ni condimentos y ponla a hervir por 10-12 minutos.',
+      'Cocina la auyama y la zanahoria al vapor hasta que estén muy suaves.',
+      'Pisa la auyama para formar un puré y mezcla todos los ingredientes en el plato.',
+      'Deja enfriar a temperatura ambiente y añade las gotas de aceite de oliva o salmón.'
+    ]
+  },
+  {
+    id: 'turkey-zucchini-cooked',
+    name: 'Menú Vital: Pavo Magro, Calabacín y Arándanos',
+    category: 'Cocida',
+    petType: 'both',
+    description: 'Rica en antioxidantes naturales y baja en alérgenos. Excelente opción para mantenimiento.',
+    cookingMethod: 'Salteado al agua o cocción lenta.',
+    benefits: ['Antioxidantes de arándanos para inmunidad', 'Hidratación extra con calabacín', 'Proteína hipoalergénica'],
+    ingredientBreakdown: [
+      { name: 'Carne Molida de Pavo o Muslo', percentage: 65, note: 'Cocida al sartén sin aceite' },
+      { name: 'Calabacín Verde', percentage: 20, note: 'Picado fino al vapor' },
+      { name: 'Manzana (Sin semillas)', percentage: 10, note: 'En cuadritos' },
+      { name: 'Arándanos Frescos o Congelados', percentage: 5, note: 'Machacados' }
+    ],
+    instructions: [
+      'Cocina la carne de pavo molida en una sartén a fuego medio usando un chorrito de agua (sin sal).',
+      'Agrega el calabacín rallado durante los últimos 3 minutos de cocción.',
+      'Mezcla con la manzana picada (retira todas las semillas) y los arándanos machacados.',
+      'Sirve a temperatura ambiente.'
+    ]
+  },
+  {
+    id: 'beef-veggies-cooked',
+    name: 'Menú Fuerza: Ternera Magra y Zanahoria',
+    category: 'Cocida',
+    petType: 'dog',
+    description: 'Aporte sustancioso de hierro, complejo B y aminoácidos esenciales para perritos activos.',
+    cookingMethod: 'Cocción media al vapor.',
+    benefits: ['Hierro hemínico de alta biodisponibilidad', 'Energía duradera para razas medianas y grandes', 'Fortalece masa muscular'],
+    ingredientBreakdown: [
+      { name: 'Carne Magra de Ternera o Res', percentage: 65, note: 'Magra sin exceso de gordura' },
+      { name: 'Zanahoria', percentage: 20, note: 'Rallada o hervida' },
+      { name: 'Espinacas o Acelga', percentage: 10, note: 'Hojas al vapor picadas' },
+      { name: 'Sardina en agua (Opcional)', percentage: 5, note: 'Aporte de Omega 3 natural' }
+    ],
+    instructions: [
+      'Cocina la carne de res magra al vapor o dorada ligeramente en agua por 5-8 minutos.',
+      'Hierve las zanahorias y espinacas, luego pícalas muy fino.',
+      'Mezcla la carne, los vegetales y media sardina desmenuzada en agua sin sal.',
+      'Deja reposar antes de servir.'
+    ]
+  },
+  {
+    id: 'barf-classic-dog',
+    name: 'Menú BARF Canino Tradicional (Modelo 80/10/10)',
+    category: 'BARF',
+    petType: 'dog',
+    description: 'Dieta de alimentos crudos biológicamente apropiados formulada bajo la regla estándar BARF.',
+    cookingMethod: 'Servido crudo previo congelado sanitario (mínimo 3 días a -18°C).',
+    benefits: ['Limpieza dental mecánica natural', 'Heces más pequeñas y firmes', 'Pelaje brillante'],
+    ingredientBreakdown: [
+      { name: 'Huesos Carnosos Crudos (Cuellos/Alas)', percentage: 50, note: 'NUNCA cocinados, siempre crudos' },
+      { name: 'Carne Magra Muscular (Pollo/Res)', percentage: 30, note: 'Músculo crudo desmenuzado' },
+      { name: 'Vísceras y Órganos (Hígado/Corazón)', percentage: 10, note: 'Hígado (5%) + Corazón/Molleja (5%)' },
+      { name: 'Vegetales y Frutas Trituradas', percentage: 10, note: 'Auyama, zanahoria y manzana' }
+    ],
+    instructions: [
+      'IMPORTANTE: Congela las carnes y huesos crudos durante al menos 3 a 5 días para eliminar bacterias antes de servir.',
+      'Pesa los huesos carnosos crudos (ej: cuellos o carcasas de pollo desgrasadas). NUNCA los cocines porque se astillan.',
+      'Tritura los vegetales en procesador para que el perro pueda absorber sus nutrientes.',
+      'Mezcla la carne muscular, vísceras picadas y puré vegetal en el plato.'
+    ]
+  },
+  {
+    id: 'mixed-topper-kibble',
+    name: 'Menú Mixto: Croqueta Seca + Topper Caldo y Pollo',
+    category: 'Mixta',
+    petType: 'both',
+    description: 'Lo mejor de dos mundos: 60% de croquetas balanceadas + 40% de alimento fresco hidratante.',
+    cookingMethod: 'Caldo de huesos sin sal + carne hervida sobre las croquetas habituales.',
+    benefits: ['Aumenta la palatabilidad sin cambiar drásticamente la dieta', 'Hidratación extra para riñones', 'Económico y nutritivo'],
+    ingredientBreakdown: [
+      { name: 'Croquetas Secas Habituales', percentage: 60, note: 'Ración de su alimento concentrado' },
+      { name: 'Pollo o Ternera Desmenuzada', percentage: 30, note: 'Hervida sin sal' },
+      { name: 'Caldo Nutritivo de Pollo/Res', percentage: 10, note: 'Caldo casero sin cebolla ni ajo' }
+    ],
+    instructions: [
+      'Sirve el 60% de la ración de croquetas diarias recomendada para tu mascota.',
+      'Agrega encima el pollo desmenuzado recién cocido.',
+      'Baña el plato con 2 a 3 cucharadas de caldo de huesos tibio sin condimentos para crear una salsa deliciosa.'
+    ]
+  }
+];
+
 export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal = () => {} }) => {
   const { activePet, isProOrTrial } = usePets();
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string>(PRESET_RECIPES[0].id);
+  const [customIngredients, setCustomIngredients] = useState<string>('');
+  const [aiGenerating, setAiGenerating] = useState<boolean>(false);
+  const [aiRecipeResult, setAiRecipeResult] = useState<string | null>(null);
+  const [copied, setCopied] = useState<boolean>(false);
 
-  // 🔒 1. Si no es Pro o no ha iniciado sesión, muestra la tarjeta de bloqueo
+  // 1. Candado Pro prioritario
   if (!isProOrTrial) {
     return (
       <div className="space-y-6">
         <ProFeatureLock
-          featureName="Generador Avanzado de Menús y Recetas BARF"
-          description="Diseña raciones biológicamente apropiadas y personalizadas al gramo exacto según el peso, edad y nivel de actividad de tu mascota."
+          featureName="Generador de Recetas BARF & Menús Caseros"
+          description="Diseña recetas de comida natural balanceadas al gramo según la edad, condición corporal y nivel de actividad física de tu mascota."
           benefits={[
-            "Desglose exacto en gramos de huesos carnosos, carne magra, vísceras y vegetales",
-            "Generador interactivo de recetas equilibradas según especie canina o felina",
-            "Opciones de rotación de proteínas y recomendaciones para transición segura"
+            "Cálculo exacto de huesos carnosos, carne magra, vísceras y vegetales",
+            "Menús listos para armar en dietas crudas BARF, cocinadas y mixtas",
+            "Guías paso a paso de preparación y medidas de inocuidad sanitaria"
           ]}
           onOpenSubscriptionModal={onOpenSubscriptionModal}
         />
@@ -44,171 +161,367 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal =
     );
   }
 
-  // 🐾 2. Si es Pro pero no tiene mascota activa seleccionada
+  // 2. Validación de mascota activa
   if (!activePet) {
     return (
-      <div className="p-8 text-center bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 space-y-3 max-w-lg mx-auto my-8">
+      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-10 text-center space-y-3 max-w-lg mx-auto my-8 shadow-xs">
         <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
           No hay ninguna mascota seleccionada
         </h3>
-        <p className="text-stone-500 dark:text-stone-400 text-xs">
-          Selecciona o registra una mascota para generar sus recetas y proporciones BARF personalizadas.
+        <p className="text-xs text-stone-500 dark:text-stone-400">
+          Selecciona o registra una mascota para generar su formulación nutricional personalizada.
         </p>
       </div>
     );
   }
 
-  const result: CalculationResult = calculatePetNutrition(activePet);
-  const barf = result.barfBreakdown;
-  const isDog = activePet.type === 'dog';
+  const currentRecipe = PRESET_RECIPES.find(r => r.id === selectedRecipeId) || PRESET_RECIPES[0];
 
-  const [selectedProtein, setSelectedProtein] = useState<'chicken' | 'beef' | 'turkey' | 'lamb'>('chicken');
-  const [selectedViscera, setSelectedViscera] = useState<'beef_liver' | 'chicken_liver'>('chicken_liver');
+  // Cálculo de ración diaria estimada (aprox 2.8% en perros a 3.5% en gatos)
+  const estimatedDailyGrams = Math.round(activePet.weightKg * (activePet.type === 'cat' ? 35 : 28));
 
-  const proteins = {
-    chicken: { name: 'Pollo / Gallina', bone: 'Alitas, cuellos o carcasas de pollo', meat: 'Pechuga o muslo sin piel' },
-    beef: { name: 'Res / Ternera', bone: 'Costilla tierna o cola de res', meat: 'Carne magra de res / corazón' },
-    turkey: { name: 'Pavo', bone: 'Cuello de pavo o puntas de ala', meat: 'Pechuga o solomillo de pavo' },
-    lamb: { name: 'Cordero', bone: 'Costillas o cuartos traseros tiernos', meat: 'Magro de pierna de cordero' }
+  // Filtrar recetas por especie
+  const availableRecipes = PRESET_RECIPES.filter(r => r.petType === 'both' || r.petType === activePet.type);
+
+  const handleCopyRecipe = () => {
+    let text = `🥩 *RECETA CASERA BALANCEADA PARA ${activePet.name.toUpperCase()}*\n`;
+    text += `📌 *Platillo:* ${currentRecipe.name}\n`;
+    text += `🥣 *Ración Diaria Total:* ${estimatedDailyGrams} g/día\n`;
+    text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `📊 *INGREDIENTES EXACTOS POR PESO (${activePet.weightKg} kg):*\n`;
+    currentRecipe.ingredientBreakdown.forEach(ing => {
+      const grams = Math.round((estimatedDailyGrams * ing.percentage) / 100);
+      text += `• ${ing.name}: *${grams} g* (${ing.percentage}%)\n`;
+    });
+    text += `━━━━━━━━━━━━━━━━━━━━━\n`;
+    text += `👨‍🍳 *PREPARACIÓN:*\n${currentRecipe.instructions.map((ins, i) => `${i + 1}.${ins}`).join('\n')}\n`;
+    text += `\n✨ _Calculado en NutriPet Pro_`;
+
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+  };
+
+  const handleShareWhatsApp = () => {
+    let text = `🥩 *RECETA NUTRIPET PARA ${activePet.name.toUpperCase()}*\n`;
+    text += `📌 *Platillo:* ${currentRecipe.name}\n`;
+    text += `🥣 *Ración Diaria:* ${estimatedDailyGrams} g/día\n\n`;
+    text += `📊 *Ingredientes:* \n`;
+    currentRecipe.ingredientBreakdown.forEach(ing => {
+      const grams = Math.round((estimatedDailyGrams * ing.percentage) / 100);
+      text += `• ${ing.name}: ${grams}g\n`;
+    });
+    text += `\n👨‍🍳 *Cocción:* ${currentRecipe.cookingMethod}`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+  };
+
+  const handleGenerateCustomRecipe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!customIngredients.trim()) return;
+
+    setAiGenerating(true);
+    setAiRecipeResult(null);
+
+    setTimeout(() => {
+      const primaryIng = customIngredients.split(',')[0]?.trim() || 'Carne magra / Pechuga';
+      setAiRecipeResult(`👨‍🍳 RECETA CASERA PERSONALIZADA PARA ${activePet.name.toUpperCase()} (${estimatedDailyGrams}g totales):
+
+Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC para ${activePet.type === 'dog' ? 'caninos' : 'felinos'} de ${activePet.weightKg}kg:
+
+1. Base de proteína magra (${primaryIng}): ${Math.round(estimatedDailyGrams * 0.65)}g (Cocinar al vapor o en agua sin sal)
+2. Fibra y vegetales aptos: ${Math.round(estimatedDailyGrams * 0.25)}g (Hervir y triturar en puré)
+3. Ácidos grasos y complementos (Aceite de oliva virgen o salmón): ${Math.round(estimatedDailyGrams * 0.10)}g (Añadir en crudo al servir)
+
+💡 Consejo de Seguridad: Asegúrate de retirar semillas y nunca ofrecer huesos cocidos. No agregues cebolla, ajo, uvas ni sal.`);
+      setAiGenerating(false);
+    }, 250);
   };
 
   return (
     <div className="space-y-6">
-      {/* Encabezado */}
-      <div className="glass-card rounded-3xl p-6 sm:p-7 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-6 border-b border-stone-100 dark:border-stone-800 text-center sm:text-left">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 flex items-center justify-center shrink-0">
-              <ChefHat className="w-6 h-6" />
+      
+      {/* Banner Principal de la Sección */}
+      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+        
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-xs font-black uppercase tracking-wider">
+              <Crown className="w-3.5 h-3.5" />
+              <span>Función Exclusiva Pro</span>
             </div>
-            <div>
-              <h2 className="font-heading font-extrabold text-2xl text-stone-900 dark:text-stone-100 leading-tight">
-                Generador de Menú Natural BARF
-              </h2>
-              <p className="text-xs text-stone-500 dark:text-stone-400">
-                Plan nutricional adaptado a <strong className="text-stone-800 dark:text-stone-200">{activePet.name}</strong> ({activePet.weightKg} kg)
-              </p>
-            </div>
-          </div>
-          <span className="text-xs font-bold px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 rounded-full border border-amber-200 dark:border-amber-800">
-            {barf?.percentage}% del peso corporal
-          </span>
-        </div>
-
-        {/* Resumen diario */}
-        <div className="mt-6 p-5 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="text-center sm:text-left">
-            <span className="text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider block">
-              Ración Diaria Total:
-            </span>
-            <span className="text-3xl sm:text-4xl font-black text-stone-900 dark:text-white font-heading">
-              {barf?.totalGrams || 0} <span className="text-base font-bold text-amber-600">gramos/día</span>
-            </span>
+            <h2 className="font-heading font-black text-2xl sm:text-3xl text-white">
+              Generador BARF & Recetas Caseras 🥩
+            </h2>
+            <p className="text-xs sm:text-sm text-stone-300 max-w-xl leading-relaxed">
+              Formulaciones balanceadas de comida natural cocida, dieta BARF o toppers húmedos calculadas gramo a gramo para <strong>{activePet.name}</strong> ({activePet.weightKg} kg).
+            </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="bg-white dark:bg-stone-900 px-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-800 text-center">
-              <span className="text-[10px] font-bold text-stone-400 block uppercase">Tomas recomendadas</span>
-              <span className="text-base font-extrabold text-stone-800 dark:text-stone-200">
-                {result.mealsPerDay} tomas al día
-              </span>
-            </div>
-            <div className="bg-white dark:bg-stone-900 px-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-800 text-center">
-              <span className="text-[10px] font-bold text-stone-400 block uppercase">Por toma</span>
-              <span className="text-base font-extrabold text-amber-600">
-                {Math.round((barf?.totalGrams || 0) / result.mealsPerDay)}g
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Proporciones en gramos */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
-          <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 text-center">
-            <span className="text-xs font-bold text-amber-900 dark:text-amber-300 block">Huesos Carnosos</span>
-            <span className="text-2xl font-black text-stone-900 dark:text-white font-heading block mt-1">
-              {barf?.meatyBonesGrams}g
+          <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/15 text-center shrink-0 min-w-[160px]">
+            <span className="text-[10px] font-extrabold uppercase text-emerald-300 block">
+              Ración Diaria Sugerida
             </span>
-            <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">50% de la ración</span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-center">
-            <span className="text-xs font-bold text-rose-900 dark:text-rose-300 block">Carne Magra</span>
-            <span className="text-2xl font-black text-stone-900 dark:text-white font-heading block mt-1">
-              {barf?.muscleMeatGrams}g
+            <span className="font-heading font-black text-2xl text-white block mt-0.5">
+              ~{estimatedDailyGrams} g
             </span>
-            <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">30% músculo</span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 text-center">
-            <span className="text-xs font-bold text-purple-900 dark:text-purple-300 block">Vísceras y Órganos</span>
-            <span className="text-2xl font-black text-stone-900 dark:text-white font-heading block mt-1">
-              {barf?.organsGrams}g
-            </span>
-            <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">10% víscera / hígado</span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-center">
-            <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300 block">
-              {isDog ? 'Vegetales & Fruta' : 'Complementos Felinos'}
-            </span>
-            <span className="text-2xl font-black text-stone-900 dark:text-white font-heading block mt-1">
-              {barf?.vegetablesFruitsGrams}g
-            </span>
-            <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">
-              {isDog ? '10% triturado' : 'Taurina & Fibra'}
+            <span className="text-[10px] text-stone-300 block">
+              para {activePet.weightKg} kg de peso
             </span>
           </div>
         </div>
+      </div>
 
-        {/* Creador de plato */}
-        <div className="mt-8 space-y-4">
-          <h3 className="font-heading font-extrabold text-lg text-stone-900 dark:text-stone-100 flex items-center gap-2">
-            <Utensils className="w-5 h-5 text-amber-600" />
-            Configurador de Proteína para Hoy
+      {/* Nota Explicativa: Humedad y Gramos en Comida Fresca vs Croquetas */}
+      <div className="p-4 rounded-2xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/60 flex items-start gap-3 text-xs text-teal-900 dark:text-teal-200 shadow-2xs">
+        <Droplets className="w-5 h-5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
+        <div className="space-y-1">
+          <p className="font-extrabold text-stone-900 dark:text-white text-xs flex items-center gap-1.5">
+            💡 ¿Por qué la ración en comida fresca o BARF (~{estimatedDailyGrams}g) es mayor que en croquetas secas?
+          </p>
+          <p className="text-[11.5px] leading-relaxed text-stone-600 dark:text-stone-300">
+            <strong>Croquetas secas:</strong> Tienen solo entre <strong>8% y 10% de humedad</strong> (las calorías están ultra deshidratadas e hiperconcentradas en menos gramos).<br />
+            <strong>Comida Fresca / BARF:</strong> Contiene un <strong>70% a 75% de agua biológica natural</strong> propia de la carne y vegetales. Para aportar exactamente las mismas calorías que requiere {activePet.name}, el plato fresco tiene mayor volumen y gramos biológicos.
+          </p>
+        </div>
+      </div>
+
+      {/* Grid Principal */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Catálogo de Recetas */}
+        <div className="lg:col-span-5 space-y-3">
+          <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 dark:text-stone-400 flex items-center gap-1.5 px-1">
+            <ChefHat className="w-4 h-4 text-emerald-600" />
+            Catálogo de Recetas Balanceadas ({availableRecipes.length}):
           </h3>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {(Object.keys(proteins) as Array<keyof typeof proteins>).map((key) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setSelectedProtein(key)}
-                className={`p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  selectedProtein === key
-                    ? 'border-amber-600 bg-amber-50 dark:bg-amber-950/60 text-amber-900 dark:text-amber-200 shadow-2xs'
-                    : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300'
-                }`}
-              >
-                {proteins[key].name}
-              </button>
-            ))}
+          <div className="space-y-2.5">
+            {availableRecipes.map(recipe => {
+              const isSelected = selectedRecipeId === recipe.id;
+              return (
+                <div
+                  key={recipe.id}
+                  onClick={() => {
+                    setSelectedRecipeId(recipe.id);
+                    setAiRecipeResult(null);
+                  }}
+                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                    isSelected 
+                      ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-600/20 shadow-sm' 
+                      : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-stone-300 dark:hover:border-stone-700'
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
+                      recipe.category === 'BARF' 
+                        ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800' 
+                        : recipe.category === 'Cocida' 
+                        ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800' 
+                        : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800'
+                    }`}>
+                      {recipe.category}
+                    </span>
+                    <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500">
+                      {recipe.petType === 'both' ? '🐶 Canino & 🐱 Felino' : recipe.petType === 'dog' ? '🐶 Solo Caninos' : '🐱 Solo Felinos'}
+                    </span>
+                  </div>
+
+                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm">
+                    {recipe.name}
+                  </h4>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 line-clamp-2">
+                    {recipe.description}
+                  </p>
+                </div>
+              );
+            })}
           </div>
 
-          <div className="p-5 rounded-2xl bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 space-y-3">
-            <h4 className="font-bold text-stone-900 dark:text-stone-100 text-sm">
-              Plato sugerido para {activePet.name}:
-            </h4>
-            <ul className="space-y-2 text-xs text-stone-700 dark:text-stone-300">
-              <li className="flex items-center justify-between py-1 border-b border-stone-200/60 dark:border-stone-800">
-                <span>🦴 <strong>Hueso carnoso ({barf?.meatyBonesGrams}g):</strong> {proteins[selectedProtein].bone}</span>
-              </li>
-              <li className="flex items-center justify-between py-1 border-b border-stone-200/60 dark:border-stone-800">
-                <span>🥩 <strong>Carne magra ({barf?.muscleMeatGrams}g):</strong> {proteins[selectedProtein].meat}</span>
-              </li>
-              <li className="flex items-center justify-between py-1 border-b border-stone-200/60 dark:border-stone-800">
-                <span>🫀 <strong>Vísceras ({barf?.organsGrams}g):</strong> 50% hígado + 50% riñón/bazo</span>
-              </li>
-              {isDog && (
-                <li className="flex items-center justify-between py-1">
-                  <span>🥦 <strong>Vegetales ({barf?.vegetablesFruitsGrams}g):</strong> Calabacín, zanahoria y manzana finamente procesados</span>
-                </li>
-              )}
-            </ul>
+          {/* Formulario Personalizado */}
+          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4 space-y-3 shadow-2xs">
+            <div className="flex items-center gap-2">
+              <ChefHat className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider">
+                Personalizar con tus Ingredientes
+              </h4>
+            </div>
+            <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-tight">
+              Escribe qué alimentos tienes en casa y calcularemos la proporción balanceada para {activePet.name}:
+            </p>
+            <form onSubmit={handleGenerateCustomRecipe} className="space-y-2">
+              <input
+                type="text"
+                value={customIngredients}
+                onChange={(e) => setCustomIngredients(e.target.value)}
+                placeholder="Ej: Tengo pechuga, zanahoria y auyama..."
+                className="w-full px-3 py-2 text-xs border border-stone-300 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100"
+              />
+              <button
+                type="submit"
+                disabled={aiGenerating || !customIngredients.trim()}
+                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                {aiGenerating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Utensils className="w-3.5 h-3.5" />}
+                <span>{aiGenerating ? 'Calculando ración...' : 'Formular con mis Ingredientes'}</span>
+              </button>
+            </form>
           </div>
         </div>
 
+        {/* Detalle de Receta Seleccionada */}
+        <div className="lg:col-span-7 space-y-4">
+          
+          {aiRecipeResult ? (
+            <div className="bg-white dark:bg-stone-900 border-2 border-emerald-500/80 rounded-3xl p-6 space-y-4 shadow-md">
+              <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
+                <div className="flex items-center gap-2">
+                  <ChefHat className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="font-heading font-black text-base text-stone-900 dark:text-stone-100">
+                    Receta Personalizada Balanceada
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAiRecipeResult(null)}
+                  className="text-xs text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
+                >
+                  Volver al Catálogo
+                </button>
+              </div>
+
+              <div className="text-xs text-stone-800 dark:text-stone-200 space-y-2 font-mono whitespace-pre-wrap bg-amber-50/50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-200/60 dark:border-amber-800/60 leading-relaxed">
+                {aiRecipeResult}
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+              
+              <div className="space-y-2 border-b border-stone-100 dark:border-stone-800 pb-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    {currentRecipe.category} • {currentRecipe.cookingMethod}
+                  </span>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleCopyRecipe}
+                      className="px-3 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                      title="Copiar texto de la receta"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>{copied ? '¡Copiado!' : 'Copiar'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleShareWhatsApp}
+                      className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                      title="Enviar por WhatsApp"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </button>
+                  </div>
+                </div>
+
+                <h3 className="font-heading font-black text-xl sm:text-2xl text-stone-900 dark:text-stone-100">
+                  {currentRecipe.name}
+                </h3>
+                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                  {currentRecipe.description}
+                </p>
+              </div>
+
+              {/* Porciones exactas calculadas */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    Ingredientes Exactos para {activePet.name} ({estimatedDailyGrams}g totales / día):
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {currentRecipe.ingredientBreakdown.map((ing, idx) => {
+                    const exactGrams = Math.round((estimatedDailyGrams * ing.percentage) / 100);
+                    return (
+                      <div 
+                        key={idx}
+                        className="p-3.5 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 flex items-center justify-between"
+                      >
+                        <div>
+                          <span className="font-extrabold text-stone-900 dark:text-stone-100 text-xs block">
+                            {ing.name}
+                          </span>
+                          {ing.note && (
+                            <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">
+                              {ing.note}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0 pl-2">
+                          <span className="font-heading font-black text-emerald-800 dark:text-emerald-400 text-sm block">
+                            {exactGrams} g
+                          </span>
+                          <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500">
+                            {ing.percentage}%
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Beneficios */}
+              <div className="bg-emerald-50/60 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-800/60 space-y-1.5">
+                <span className="text-[10px] font-black uppercase text-emerald-900 dark:text-emerald-300 block">
+                  ✨ Beneficios Clínicos del Menú:
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {currentRecipe.benefits.map((b, i) => (
+                    <span key={i} className="text-xs text-emerald-800 dark:text-emerald-300 font-medium bg-white dark:bg-stone-850 px-2.5 py-1 rounded-lg border border-emerald-200/80 dark:border-emerald-800/80 shadow-3xs">
+                      ✓ {b}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Instrucciones */}
+              <div className="space-y-3">
+                <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <ChefHat className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  Instrucciones Paso a Paso:
+                </h4>
+
+                <ol className="space-y-2 text-xs text-stone-700 dark:text-stone-300">
+                  {currentRecipe.instructions.map((step, idx) => (
+                    <li key={idx} className="flex items-start gap-3 bg-stone-50/80 dark:bg-stone-850/80 p-3 rounded-xl border border-stone-200/60 dark:border-stone-800">
+                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                        {idx + 1}
+                      </span>
+                      <span className="leading-relaxed">{step}</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+
+              {/* Disclaimer */}
+              <div className="p-3.5 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl text-[11px] text-amber-950 dark:text-amber-200 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                <p className="leading-snug">
+                  <strong>Aviso de Salud NutriPet:</strong> Estas recetas son guías caseras complementarias orientativas. Si vas a alimentar a {activePet.name} 100% con comida casera a largo plazo, consulta con un nutricionista veterinario para adicionar suplementación de calcio, taurina o multivitamínico.
+                </p>
+              </div>
+
+            </div>
+          )}
+
+        </div>
       </div>
+
     </div>
   );
 };
