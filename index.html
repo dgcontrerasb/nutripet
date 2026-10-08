@@ -3,19 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>NutriPet - Guía y Estimador de Porciones para Mascotas</title>
-    <meta name="description" content="Herramienta informativa de orientación para dueños de perros y gatos. Estimador de porciones orientativas, guía de razas y alimentos aptos y no aptos." />
-    <meta property="og:title" content="NutriPet - Guía y Estimador de Porciones para Mascotas" />
-    <meta property="og:description" content="Estimador de porciones orientativas en gramos, hidratación sugerida e información práctica para perros y gatos." />
+
+    <!-- Metadatos Básicos y SEO -->
+    <title>NutriPet | Calculadora Nutricional, Dietas BARF y Carnet de Vacunas</title>
+    <meta name="description" content="Calcula porciones exactas de alimento para perros y gatos, planes de dieta BARF, control de peso, carnet de vacunación y ficha médica digital." />
+    <meta name="keywords" content="calculadora comida perros, dieta BARF gatos, carnet vacunacion mascotas, porciones alimento balanceado, nutricion canina, salud veterinaria" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+
+    <!-- Open Graph (Redes Sociales, WhatsApp y Google Discover) -->
     <meta property="og:type" content="website" />
+    <meta property="og:title" content="NutriPet | Calculadora Nutricional y Salud para Mascotas" />
+    <meta property="og:description" content="Calcula la ración exacta, genera planes de comida balanceada y lleva el control médico preventivo de tu mascota." />
+    <meta property="og:image" content="/logo-icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="theme-color" content="#059669" />
+
+    <!-- Íconos y PWA -->
     <link rel="icon" type="image/png" href="/logo-icon.png" />
     <link rel="apple-touch-icon" href="/logo-icon.png" />
     <link rel="manifest" href="/manifest.json" />
+
+    <!-- Fuentes de Google -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- Google tag (gtag.js) - Google Analytics 4 -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SD1GXR3252"></script>
     <script>
@@ -24,12 +36,29 @@
       gtag('js', new Date());
       gtag('config', 'G-SD1GXR3252');
     </script>
+
     <!-- Wompi Checkout Widget Script -->
     <script type="text/javascript" src="https://checkout.wompi.co/widget.js"></script>
+
+    <!-- Datos Estructurados JSON-LD (Schema.org para Google) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "NutriPet",
+      "description": "Calculadora nutricional, planes de comida natural y calendario preventivo para perros y gatos.",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "All",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
   </head>
   <body class="bg-stone-50 text-stone-800 antialiased selection:bg-emerald-500 selection:text-white">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
-
