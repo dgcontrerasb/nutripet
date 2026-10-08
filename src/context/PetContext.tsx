@@ -52,6 +52,7 @@ interface PetContextType {
   ) => Promise<boolean>;
   cancelSubscription: () => Promise<void>;
   resetSubscription: () => Promise<void>;
+  deleteUserAccount: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   loginWithGoogleRedirect: () => Promise<void>;
   logout: () => Promise<void>;
@@ -891,7 +892,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSyncError(`Error eliminando mascota: ${err}`);
       throw err;
     }
-  }, [user]);
+  }, [user, pets]);
 
   const addMedicalRecord = useCallback(async (data: Omit<MedicalRecord, 'id' | 'petId' | 'userId'>) => {
     const newRecord: MedicalRecord = {
@@ -1137,6 +1138,58 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSubscription(freeSub);
   }, []);
 
+  // === FUNCIÓN DE ELIMINACIÓN TOTAL DE CUENTA Y DATOS ===
+  const deleteUserAccount = useCallback(async () => {
+    if (!user) return;
+    const currentUid = user.uid;
+
+    try {
+      console.log(`🗑️ [PetContext] Iniciando eliminación definitiva de cuenta para ${currentUid}...`);
+
+      // 1. Obtener y eliminar todas las mascotas y sus subcolecciones
+      const petsSnap = await getDocs(collection(db, 'users', currentUid, 'pets'));
+      for (const petDoc of petsSnap.docs) {
+        await deletePet(petDoc.id);
+      }
+
+      // 2. Eliminar el documento raíz del usuario en Firestore
+      await deleteDoc(doc(db, 'users', currentUid));
+
+      // 3. Limpiar toda la caché local del navegador
+      try {
+        localStorage.removeItem(LOCAL_STORAGE_PETS_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_ACTIVE_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_RECORDS_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_REMINDERS_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_WEIGHTS_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_BATHS_KEY);
+      } catch (lsErr) {
+        console.warn('Error limpiando almacenamiento local tras eliminar cuenta:', lsErr);
+      }
+
+      // 4. Limpiar estados en memoria
+      setPets([]);
+      setActivePetIdState('');
+      setMedicalRecords([]);
+      setReminders([]);
+      setWeightLogs([]);
+      setBathLogs([]);
+
+      // 5. Eliminar usuario de Firebase Auth (o cerrar sesión si el token expiró)
+      try {
+        await user.delete();
+      } catch (authErr) {
+        console.warn('user.delete() requirió cerrar sesión:', authErr);
+        await signOut(auth);
+      }
+
+      console.log('✅ [PetContext] Cuenta y datos eliminados satisfactoriamente.');
+    } catch (error) {
+      console.error('❌ [PetContext] Error al eliminar cuenta de usuario:', error);
+      throw error;
+    }
+  }, [user, deletePet]);
+
   const isProActive = subscription.tier !== 'free' && subscription.status === 'active';
   const isProOrTrial = isProState || isProActive || trialDaysRemaining > 0;
 
@@ -1174,6 +1227,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateSubscription,
         cancelSubscription,
         resetSubscription,
+        deleteUserAccount,
         loginWithGoogle,
         loginWithGoogleRedirect,
         logout

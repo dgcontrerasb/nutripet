@@ -62,21 +62,21 @@ export const RegistrationLockModal: React.FC<RegistrationLockModalProps> = ({ fo
       {isModalVisible && (
         <div 
           className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-stone-950/70 backdrop-blur-sm no-print animate-fade-in"
-          onClick={handleClose} // Cerrar al hacer clic fuera
+          onClick={handleClose}
         >
           <div 
-            className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-emerald-200 text-stone-800 relative overflow-hidden my-8 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()} // Evitar cerrar al hacer clic dentro
+            className="bg-white dark:bg-stone-900 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-emerald-200 dark:border-stone-800 text-stone-800 dark:text-stone-100 relative overflow-hidden my-8 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
           >
             
             {/* Decoración superior */}
             <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-emerald-500 via-teal-500 to-amber-500" />
 
-            {/* Botón para cerrar la ventana sin sentir la obligación */}
+            {/* Botón para cerrar la ventana */}
             <button
               type="button"
               onClick={handleClose}
-              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-100 hover:bg-stone-200 flex items-center justify-center text-stone-500 font-bold text-sm cursor-pointer transition-colors z-10"
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 flex items-center justify-center text-stone-500 dark:text-stone-400 font-bold text-sm cursor-pointer transition-colors z-10"
               title="Cerrar y continuar explorando"
             >
               <X className="w-4 h-4" />
@@ -91,35 +91,35 @@ export const RegistrationLockModal: React.FC<RegistrationLockModalProps> = ({ fo
 
               {/* Títulos */}
               <div>
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold uppercase tracking-wider mb-2">
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 text-[11px] font-extrabold uppercase tracking-wider mb-2">
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   Prueba Gratuita NutriPet Pro
                 </span>
-                <h3 className="text-xl sm:text-2xl font-heading font-black text-stone-900 leading-tight">
-                  Guarda la Ficha de tu Mascota y obtén <span className="text-emerald-700">15 Días Pro Gratis</span>
+                <h3 className="text-xl sm:text-2xl font-heading font-black text-stone-900 dark:text-stone-100 leading-tight">
+                  Guarda la Ficha de tu Mascota y obtén <span className="text-emerald-700 dark:text-emerald-400">15 Días Pro Gratis</span>
                 </h3>
-                <p className="text-xs sm:text-sm text-stone-600 mt-2 leading-relaxed">
+                <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 mt-2 leading-relaxed">
                   Conecta tu cuenta de Google en 1 clic para que los expedientes de tu mascota queden guardados de forma segura en la nube.
                 </p>
               </div>
 
               {/* Beneficios de Registrarse */}
-              <div className="text-left bg-emerald-50/50 border border-emerald-200/80 rounded-2xl p-4 space-y-3">
+              <div className="text-left bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-2xl p-4 space-y-3">
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-stone-800 leading-snug">
-                    <strong>15 Días Pro Gratis:</strong> Disfruta de Ficha Técnica PDF con QR, Asistente IA Groq y control de peso ilimitado.
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-stone-800 dark:text-stone-200 leading-snug">
+                    <strong>15 Días Pro Gratis:</strong> Disfruta de Ficha Técnica PDF con QR, recetas caseras/BARF y carnet de vacunas completo.
                   </p>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-stone-800 leading-snug">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-stone-800 dark:text-stone-200 leading-snug">
                     <strong>Respaldo Multi-Dispositivo:</strong> Accede a la información de tu mascota desde cualquier teléfono o computador.
                   </p>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                  <p className="text-xs text-stone-800 leading-snug">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-stone-800 dark:text-stone-200 leading-snug">
                     <strong>Sin tarjeta de crédito:</strong> Registro 100% libre sin cargos ocultos ni cobros automáticos.
                   </p>
                 </div>
@@ -127,8 +127,8 @@ export const RegistrationLockModal: React.FC<RegistrationLockModalProps> = ({ fo
 
               {/* Alerta de Error si falla Google */}
               {loginError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-800 flex items-center gap-2 text-left">
-                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-xl text-xs text-rose-800 dark:text-rose-300 flex items-center gap-2 text-left">
+                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0" />
                   <span>{loginError}</span>
                 </div>
               )}
@@ -173,19 +173,43 @@ export const RegistrationLockModal: React.FC<RegistrationLockModalProps> = ({ fo
                   )}
                 </button>
 
+                {/* Cláusula legal de consentimiento expreso */}
+                <p className="text-[11px] text-stone-500 dark:text-stone-400 text-center leading-relaxed px-2 pt-1">
+                  Al continuar, confirmas que aceptas nuestros{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('open_legal_modal', { detail: 'terms' }));
+                    }}
+                    className="underline text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 font-semibold cursor-pointer"
+                  >
+                    Términos de Servicio
+                  </button>{' '}
+                  y nuestra{' '}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('open_legal_modal', { detail: 'privacy' }));
+                    }}
+                    className="underline text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 font-semibold cursor-pointer"
+                  >
+                    Política de Privacidad
+                  </button>.
+                </p>
+
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="text-xs text-stone-500 hover:text-stone-700 font-bold hover:underline cursor-pointer pt-1"
+                  className="text-xs text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 font-bold hover:underline cursor-pointer pt-2"
                 >
                   Continuar explorando sin cuenta por ahora
                 </button>
               </div>
 
               {/* Pie de confianza */}
-              <div className="pt-3 border-t border-stone-100 flex items-center justify-center gap-4 text-[11px] text-stone-500">
+              <div className="pt-3 border-t border-stone-100 dark:border-stone-800 flex items-center justify-center gap-4 text-[11px] text-stone-500 dark:text-stone-400">
                 <span className="flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Sin Tarjeta de Crédito
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Sin Tarjeta de Crédito
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1">

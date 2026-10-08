@@ -67,6 +67,7 @@ import { BackToTopButton } from './components/BackToTopButton';
 import { ThemeToggleButton } from './components/ThemeToggleButton';
 import { LogoutTransitionModal } from './components/LogoutTransitionModal';
 import { FeedbackModal } from './components/FeedbackModal';
+import { LegalModal } from './components/LegalModal';
 import { usePets } from './context/PetContext';
 import { useBgPreferences } from './hooks/useBgPreferences';
 
@@ -345,7 +346,14 @@ export default function App() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState<boolean>(false);
   const [showAdminModal, setShowAdminModal] = useState<boolean>(false);
   const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
-
+  const [legalModalTab, setLegalModalTab] = useState<'terms' | 'privacy' | 'contact' | null>(null);
+useEffect(() => {
+  const handleOpenLegal = (e: any) => {
+    setLegalModalTab(e.detail || 'terms');
+  };
+  window.addEventListener('open_legal_modal', handleOpenLegal);
+  return () => window.removeEventListener('open_legal_modal', handleOpenLegal);
+}, []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -503,7 +511,7 @@ export default function App() {
         darkMode={darkMode}
       />
       
-      {/* Cabecera Superior Fija: cubre todo el ancho superior de extremo a extremo */}
+      {/* Cabecera Superior Fija */}
       <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
         <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium">
           <span className="inline-flex items-center gap-1.5 text-emerald-400">
@@ -1051,7 +1059,7 @@ export default function App() {
                   </div>
 
                   {/* Peso Actual */}
-                  <div className="p-4 bg-stone-50/80 dark:bg-stone-800/80 rounded-2xl border border-stone-200 dark:border-stone-700 space-y-2.5">
+                  <div className="p-4 bg-stone-50/80 dark:bg-stone-800/80 rounded-2xl border border-stone-200 dark:border-stone-750 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <label htmlFor="pet-weight-input" className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
                         <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -1737,8 +1745,36 @@ export default function App() {
               )}
             </div>
           </div>
+
           <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-800 text-[11px] text-stone-600 dark:text-stone-400 leading-relaxed">
             <strong>Aviso de exención de responsabilidad:</strong> Esta aplicación web es un recurso de consulta general y cálculo orientativo creado para amantes de las mascotas. La información, tablas y estimaciones aquí presentadas son solo de referencia general y <u>no constituyen asesoría médica, diagnóstico ni prescripción</u>. Cada perro o gato tiene necesidades individuales, condiciones preexistentes o alergias que requieren la valoración de un profesional de la salud animal. Ante cualquier duda, cambio de dieta o síntoma, consulta siempre a tu médico veterinario de confianza.
+          </div>
+
+          {/* Enlaces Legales y de Contacto */}
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-stone-500 dark:text-stone-400 pt-2 pb-1">
+            <button
+              type="button"
+              onClick={() => setLegalModalTab('terms')}
+              className="hover:text-emerald-600 dark:hover:text-emerald-400 underline underline-offset-4 cursor-pointer"
+            >
+              Términos de Servicio
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => setLegalModalTab('privacy')}
+              className="hover:text-emerald-600 dark:hover:text-emerald-400 underline underline-offset-4 cursor-pointer"
+            >
+              Política de Privacidad
+            </button>
+            <span>•</span>
+            <button
+              type="button"
+              onClick={() => setLegalModalTab('contact')}
+              className="hover:text-emerald-600 dark:hover:text-emerald-400 underline underline-offset-4 cursor-pointer font-medium"
+            >
+              Contacto & Soporte
+            </button>
           </div>
         </div>
       </footer>
@@ -1762,6 +1798,11 @@ export default function App() {
       <FeedbackModal
         isOpen={showFeedbackModal}
         onClose={() => setShowFeedbackModal(false)}
+      />
+      <LegalModal
+        isOpen={legalModalTab !== null}
+        onClose={() => setLegalModalTab(null)}
+        initialTab={legalModalTab || 'terms'}
       />
       <RegistrationLockModal />
       <LogoutTransitionModal isOpen={isLoggingOut} />
