@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
+﻿import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, signInAnonymously } from 'firebase/auth';
 import { useAuth } from './AuthContext';
 import { 
@@ -64,14 +64,14 @@ const sanitizePets = (petList: any[]): PetProfile[] => {
   return petList.map(p => {
     let photo = p.photoUrl || p.photoURL || undefined;
     if (typeof photo === 'string' && photo.startsWith('data:image') && photo.length > 300000) {
-      console.warn(`[NutriPet] Foto de mascota '${p.name || p.id}' demasiado grande (${Math.round(photo.length / 1024)} KB). Removida para sincronización.`);
+      console.warn(`[NutriPet] Foto de mascota '${p.name || p.id}' demasiado grande (${Math.round(photo.length / 1024)} KB). Removida para sincronizaciÃ³n.`);
       photo = undefined;
     }
 
     return {
       ...p,
       photoUrl: photo,
-      veterinarian: (p.veterinarian && (p.veterinarian.includes('Alejandro') || p.veterinarian.includes('María Paz') || p.veterinarian.includes('Dr.') || p.veterinarian.includes('Dra.'))) ? '' : p.veterinarian,
+      veterinarian: (p.veterinarian && (p.veterinarian.includes('Alejandro') || p.veterinarian.includes('MarÃ­a Paz') || p.veterinarian.includes('Dr.') || p.veterinarian.includes('Dra.'))) ? '' : p.veterinarian,
       veterinarianPhone: (p.veterinarianPhone && (p.veterinarianPhone.includes('+57') || p.veterinarianPhone.includes('300 123') || p.veterinarianPhone.includes('311 987'))) ? '' : p.veterinarianPhone,
       microchip: (p.microchip && p.microchip.startsWith('98109810')) ? '' : p.microchip
     };
@@ -81,7 +81,7 @@ const sanitizePets = (petList: any[]): PetProfile[] => {
 const sanitizeRecords = (records: MedicalRecord[]): MedicalRecord[] => {
   return records.map(r => ({
     ...r,
-    veterinarian: (r.veterinarian && (r.veterinarian.includes('Alejandro') || r.veterinarian.includes('María Paz') || r.veterinarian.includes('Dr.') || r.veterinarian.includes('Dra.'))) ? '' : r.veterinarian
+    veterinarian: (r.veterinarian && (r.veterinarian.includes('Alejandro') || r.veterinarian.includes('MarÃ­a Paz') || r.veterinarian.includes('Dr.') || r.veterinarian.includes('Dra.'))) ? '' : r.veterinarian
   }));
 };
 
@@ -98,7 +98,7 @@ export function cleanFirestoreData<T extends Record<string, any>>(obj: T): Recor
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
       if (typeof value === 'string' && value.startsWith('data:image') && value.length > 300000) {
-        console.warn(`[Firestore] Campo '${key}' omitido por superar tamaño seguro (${Math.round(value.length / 1024)} KB).`);
+        console.warn(`[Firestore] Campo '${key}' omitido por superar tamaÃ±o seguro (${Math.round(value.length / 1024)} KB).`);
         continue;
       }
       if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
@@ -140,6 +140,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const pendingDebouncePetIdRef = useRef<string | null>(null);
   const deletedPetIdsRef = useRef<Set<string>>(new Set());
   const loadedPetsRef = useRef<Set<string>>(new Set());
+  const petCreateInFlightRef = useRef<number>(0);
 
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number>(0);
   const [isProState, setIsProState] = useState<boolean>(false);
@@ -153,6 +154,15 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const syncTrialFromBackend = useCallback(async (currentUser: User) => {
+    if (!currentUser || !auth.currentUser) {
+      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+      setTrialDaysRemaining(0);
+      setIsProState(false);
+      setTrialStartedAt(null);
+      setTrialEndsAt(null);
+      return;
+    }
+
     try {
       const idToken = await currentUser.getIdToken();
       const response = await fetch('/api/initialize-trial', {
@@ -163,33 +173,53 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          if (data.subscription) {
-            setSubscription(data.subscription);
-          }
-          
-          let remaining = data.daysRemaining ?? 0;
-          if (data.subscription?.validUntil) {
-            const validUntilStr = data.subscription.validUntil.includes('T')
-              ? data.subscription.validUntil
-              : `${data.subscription.validUntil}T23:59:59`;
-            const validMs = new Date(validUntilStr).getTime();
-            if (!isNaN(validMs)) {
-              remaining = Math.max(0, Math.ceil((validMs - Date.now()) / (1000 * 60 * 60 * 24)));
-            }
-          }
+      if (!response.ok) {
+        setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+        setTrialDaysRemaining(0);
+        setIsProState(false);
+        setTrialStartedAt(null);
+        setTrialEndsAt(null);
+        return;
+      }
 
-          setTrialDaysRemaining(remaining);
-          setIsProState(Boolean(data.isPro) || remaining > 0);
-          if (data.trialStartedAt) setTrialStartedAt(data.trialStartedAt);
-          if (data.trialEndsAt) setTrialEndsAt(data.trialEndsAt);
-          console.log(`⏳ [Trial] trial consultado: ${remaining} días restantes para usuario ${currentUser.uid}`);
+      const data = await response.json();
+      if (!data?.success || !data.subscription) {
+        setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+        setTrialDaysRemaining(0);
+        setIsProState(false);
+        setTrialStartedAt(null);
+        setTrialEndsAt(null);
+        return;
+      }
+
+      if (data.subscription) {
+        setSubscription(data.subscription);
+      }
+
+      let remaining = data.daysRemaining ?? 0;
+      if (data.subscription?.validUntil) {
+        const validUntilStr = data.subscription.validUntil.includes('T')
+          ? data.subscription.validUntil
+          : `${data.subscription.validUntil}T23:59:59`;
+        const validMs = new Date(validUntilStr).getTime();
+        if (!isNaN(validMs)) {
+          remaining = Math.max(0, Math.ceil((validMs - Date.now()) / (1000 * 60 * 60 * 24)));
         }
       }
+
+      const nextIsPro = Boolean(data.isPro) && remaining > 0;
+      setTrialDaysRemaining(remaining);
+      setIsProState(nextIsPro);
+      if (data.trialStartedAt) setTrialStartedAt(data.trialStartedAt);
+      if (data.subscription?.validUntil) setTrialEndsAt(data.subscription.validUntil);
+      console.log(`⏳ [Trial] trial consultado: ${remaining} días restantes para usuario ${currentUser.uid}`);
     } catch (err) {
       console.warn('⚠ [Trial] Error al consultar trial con backend:', err);
+      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+      setTrialDaysRemaining(0);
+      setIsProState(false);
+      setTrialStartedAt(null);
+      setTrialEndsAt(null);
     }
   }, []);
 
@@ -303,7 +333,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const mergeUserData = async (anonUid: string, googleUid: string) => {
     try {
-      console.log(`[Merge] Iniciando migración de cuenta invitada ${anonUid} a cuenta Google ${googleUid}...`);
+      console.log(`[Merge] Iniciando migraciÃ³n de cuenta invitada ${anonUid} a cuenta Google ${googleUid}...`);
 
       const anonDocSnap = await getDoc(doc(db, 'users', anonUid));
       if (anonDocSnap.exists()) {
@@ -343,7 +373,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
       await deleteDoc(doc(db, 'users', anonUid));
     } catch (e) {
-      console.error('[Merge] Error migrando cuenta anónima:', e);
+      console.error('[Merge] Error migrando cuenta anÃ³nima:', e);
     }
   };
 
@@ -351,7 +381,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
-          console.log('✅ [Auth] Sesión iniciada exitosamente con Redirect:', result.user.email);
+          console.log('âœ… [Auth] SesiÃ³n iniciada exitosamente con Redirect:', result.user.email);
         }
       })
       .catch((err) => {
@@ -424,7 +454,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         } catch (e: any) {
           if (e?.code === 'permission-denied') {
-            console.warn('🚫 [Trial] Intento cliente bloqueado de modificar suscripción');
+            console.warn('ðŸš« [Trial] Intento cliente bloqueado de modificar suscripciÃ³n');
           } else {
             console.error('Error syncing user profile:', e);
           }
@@ -441,7 +471,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => unsubscribe();
   }, [syncTrialFromBackend]);
 
-  // === CARGA OPTIMIZADA DE USUARIO Y SUSCRIPCIÓN (1 sola lectura puntual con getDoc) ===
+  // === CARGA OPTIMIZADA DE USUARIO Y SUSCRIPCIÃ“N (1 sola lectura puntual con getDoc) ===
   useEffect(() => {
     if (!user) return;
 
@@ -509,7 +539,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [user]);
 
-  // === SINCRONIZACIÓN EN TIEMPO REAL DE MASCOTAS ===
+  // === SINCRONIZACIÃ“N EN TIEMPO REAL DE MASCOTAS ===
   useEffect(() => {
     if (!user) return;
 
@@ -532,7 +562,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
       const sanitizedCloudPets = sanitizePets(cloudPets);
-      console.log(`🐾 Firestore cargó ${sanitizedCloudPets.length} mascotas.`);
+      console.log(`ðŸ¾ Firestore cargÃ³ ${sanitizedCloudPets.length} mascotas.`);
 
       setPets(sanitizedCloudPets);
       try {
@@ -635,27 +665,27 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         const currentUid = auth.currentUser?.uid || user.uid;
         const petDocRef = doc(db, 'users', currentUid, 'pets', petId);
         await setDoc(petDocRef, { publicId, updatedAt: new Date().toISOString() }, { merge: true });
-        console.log('✅ [PetContext] publicId persistido para la mascota:', petId, publicId);
+        console.log('âœ… [PetContext] publicId persistido para la mascota:', petId, publicId);
       } catch (e) {
-        console.warn('⚠ [PetContext] Error persistiendo publicId en Firestore:', e);
+        console.warn('âš  [PetContext] Error persistiendo publicId en Firestore:', e);
       }
     }
   }, [user]);
 
   const updatePetLocal = useCallback((petData: PetProfile) => {
     if (!isValidPersistablePet(petData)) {
-      console.warn('✖ Escritura bloqueada por mascota inválida/temporal', petData?.id);
+      console.warn('âœ– Escritura bloqueada por mascota invÃ¡lida/temporal', petData?.id);
       return;
     }
 
     if (deletedPetIdsRef.current.has(petData.id)) {
-      console.warn('✖ Escritura bloqueada por mascota eliminada', petData.id);
+      console.warn('âœ– Escritura bloqueada por mascota eliminada', petData.id);
       return;
     }
 
     const petExists = pets.some(p => p.id === petData.id);
     if (!petExists) {
-      console.warn('⚠️ Actualización bloqueada de mascota inexistente:', petData.id);
+      console.warn('âš ï¸ ActualizaciÃ³n bloqueada de mascota inexistente:', petData.id);
       return;
     }
 
@@ -689,18 +719,18 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         let petToSave = { ...petData };
         if (petToSave.photoUrl && petToSave.photoUrl.length > 150_000) {
-          console.warn('✖ Foto omitida en sync por superar 150KB');
+          console.warn('âœ– Foto omitida en sync por superar 150KB');
           petToSave.photoUrl = undefined;
         }
 
         if (user) {
           const currentUid = auth.currentUser?.uid || user.uid;
           const petDocRef = doc(db, "users", currentUid, "pets", petToSave.id);
-          console.log('💾 [Spark-Optimized] Guardando mascota...', petToSave.id);
+          console.log('ðŸ’¾ [Spark-Optimized] Guardando mascota...', petToSave.id);
           await setDoc(petDocRef, cleanFirestoreData({ ...petToSave, userId: currentUid, updatedAt: new Date().toISOString() }), { merge: true });
         }
       } catch (e: any) {
-        console.error("❌ Error en auto-guardado:", e);
+        console.error("âŒ Error en auto-guardado:", e);
       } finally {
         if (pendingDebouncePetIdRef.current === petData.id) {
           pendingDebouncePetIdRef.current = null;
@@ -718,7 +748,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // === FUNCIÓN savePet: CREACIÓN O ACTUALIZACIÓN CON LÍMITE DE 8 MASCOTAS ===
+  // === FUNCIÃ“N savePet: CREACIÃ“N O ACTUALIZACIÃ“N CON LÃMITE DE 8 MASCOTAS ===
   const savePet = useCallback(async (petData: PetProfile) => {
     if (!isValidPersistablePet(petData)) {
       console.warn('✖ Escritura bloqueada por mascota inválida/temporal', petData?.id);
@@ -731,9 +761,9 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     const exists = pets.some(p => p.id === petData.id);
+    const effectiveCreateCount = pets.length + petCreateInFlightRef.current;
 
-    // 🔒 Límite estricto de 8 mascotas por usuario
-    if (!exists && pets.length >= MAX_PETS_PER_USER) {
+    if (!exists && effectiveCreateCount >= MAX_PETS_PER_USER) {
       const limitMessage = `Has alcanzado el límite máximo de ${MAX_PETS_PER_USER} mascotas permitidas.`;
       console.warn(`⚠️ [PetContext] ${limitMessage}`);
       setSyncError(limitMessage);
@@ -744,6 +774,10 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
       pendingDebouncePetIdRef.current = null;
+    }
+
+    if (!exists) {
+      petCreateInFlightRef.current += 1;
     }
 
     let petToSave = { ...petData };
@@ -804,13 +838,16 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       throw err;
     } finally {
+      if (!exists) {
+        petCreateInFlightRef.current = Math.max(0, petCreateInFlightRef.current - 1);
+      }
       setIsSavingPet(false);
     }
   }, [user, pets]);
 
   const deletePet = useCallback(async (petId: string) => {
     if (!petId || petId === 'temp_empty_pet' || petId.toLowerCase().includes('default')) {
-      console.warn('⚠️ Intento de eliminar mascota con ID inválido/temporal bloqueado:', petId);
+      console.warn('âš ï¸ Intento de eliminar mascota con ID invÃ¡lido/temporal bloqueado:', petId);
       return;
     }
 
@@ -885,7 +922,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await deletePublicPetCard(targetPublicId, auth.currentUser || user);
         await deleteDoc(doc(db, 'users', currentUid, 'pets', petId));
       }
-      console.log('🗑️ Mascota eliminada:', petId);
+      console.log('ðŸ—‘ï¸ Mascota eliminada:', petId);
       setSyncError(null);
     } catch (err) {
       console.error('Error deleting pet from Firestore:', err);
@@ -1106,16 +1143,16 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setSubscription(data.subscription);
           setIsProState(true);
           setTrialDaysRemaining(365);
-          console.log('✅ [Subscription] Suscripción activada exitosamente por backend:', data.subscription);
+          console.log('âœ… [Subscription] SuscripciÃ³n activada exitosamente por backend:', data.subscription);
           return true;
         }
       } else {
         const errData = await res.json().catch(() => ({}));
-        console.warn('🔒 [Subscription] Activación bloqueada por backend:', errData);
+        console.warn('ðŸ”’ [Subscription] ActivaciÃ³n bloqueada por backend:', errData);
       }
       return false;
     } catch (e: any) {
-      console.error('Error activando suscripción:', e);
+      console.error('Error activando suscripciÃ³n:', e);
       return false;
     }
   }, [user]);
@@ -1138,13 +1175,13 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setSubscription(freeSub);
   }, []);
 
-  // === FUNCIÓN DE ELIMINACIÓN TOTAL DE CUENTA Y DATOS ===
+  // === FUNCIÃ“N DE ELIMINACIÃ“N TOTAL DE CUENTA Y DATOS ===
   const deleteUserAccount = useCallback(async () => {
     if (!user) return;
     const currentUid = user.uid;
 
     try {
-      console.log(`🗑️ [PetContext] Iniciando eliminación definitiva de cuenta para ${currentUid}...`);
+      console.log(`ðŸ—‘ï¸ [PetContext] Iniciando eliminaciÃ³n definitiva de cuenta para ${currentUid}...`);
 
       // 1. Obtener y eliminar todas las mascotas y sus subcolecciones
       const petsSnap = await getDocs(collection(db, 'users', currentUid, 'pets'));
@@ -1152,10 +1189,10 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         await deletePet(petDoc.id);
       }
 
-      // 2. Eliminar el documento raíz del usuario en Firestore
+      // 2. Eliminar el documento raÃ­z del usuario en Firestore
       await deleteDoc(doc(db, 'users', currentUid));
 
-      // 3. Limpiar toda la caché local del navegador
+      // 3. Limpiar toda la cachÃ© local del navegador
       try {
         localStorage.removeItem(LOCAL_STORAGE_PETS_KEY);
         localStorage.removeItem(LOCAL_STORAGE_ACTIVE_KEY);
@@ -1175,17 +1212,17 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setWeightLogs([]);
       setBathLogs([]);
 
-      // 5. Eliminar usuario de Firebase Auth (o cerrar sesión si el token expiró)
+      // 5. Eliminar usuario de Firebase Auth (o cerrar sesiÃ³n si el token expirÃ³)
       try {
         await user.delete();
       } catch (authErr) {
-        console.warn('user.delete() requirió cerrar sesión:', authErr);
+        console.warn('user.delete() requiriÃ³ cerrar sesiÃ³n:', authErr);
         await signOut(auth);
       }
 
-      console.log('✅ [PetContext] Cuenta y datos eliminados satisfactoriamente.');
+      console.log('âœ… [PetContext] Cuenta y datos eliminados satisfactoriamente.');
     } catch (error) {
-      console.error('❌ [PetContext] Error al eliminar cuenta de usuario:', error);
+      console.error('âŒ [PetContext] Error al eliminar cuenta de usuario:', error);
       throw error;
     }
   }, [user, deletePet]);
