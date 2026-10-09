@@ -19,8 +19,7 @@ import {
   Sun,
   Moon,
   Clock,
-  Utensils,
-  ShieldCheck
+  Utensils
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { NutriPetLogo } from './NutriPetLogo';
@@ -171,7 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                           ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md'
                           : 'bg-emerald-50 text-emerald-950 border-l-4 border-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-200'
                         : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100/90 dark:hover:bg-stone-800/80'
-                    }`}
+                    } ${!showText ? 'justify-center px-2' : ''}`}
                   >
                     <IconComp className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
                       isActive 
@@ -253,11 +252,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </nav>
 
-      {/* 💻 Menú lateral de escritorio: Ocupa toda la altura disponible eliminando el vacío y scroll horizontal */}
+      {/* 💻 Menú lateral de escritorio: Sticky y respetando el contenedor sin tapar el footer */}
       <aside 
-        className={`hidden lg:flex flex-col border-r border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md shadow-sm shrink-0 select-none no-print transition-all duration-300 fixed top-[84px] sm:top-[90px] left-0 bottom-0 z-30 overflow-x-hidden ${
+        className={`hidden lg:flex flex-col border-r border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md shadow-xs shrink-0 select-none no-print transition-all duration-300 sticky top-[84px] sm:top-[90px] z-30 overflow-x-hidden ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}
+        style={{
+          height: 'calc(100vh - 90px)',
+          maxHeight: 'calc(100vh - 90px)',
+        }}
       >
         {/* Cabecera con Logo y Botón de Recoger/Desplegar sin solapar */}
         <div className="p-3 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between h-16 shrink-0 relative">
@@ -349,14 +352,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
         )}
 
-        {/* Acceso Administrador en PC con Icono de Engranaje (Neutro Elegante) */}
+        {/* Acceso Administrador en PC */}
         {onOpenAdminModal && (
           <div className="px-3 pt-2 border-t border-stone-100 dark:border-stone-800 shrink-0">
             {isCollapsed ? (
               <button
                 type="button"
                 onClick={onOpenAdminModal}
-                className="w-10 h-10 rounded-2xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-100 flex items-center justify-center mx-auto shadow-sm active:scale-95 cursor-pointer transition-colors"
+                className="w-10 h-10 rounded-2xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-100 flex items-center justify-center mx-auto shadow-xs active:scale-95 cursor-pointer transition-colors"
                 title="Panel Administrador"
               >
                 <Settings className="w-5 h-5 text-stone-200" />
@@ -379,7 +382,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {isCollapsed ? (
             <button
               onClick={onOpenSubscriptionModal}
-              className="w-10 h-10 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-white flex items-center justify-center mx-auto shadow-sm active:scale-95 cursor-pointer"
+              className="w-10 h-10 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-white flex items-center justify-center mx-auto shadow-xs active:scale-95 cursor-pointer"
               title="Suscripción NutriPet Pro"
             >
               <Crown className="w-5 h-5 text-amber-200" />
@@ -419,7 +422,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsMobileOpen(false)}
-              className="fixed inset-0 bg-black/70 backdrop-blur-sm cursor-pointer z-0"
+              className="fixed inset-0 bg-black/70 backdrop-blur-xs cursor-pointer z-0"
             />
 
             <motion.div
@@ -485,18 +488,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
 
                 {onOpenAdminModal && (
-  <button
-    type="button"
-    onClick={() => {
-      setIsMobileOpen(false);
-      onOpenAdminModal();
-    }}
-    className="w-full py-2 px-3 rounded-xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-100 font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-colors active:scale-95"
-  >
-    <Settings className="w-4 h-4 text-stone-300" />
-    <span>Panel Administrador</span>
-  </button>
-)}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileOpen(false);
+                      onOpenAdminModal();
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-100 font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-colors active:scale-95"
+                  >
+                    <Settings className="w-4 h-4 text-stone-300" />
+                    <span>Panel Administrador</span>
+                  </button>
+                )}
+
                 <div 
                   onClick={() => {
                     if (!isProOrTrial) {
