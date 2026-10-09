@@ -169,8 +169,8 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
-        }
+          'Authorization': 'Bearer ' + idToken,
+        },
       });
 
       if (!response.ok) {
@@ -212,9 +212,9 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsProState(nextIsPro);
       if (data.trialStartedAt) setTrialStartedAt(data.trialStartedAt);
       if (data.subscription?.validUntil) setTrialEndsAt(data.subscription.validUntil);
-      console.log(`⏳ [Trial] trial consultado: ${remaining} días restantes para usuario ${currentUser.uid}`);
+      console.log(`? [Trial] trial consultado: ${remaining} d?as restantes para usuario ${currentUser.uid}`);
     } catch (err) {
-      console.warn('⚠ [Trial] Error al consultar trial con backend:', err);
+      console.warn('?? [Trial] Error al consultar trial con backend:', err);
       setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
       setTrialDaysRemaining(0);
       setIsProState(false);
@@ -223,7 +223,7 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
 
-  const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
+const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
 
   const [pets, setPets] = useState<PetProfile[]>(() => {
     try {
@@ -1113,12 +1113,17 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const updateSubscription = useCallback(async (
-    tier: SubscriptionTier, 
-    planName: string, 
+    tier: SubscriptionTier,
+    planName: string,
     verificationDetails?: { wompiTransactionId?: string; transactionReference?: string; paypalOrderId?: string }
   ): Promise<boolean> => {
     const currentUser = auth.currentUser || user;
-    if (!currentUser) return false;
+    if (!currentUser) {
+      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+      setTrialDaysRemaining(0);
+      setIsProState(false);
+      return false;
+    }
 
     try {
       const idToken = await currentUser.getIdToken();
@@ -1126,38 +1131,47 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
+          'Authorization': 'Bearer ' + idToken,
         },
         body: JSON.stringify({
-          planId: tier === 'pro_annual' ? 'plan_pro_annual' : 'plan_pro_monthly',
-          planName,
+          planId: tier === 'pro_annual' ? 'pro_annual' : 'pro_monthly',
           wompiTransactionId: verificationDetails?.wompiTransactionId,
-          transactionReference: verificationDetails?.transactionReference,
-          paypalOrderId: verificationDetails?.paypalOrderId
+          paypalOrderId: verificationDetails?.paypalOrderId,
         })
       });
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.subscription) {
-          setSubscription(data.subscription);
-          setIsProState(true);
-          setTrialDaysRemaining(365);
-          console.log('âœ… [Subscription] SuscripciÃ³n activada exitosamente por backend:', data.subscription);
-          return true;
-        }
-      } else {
+      if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        console.warn('ðŸ”’ [Subscription] ActivaciÃ³n bloqueada por backend:', errData);
+        console.warn('?? [Subscription] Activaci?n bloqueada por backend:', errData);
+        setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+        setTrialDaysRemaining(0);
+        setIsProState(false);
+        return false;
       }
+
+      const data = await res.json();
+      if (res.ok && data?.success === true && data.subscription) {
+        setSubscription(data.subscription);
+        setIsProState(true);
+        setTrialDaysRemaining(data.subscription.tier === 'trial' ? (data.daysRemaining ?? 0) : 365);
+        console.log('? [Subscription] Suscripci?n activada exitosamente por backend:', data.subscription);
+        return true;
+      }
+
+      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+      setTrialDaysRemaining(0);
+      setIsProState(false);
       return false;
     } catch (e: any) {
-      console.error('Error activando suscripciÃ³n:', e);
+      console.error('Error activando suscripci?n:', e);
+      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+      setTrialDaysRemaining(0);
+      setIsProState(false);
       return false;
     }
   }, [user]);
 
-  const cancelSubscription = useCallback(async () => {
+const cancelSubscription = useCallback(async () => {
     const cancelledSub: UserSubscription = {
       ...subscription,
       autoRenew: false,

@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
 import initializeTrialHandler from './api/initialize-trial.ts';
+import activateHandler from './api/subscription/activate.ts';
 
 dotenv.config();
 
@@ -16,6 +17,10 @@ async function startServer() {
   // Mount API endpoints
   app.all('/api/initialize-trial', (req: Request, res: Response) => {
     return (initializeTrialHandler as any)(req, res);
+  });
+
+  app.all('/api/subscription/activate', (req: Request, res: Response) => {
+    return (activateHandler as any)(req, res);
   });
 
   const isProduction = process.env.NODE_ENV === 'production';

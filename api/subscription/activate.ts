@@ -29,7 +29,28 @@ type ApiResponse = ServerResponse & {
   };
 };
 
-const TRIAL_DAYS = 15;
+const ALLOWED_PLAN_IDS = new Set(['pro_monthly', 'pro_annual']);
+
+async function readJsonBody(req: ApiRequest): Promise<any> {
+  if (req.body && typeof req.body === 'object') {
+    return req.body;
+  }
+
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+    req.on('end', () => {
+      const raw = Buffer.concat(chunks).toString('utf8').trim();
+      if (!raw) return resolve({});
+      try {
+        resolve(JSON.parse(raw));
+      } catch (error) {
+        reject(error);
+      }
+    });
+    req.on('error', reject);
+  });
+}
 
 function getAllowedOrigin(req: ApiRequest): string {
   const configuredOrigin = process.env.ALLOWED_ORIGIN;
@@ -66,90 +87,67 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
   if (!idToken) {
-    return res.status(401).json({ error: 'Token de autenticaci?n vac?o o malformado.' });
+    return res.status(401).json({ error: 'Token inv?lido o vac?o.' });
   }
 
   try {
     const decodedToken = await getAuth().verifyIdToken(idToken);
     const uid = decodedToken.uid;
-    const db = getFirestore();
-    const userRef = db.collection('users').doc(uid);
-    const userSnap = await userRef.get();
-    const now = Date.now();
+    const body = await readJsonBody(req);
+    const planId = String(body?.planId || '');
+    const wompiTransactionId = body?.wompiTransactionId ? String(body.wompiTransactionId) : '';
+    const paypalOrderId = body?.paypalOrderId ? String(body.paypalOrderId) : '';
+    const transactionId = wompiTransactionId || paypalOrderId;
 
-    if (userSnap.exists) {
-      const userData = userSnap.data() || {};
-      const tier = userData.subscription?.tier;
-      const status = userData.subscription?.status;
-      const isPaidActive = (tier === 'pro_monthly' || tier === 'pro_annual') && status === 'active';
-
-      if (isPaidActive) {
-        return res.status(200).json({
-          success: true,
-          isPro: true,
-          daysRemaining: 30,
-          subscription: userData.subscription
-        });
-      }
+    if (!ALLOWED_PLAN_IDS.has(planId)) {
+      return res.status(400).json({ error: 'planId inv?lido. Usa pro_monthly o pro_annual.' });
     }
 
-    const existingTrialStartedAt = userSnap.exists ? Number(userSnap.data()?.trialStartedAt ?? now) : now;
-    const trialStartedAt = Number.isFinite(existingTrialStartedAt) && existingTrialStartedAt > 0
-      ? existingTrialStartedAt
-      : now;
-
-    if (!userSnap.exists || !userSnap.data()?.trialStartedAt) {
-      await userRef.set({
-        trialStartedAt,
-        updatedAt: now
-      }, { merge: true });
+    if (!transactionId) {
+      return res.status(400).json({ error: 'Debe incluir wompiTransactionId o paypalOrderId.' });
     }
 
-    const totalTrialMs = TRIAL_DAYS * 24 * 60 * 60 * 1000;
-    const elapsedMs = Math.max(0, now - trialStartedAt);
-    const remainingMs = totalTrialMs - elapsedMs;
-
-    if (remainingMs <= 0) {
-      const freeSubscription = {
-        tier: 'free',
-        status: 'active',
-        planName: 'Plan Gratuito'
-      };
-
-      await userRef.set({
-        isPro: false,
-        trialStartedAt,
-        subscription: freeSubscription,
-        updatedAt: now
-      }, { merge: true });
-
-      return res.status(200).json({
-        success: true,
-        isPro: false,
-        daysRemaining: 0,
-        subscription: freeSubscription
-      });
+    const firestore = getFirestore();
+    const processedRef = firestore.collection('processed_payments').doc(transactionId);
+    const processedSnap = await processedRef.get();
+    if (processedSnap.exists) {
+      return res.status(409).json({ error: 'Transacci?n ya procesada.' });
     }
 
-    const daysRemaining = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+    const planName = planId === 'pro_annual' ? 'NutriPet Pro Anual' : 'NutriPet Pro Mensual';
+    const subscription = {
+      tier: planId,
+      status: 'active',
+      planName,
+      activatedAt: Date.now(),
+      transactionId,
+      updatedAt: Date.now()
+    };
+
+    const batch = firestore.batch();
+    batch.set(processedRef, {
+      userId: uid,
+      planId,
+      transactionId,
+      processedAt: Date.now()
+    });
+    batch.set(firestore.collection('users').doc(uid), {
+      isPro: true,
+      subscription,
+      updatedAt: Date.now()
+    }, { merge: true });
+
+    await batch.commit();
 
     return res.status(200).json({
       success: true,
-      isPro: false,
-      daysRemaining,
-      subscription: {
-        tier: 'trial',
-        status: 'active',
-        planName: 'Periodo de Prueba',
-        trialStartedAt,
-        validUntil: new Date(trialStartedAt + totalTrialMs).toISOString()
-      }
+      subscription
     });
-  } catch (err: any) {
-    console.error('Error verificando sesi?n o trial:', err);
+  } catch (error: any) {
+    console.error('Error activando suscripci?n:', error);
     return res.status(401).json({
-      error: 'Token inv?lido o expirado.',
-      details: err?.message
+      error: 'No autorizado o token inv?lido.',
+      details: error?.message || 'invalid token'
     });
   }
 }
