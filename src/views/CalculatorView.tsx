@@ -140,7 +140,7 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
 
   return (
     <div className="space-y-8">
-      {/* Banner Superior Orientativo */}
+      {/* Banner Superior */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-950 via-teal-900 to-stone-900 text-white p-6 sm:p-8 shadow-lg border border-emerald-800/40 dark:shadow-[0_0_25px_rgba(16,185,129,0.12)] no-print text-center">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 max-w-3xl mx-auto space-y-3 flex flex-col items-center">
@@ -185,10 +185,10 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
         </div>
       </div>
 
-      {/* Formulario + Ficha */}
+      {/* Formulario y Ficha */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
         
-        {/* Panel Izquierdo: Biométricos */}
+        {/* Panel Izquierdo */}
         <div className="lg:col-span-5 space-y-4">
           <div className="flex items-center justify-between px-1 no-print">
             <span className="text-xs font-bold text-stone-600 dark:text-stone-300">
@@ -242,7 +242,6 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
               </div>
             ) : (
               <>
-                {/* Foto de la Mascota */}
                 <div className="p-4 bg-stone-50/80 dark:bg-stone-800/60 rounded-2xl border border-stone-200 dark:border-stone-750 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
@@ -298,7 +297,6 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Especie */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                     Especie
@@ -314,7 +312,7 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                           : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
                       }`}
                     >
-                      <span className="text-xl transform group-hover:scale-110 transition-transform">🐶</span>
+                      <span className="text-xl">🐶</span>
                       <span>Perro</span>
                     </button>
                     <button
@@ -327,13 +325,12 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                           : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
                       }`}
                     >
-                      <span className="text-xl transform group-hover:scale-110 transition-transform">🐱</span>
+                      <span className="text-xl">🐱</span>
                       <span>Gato</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Nombre y Raza */}
                 <div className="space-y-3">
                   <div className="space-y-1.5">
                     <label htmlFor="pet-name-input" className="text-xs font-bold uppercase tracking-wider text-stone-500">
@@ -381,7 +378,6 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Peso Actual */}
                 <div className="p-4 bg-stone-50/80 dark:bg-stone-800/80 rounded-2xl border border-stone-200 dark:border-stone-750 space-y-2.5">
                   <div className="flex items-center justify-between">
                     <label htmlFor="pet-weight-input" className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
@@ -432,7 +428,6 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Etapa de Vida */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                     Etapa de Vida
@@ -474,7 +469,6 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Condición Corporal */}
                 <div className="space-y-2">
                   <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
                     Condición Corporal
@@ -516,7 +510,6 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                   </div>
                 </div>
 
-                {/* Esterilizado */}
                 <div className="flex items-center justify-between p-3.5 rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-800/50">
                   <div className="space-y-0.5">
                     <span className="text-xs font-bold text-stone-900 dark:text-stone-100 block">¿Esterilizado / Castrado?</span>
@@ -537,7 +530,6 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                   </button>
                 </div>
 
-                {/* Dieta */}
                 <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
                   <button
                     type="button"
@@ -563,7 +555,6 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                   </button>
                 </div>
 
-                {/* Guardar Cambios */}
                 <div className="pt-3 border-t border-stone-100 dark:border-stone-800 space-y-2">
                   <button
                     type="button"
@@ -611,3 +602,340 @@ export const CalculatorView: React.FC<CalculatorViewProps> = ({
                       <span>{saveSuccessMessage}</span>
                     </div>
                   )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Panel Derecho */}
+        <div className="lg:col-span-7 space-y-4">
+          <div className="flex items-center justify-between px-1 no-print">
+            <span className="text-xs font-bold text-stone-600 dark:text-stone-300">
+              Ficha Técnica & Raciones Oficiales
+            </span>
+            <span className="text-[11px] font-bold px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              Paso 3 de 3
+            </span>
+          </div>
+          
+          <div 
+            id="print-pet-sheet"
+            className="glass-card dark:bg-stone-900/90 dark:border-stone-800 dark:shadow-[0_0_25px_rgba(16,185,129,0.08)] border-2 border-emerald-500/10 rounded-3xl p-6 sm:p-8 shadow-bento space-y-6 relative overflow-hidden transition-all print:bg-white print:border print:border-black print:p-4 print:shadow-none"
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-stone-100 dark:border-stone-800 gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-stone-100 dark:bg-stone-800 border-2 border-emerald-500/40 overflow-hidden shrink-0 shadow-xs flex items-center justify-center">
+                  {profile.photoUrl ? (
+                    <img 
+                      src={profile.photoUrl} 
+                      alt={profile.name} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span className="text-3xl">
+                      {profile.type === 'dog' ? '🐶' : '🐱'}
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-heading text-2xl font-black text-stone-900 dark:text-stone-100 leading-tight">
+                      {profile.name || 'Mi Mascota'}
+                    </h3>
+                    <span className="text-xs bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200/60 dark:border-emerald-800/80">
+                      {profile.type === 'dog' ? 'Canino' : 'Felino'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-stone-600 dark:text-stone-300 font-semibold mt-0.5">
+                    {selectedBreedInfo ? selectedBreedInfo.name : 'Raza / Contextura'}
+                  </p>
+                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                    Peso: <strong className="text-stone-800 dark:text-stone-200">{profile.weightKg} kg</strong> • Condición: <strong className="text-stone-800 dark:text-stone-200">{profile.condition === 'ideal' ? 'Peso Ideal' : profile.condition === 'overweight' ? 'Sobrepeso' : 'Bajo Peso'}</strong> • Esterilizado: <strong className="text-stone-800 dark:text-stone-200">{profile.neutered ? 'Sí' : 'No'}</strong>
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap no-print">
+                <button
+                  onClick={() => setShowShareModal(true)}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold transition-all shadow-sm cursor-pointer active:scale-95"
+                  title="Compartir por WhatsApp o copiar resumen"
+                >
+                  <MessageCircle className="w-4 h-4 fill-current" />
+                  <span>Compartir Resumen</span>
+                </button>
+              </div>
+            </div>
+
+            {profile.diet === 'kibble' ? (
+              <div className="space-y-4 bg-gradient-to-b from-stone-50 to-emerald-50/30 dark:from-stone-850 dark:to-emerald-950/20 p-5 sm:p-6 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🥣</span>
+                    <div>
+                      <h4 className="font-heading font-black text-stone-900 dark:text-stone-100 text-base sm:text-lg leading-tight">
+                        Ración Diaria de Croquetas / Pienso
+                      </h4>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">Recomendación calórica para {profile.name}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-extrabold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800 shrink-0">
+                    {result.mealsPerDay} tomas al día
+                  </span>
+                </div>
+
+                <div className="bg-white dark:bg-stone-900 p-5 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
+                  <div className="text-center sm:text-left">
+                    <span className="text-xs font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider block">
+                      Total diario a servir:
+                    </span>
+                    <span className="text-3xl sm:text-4xl font-black text-stone-900 dark:text-white font-heading">
+                      <AnimatedCounter value={result.kibbleDailyGrams} /> <span className="text-base font-bold text-emerald-600 dark:text-emerald-400">gramos/día</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {Array.from({ length: result.mealsPerDay }).map((_, i) => (
+                      <div key={i} className="text-center bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800/60 px-3.5 py-2 rounded-xl">
+                        <span className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 block uppercase tracking-wider">
+                          Toma {i + 1}
+                        </span>
+                        <span className="text-lg font-black text-stone-900 dark:text-white font-heading">
+                          <AnimatedCounter value={result.gramsPerMeal} suffix="g" />
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4 bg-gradient-to-b from-stone-50 to-amber-50/30 dark:from-stone-850 dark:to-amber-950/20 p-5 sm:p-6 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-2xs">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl">🥩</span>
+                    <div>
+                      <h4 className="font-heading font-black text-stone-900 dark:text-stone-100 text-base sm:text-lg leading-tight">
+                        Ración Dieta Natural BARF
+                      </h4>
+                      <p className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">Alimento biológicamente apropiado para {profile.name}</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-extrabold text-amber-900 dark:text-amber-300 bg-amber-100 dark:bg-amber-950/80 px-3 py-1 rounded-full border border-amber-200 dark:border-amber-800 shrink-0">
+                    {result.barfBreakdown?.percentage}% peso corporal
+                  </span>
+                </div>
+
+                <div className="bg-white dark:bg-stone-900 p-4 rounded-2xl border border-stone-200 dark:border-stone-800 text-center sm:text-left flex items-center justify-between shadow-2xs">
+                  <div>
+                    <span className="text-xs text-stone-400 dark:text-stone-500 block font-bold uppercase">Total diario fresco:</span>
+                    <span className="text-3xl font-black text-stone-900 dark:text-white font-heading">
+                      <AnimatedCounter value={result.barfBreakdown?.totalGrams || 0} /> <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">gramos/día</span>
+                    </span>
+                  </div>
+                  <span className="text-xs bg-stone-100 text-stone-700 px-3 py-1.5 rounded-lg font-bold">
+                    {result.mealsPerDay} tomas de {Math.round((result.barfBreakdown?.totalGrams || 0) / result.mealsPerDay)}g
+                  </span>
+                </div>
+
+                {result.barfBreakdown && (
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                    <div className="bg-white dark:bg-stone-900 p-2.5 rounded-xl border border-stone-200 dark:border-stone-800 text-center">
+                      <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Huesos Carnosos</span>
+                      <span className="text-base font-extrabold text-stone-900 dark:text-white font-heading">
+                        <AnimatedCounter value={result.barfBreakdown.meatyBonesGrams} suffix="g" />
+                      </span>
+                      <span className="text-[10px] text-stone-400 dark:text-stone-500 block">50% crudo</span>
+                    </div>
+
+                    <div className="bg-white dark:bg-stone-900 p-2.5 rounded-xl border border-stone-200 dark:border-stone-800 text-center">
+                      <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Carne Magra</span>
+                      <span className="text-base font-extrabold text-stone-900 dark:text-white font-heading">
+                        <AnimatedCounter value={result.barfBreakdown.muscleMeatGrams} suffix="g" />
+                      </span>
+                      <span className="text-[10px] text-stone-400 dark:text-stone-500 block">30% músculo</span>
+                    </div>
+
+                    <div className="bg-white dark:bg-stone-900 p-2.5 rounded-xl border border-stone-200 dark:border-stone-800 text-center">
+                      <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Vísceras</span>
+                      <span className="text-base font-extrabold text-stone-900 dark:text-white font-heading">
+                        <AnimatedCounter value={result.barfBreakdown.organsGrams} suffix="g" />
+                      </span>
+                      <span className="text-[10px] text-stone-400 dark:text-stone-500 block">10% hígado/órgano</span>
+                    </div>
+
+                    <div className="bg-white dark:bg-stone-900 p-2.5 rounded-xl border border-stone-200 dark:border-stone-800 text-center">
+                      <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Vegetales Aptos</span>
+                      <span className="text-base font-extrabold text-stone-900 dark:text-white font-heading">
+                        <AnimatedCounter value={result.barfBreakdown.vegetablesFruitsGrams} suffix="g" />
+                      </span>
+                      <span className="text-[10px] text-stone-400 dark:text-stone-500 block">10% verdura</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-4 pt-1 animate-fade-in">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-stone-400 block mb-0.5">
+                    Gasto Base (RER)
+                  </span>
+                  <span className="text-xl font-black text-stone-800 font-heading">
+                    {result.rer} <span className="text-xs font-medium text-stone-500">kcal/día</span>
+                  </span>
+                  <span className="text-[10px] text-stone-400 block mt-1">Calorías en reposo estricto</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/70">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 block mb-0.5">
+                    Calorías Totales (MER)
+                  </span>
+                  <span className="text-xl font-black text-emerald-900 font-heading">
+                    {result.mer} <span className="text-xs font-medium text-emerald-700">kcal/día</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-600 block mt-1">Gasto total según actividad</span>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-200/70 col-span-2 sm:col-span-1">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-blue-700 block mb-0.5">
+                    Agua Diaria Sugerida
+                  </span>
+                  <span className="text-xl font-black text-blue-900 font-heading">
+                    {result.waterDailyMl.min} - {result.waterDailyMl.max} <span className="text-xs font-medium text-blue-700">ml</span>
+                  </span>
+                  <span className="text-[10px] text-blue-600 block mt-1">Hidratación fresca</span>
+                </div>
+              </div>
+
+              {selectedBreedInfo && (
+                <div className="space-y-3 pt-2 border-t border-stone-100">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <div>
+                      <h4 className="font-heading font-extrabold text-sm sm:text-base text-stone-900">
+                        Sugerencias del Mercado para {selectedBreedInfo.name}
+                      </h4>
+                      <p className="text-[11px] text-stone-500">
+                        Enfoque nutricional: {selectedBreedInfo.nutritionFocus}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {selectedBreedInfo.recommendedFoodTypes.map((tier, idx) => (
+                      <div key={idx} className="flex flex-col gap-2.5 p-4 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-800">
+                        <span className={`font-bold text-xs px-2.5 py-1 rounded-lg w-fit ${
+                          tier.tier.includes('Súper Premium')
+                            ? 'bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
+                            : 'bg-amber-100/80 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
+                        }`}>
+                          {tier.tier}
+                        </span>
+
+                        <div className="flex flex-wrap gap-2">
+                          {tier.brands.map((brand, bIdx) => (
+                            <span key={bIdx} className="px-3 py-1.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-semibold text-stone-900 dark:text-stone-100 shadow-2xs">
+                              {brand}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="text-xs text-stone-600 dark:text-stone-400 flex items-start gap-1.5 mt-1 leading-relaxed">
+                          <span className="shrink-0 mt-0.5">💡</span>
+                          <div>
+                            <strong className="text-stone-900 dark:text-stone-200">Por qué funciona:</strong> {tier.why}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {!user && (
+            <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 text-white border border-stone-800 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3.5 no-print">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-xl shrink-0">
+                  {profile.type === 'dog' ? '🐶' : '🐱'}
+                </div>
+                <div className="text-center sm:text-left">
+                  <strong className="block font-bold text-sm text-white">
+                    ¿Quieres guardar la ficha y dieta de {profile.name || 'tu mascota'}?
+                  </strong>
+                  <p className="text-xs text-stone-300">
+                    Respalda su historial en la nube e incluye 15 días gratis de funciones Pro.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const googleBtn = document.querySelector('button[title*="Google"]') as HTMLButtonElement | null;
+                  if (googleBtn) googleBtn.click();
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black text-xs transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap text-center"
+              >
+                Registrarme Gratis
+              </button>
+            </div>
+          )}
+
+          <div className="no-print">
+            <UnifiedFoodCalculator
+              dailyGrams={profile.diet === 'kibble' ? result.kibbleDailyGrams : (result.barfBreakdown?.totalGrams || 500)}
+              petName={profile.name}
+              petType={profile.type}
+            />
+          </div>
+
+          <div className="p-4 bg-emerald-50 dark:bg-stone-850 border border-emerald-200/80 dark:border-stone-700 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
+            <div className="flex items-center gap-3 text-stone-800 dark:text-stone-200 text-xs font-medium">
+              <span className="p-2 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded-xl font-extrabold">⏰</span>
+              <div>
+                <strong className="block font-bold text-stone-900 dark:text-white">Organizador de Rutina & Horarios</strong>
+                <p className="text-[11px] text-stone-500 dark:text-stone-400">Genera la tabla de horarios de {profile.name} para pegar en la nevera.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('routine')}
+              className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs whitespace-nowrap"
+            >
+              Ver Rutina Completa →
+            </button>
+          </div>
+
+          <div className="no-print">
+            <FoodTransitionGuide
+              petName={profile.name}
+              petType={profile.type}
+            />
+          </div>
+
+          <div className="p-4 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl text-center text-xs text-stone-600 dark:text-stone-400 no-print flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-center sm:text-left">
+              <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>
+                ¿Deseas la ficha clínica completa, carnet de vacunas y contactos médicos de <strong>{profile.name}</strong>?
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveTab('sheet')}
+              className="w-full sm:w-auto px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shrink-0 active:scale-98"
+            >
+              <span>Ir a la Ficha Técnica Oficial →</span>
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  );
+};
