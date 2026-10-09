@@ -19,7 +19,8 @@ import {
   Sun,
   Moon,
   Clock,
-  Utensils
+  Utensils,
+  Star
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { NutriPetLogo } from './NutriPetLogo';
@@ -32,6 +33,7 @@ interface SidebarProps {
   onOpenSubscriptionModal: () => void;
   onOpenBgModal: () => void;
   onOpenAdminModal?: () => void;
+  onOpenFeedbackModal?: () => void;
   petName: string;
   petType: 'dog' | 'cat';
   petPhotoUrl?: string;
@@ -86,6 +88,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onOpenSubscriptionModal,
   onOpenBgModal,
   onOpenAdminModal,
+  onOpenFeedbackModal,
   petName,
   petType,
   petPhotoUrl,
@@ -169,7 +172,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                         ? item.isPro
                           ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md'
                           : 'bg-emerald-50 text-emerald-950 border-l-4 border-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-200'
-                        : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100/90 dark:hover:bg-stone-800/80'
+                        : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:white hover:bg-stone-100/90 dark:hover:bg-stone-800/80'
                     } ${!showText ? 'justify-center px-2' : ''}`}
                   >
                     <IconComp className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
@@ -324,9 +327,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {renderNavLinks(handleSelectTab, !isCollapsed)}
         </nav>
 
-        {/* Panel de Configuración al fondo */}
-        {!isCollapsed && (
-          <div className="p-3 border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-850/50 space-y-2 shrink-0">
+        {/* Panel Inferior: Calificación, Fondo y Tema */}
+        <div className="p-3 border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-850/50 space-y-1.5 shrink-0">
+          {/* Botón de Calificar y Opinión */}
+          {onOpenFeedbackModal && (
+            isCollapsed ? (
+              <button
+                type="button"
+                onClick={onOpenFeedbackModal}
+                className="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-200/80 dark:border-amber-800/80 cursor-pointer shadow-2xs transition-all active:scale-95"
+                title="Calificar y Opinión"
+              >
+                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onOpenFeedbackModal}
+                className="w-full py-2 px-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                <span>Calificar y Opinión</span>
+              </button>
+            )
+          )}
+
+          {/* Selector de Fondo y Modo Oscuro */}
+          {!isCollapsed && (
             <div className="grid grid-cols-2 gap-1.5">
               <button
                 type="button"
@@ -349,8 +376,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </button>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Acceso Administrador en PC */}
         {onOpenAdminModal && (
@@ -462,6 +489,21 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </nav>
 
               <div className="p-3 border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/90 space-y-2 shrink-0">
+                {/* Botón Calificar en Menú Móvil */}
+                {onOpenFeedbackModal && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsMobileOpen(false);
+                      onOpenFeedbackModal();
+                    }}
+                    className="w-full py-2 px-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-95 cursor-pointer"
+                  >
+                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                    <span>Calificar y Opinión</span>
+                  </button>
+                )}
+
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"

@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { auth } from './lib/firebase';
-import { Sparkles, Lock, Star } from 'lucide-react';
+import { Sparkles, Lock } from 'lucide-react';
 import { PetProfile, CalculationResult, BreedInfo, AppTab } from './types';
 import { calculatePetNutrition, POPULAR_BREEDS } from './data';
 import { CalculatorView } from './views/CalculatorView';
@@ -412,6 +412,7 @@ export default function App() {
           onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
           onOpenBgModal={() => setShowBgModal(true)}
           onOpenAdminModal={user?.email?.toLowerCase().trim() === 'dgcontrerasb@gmail.com' ? () => setShowAdminModal(true) : undefined}
+          onOpenFeedbackModal={() => setShowFeedbackModal(true)}
           petName={profile.name}
           petType={profile.type}
           petPhotoUrl={profile.photoUrl}
@@ -673,9 +674,7 @@ export default function App() {
         )}
 
         {/* Contenido Principal */}
-        <main className={`flex-grow flex-1 w-full px-4 sm:px-6 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-32 lg:pb-12 space-y-8 overflow-x-hidden transition-all duration-300 ${
-          isSidebarCollapsed ? 'lg:pl-24' : 'lg:pl-72'
-        }`}>
+        <main className="flex-grow flex-1 w-full min-w-0 px-4 sm:px-6 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-32 lg:pb-12 space-y-8 overflow-x-hidden">
           
           {/* VISTA 1: CALCULADORA NUTRICIONAL Y FICHA CON FOTO */}
           {activeTab === 'calculator' && (
@@ -765,17 +764,8 @@ export default function App() {
               <span>Herramienta informativa y de orientación para el cuidado de mascotas en el hogar</span>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setShowFeedbackModal(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 font-bold border border-amber-200 dark:border-amber-800 transition-all cursor-pointer text-xs"
-              >
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span>Calificar y Opinión</span>
-              </button>
-
-              {user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com' && (
+            {user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com' && (
+              <div className="flex items-center">
                 <button
                   type="button"
                   onClick={() => setShowAdminModal(true)}
@@ -784,8 +774,8 @@ export default function App() {
                 >
                   <Lock className="w-3 h-3" />
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-800 text-[11px] text-stone-600 dark:text-stone-400 leading-relaxed">
