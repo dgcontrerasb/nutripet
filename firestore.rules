@@ -1,0 +1,54 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && request.auth.token.email.lower() == 'dgcontrerasb@gmail.com';
+    }
+
+    // Perfiles y subcolecciones de usuarios
+    match /users/{userId} {
+      allow read, write: if isOwner(userId) || isAdmin();
+
+      match /pets/{petId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+
+        match /{subcollection}/{docId} {
+          allow read, write: if isOwner(userId) || isAdmin();
+        }
+      }
+
+      match /subscription/{docId} {
+        allow read, write: if isOwner(userId) || isAdmin();
+      }
+    }
+
+    // Fichas públicas para lectura por código QR
+    match /publicPets/{petId} {
+      allow read: if true;
+      allow write: if isAuthenticated() || isAdmin();
+    }
+
+    // Feedbacks y opiniones
+    match /feedbacks/{feedbackId} {
+      allow create: if request.resource.data.rating >= 1 
+                    && request.resource.data.rating <= 5 
+                    && request.resource.data.comment.size() > 0;
+      allow read, delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // Métricas del sistema
+    match /admin_metrics/{document} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
