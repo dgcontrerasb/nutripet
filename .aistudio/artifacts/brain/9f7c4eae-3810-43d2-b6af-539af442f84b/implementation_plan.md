@@ -1,114 +1,95 @@
-# Reestructuración Espacial y Arquitectura Modular Avanzada: NutriPet
+# Plan de Elevación Profesional & Visualización Avanzada: NutriPet
 
-Plan de arquitectura de interfaz y maquetación de módulos para NutriPet, evolucionando de la maquetación estandarizada tipo tarjeta apilada hacia un **Panel Split Asimétrico de Alto Rendimiento**. Esta distribución separa de manera fija el cabezal de control e indicador biométrico del paciente (HUD de Mascota) en la columna izquierda, mientras despliega el flujo dinámico de trabajo a la derecha con contenedores desplegables de densidad progresiva y transiciones continuas sin modales emergentes invasivos.
+Plan de mejoras profesionales para NutriPet, diseñado para transformar la visibilidad y propuesta de valor de la plataforma mediante la integración de **Gráficos Interactivos de Evolución Metabólica** (Tendencia de peso y consumo calórico a lo largo del tiempo) e **Indicadores de Salud con Medidores Circulares de Progreso (Radial Progress Gauges)**, manteniendo la cabecera enfocada limpiamente en la mascota activa.
 
 ---
 
 ## Decisiones Críticas & Confirmaciones del Usuario
 
 > [!IMPORTANT]
-> Basado en tus respuestas en la entrevista de diseño, las reglas de maquetación y la infoarquitectura espacial del proyecto quedan fijadas bajo los siguientes pilares:
+> Basado en tus respuestas en la entrevista de diseño, las especificaciones maestras de esta fase quedan fijadas así:
 
-- **Estructura Espacial Principal**: *Panel Split Asimétrico (HUD + Viewport)*.
-  - **Columna Fija de Control (Izquierda / Sticky HUD)**: Muestra en todo momento el perfil del paciente activo ({profile.name}), su foto, especie, barra de peso con respecto al objetivo ideal, requerimientos calóricos base y selector rápido de mascota sin interferir con la navegación.
-  - **Viewport Principal de Trabajo (Derecha)**: Espacio de lectura y edición amplia donde se renderizan la Calculadora, Ficha Clínica, Semáforo Toxicológico, Expediente y Recetarios BARF.
-- **Patrón de Interacción y Navegación Interna**: *Flujo Continuo sin Modales Restrictivos*.
-  - Sustitución de modales emergentes intrusivos por paneles deslizantes en línea, acordeones expandibles con transiciones suaves y tarjetas de edición in situ.
-- **Densidad de Datos e Infoarquitectura**: *Progresiva y Equilibrada*.
-  - La tarjeta presenta primero la métrica o recomendación principal (ej. gramos diarios, alimentos prohibidos o próximo recordatorio) y permite expandir el desglose nutricional profundo o histórico con un solo clic táctil.
-
----
-
-## 1. Visión General & Concepto de Distribución
-
-### Problema de las Interfaces de IA Cliché
-Las interfaces generadas por IA suelen pecar de dos patrones repetitivos:
-1. *Grid Simétrico de Tarjetas Flotantes*: Tarjetas de igual tamaño apiladas verticalmente que obligan al usuario a hacer scroll infinito para encontrar datos básicos.
-2. *Cúmulo de Modales Emergentes*: Cada acción (editar peso, ver vacunas, agregar alimento) abre una ventana flotante que interrumpe la navegación.
-
-### La Solución NutriPet: Command Center Split
-NutriPet adoptará una distribución de **Centro de Comando Asimétrico**:
-- Al entrar a cualquier vista (Calculadora, Ficha, Salud, Alimentos, Recordatorios), el tutor siempre ve a su mascota en la columna fija izquierda con sus métricas vitales (HUD).
-- A la derecha, el módulo activo se despliega como un cuaderno continuo con secciones colapsables que no pierden el contexto biométrico.
+- **Módulo Interactivo Principal**: *Gráficos de Evolución de Peso & Consumo Calórico*.
+  - Integración en `WeightCurveChart.tsx` y en el HUD/Vista de Ficha de un gráfico dinámico SVG/Canvas con curvas de tendencia, franja de peso ideal óptimo, registros históricos interactivos y desglose de Kcal/día.
+- **Visualización de Métricas & Estado**: *Medidores Circulares de Progreso (Radial Gauges)*.
+  - Implementación de anillos concéntricos de porcentaje en el plato nutricional y tarjetas metabólicas para mostrar visualmente:
+    1. Porcentaje de hidratación diaria alcanzada.
+    2. Progreso hacia el peso ideal.
+    3. Distribución calórica de macronutrientes (Proteínas, Grasas, Carbohidratos).
+- **Enfoque de la Cabecera**: *Enfocada en la Mascota Activa*.
+  - La cabecera superior y el HUD lateral se mantendrán limpios y dedicados a la mascota seleccionada, evitando banners de alertas genéricas o elementos que distraigan de la atención veterinaria.
 
 ---
 
-## 2. Experiencia de Usuario & Maquetación Espacial
+## 1. Visión General & Propuesta de Valor
 
-### A. Anatomía de la Pantalla (Desktop & Tablet)
+### El Salto a una Plataforma Veterinaria de Clase Mundial
+Para que NutriPet destaque frente a herramientas genéricas, la experiencia debe ofrecer **evidencia gráfica tangible del progreso de la mascota**:
+1. **Historial Visual de Peso**: El tutor puede observar cómo el cambio de ración o alimento impacta la curva de peso hacia el objetivo saludable.
+2. **Medidores Circulares de Salud**: Anillos circulares de progreso táctil que comunican el estado de hidratación y dosificación de un vistazo sin saturation textual.
+3. **Estética Editorial Limpia**: Uso de paleta verde bosque (`#143826`), crema cálido (`#FAF8F5`), tipografía editorial (`Fraunces`) y cifras tabulares (`JetBrains Mono`).
+
+---
+
+## 2. Experiencia de Usuario & Visualización de Datos
+
+### A. Componentes a Desarrollar e Integrar
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
-│                               HEADER PERMANENTE (LG:LEFT-64)                                    │
-│       Aviso Institucional · Selector de Mascota Rapido · Cuenta Pro / Administrador · Tema     │
-├─────────────────┬───────────────────────────────────────────────────────────────────────────────┤
-│ SIDEBAR FIJO    │ PANEL SPLIT ASIMÉTRICO (viewport principal lg:pl-64)                          │
-│ (256px ancho)   │                                                                               │
-│                 │ ┌──────────────────────────────┬────────────────────────────────────────────┐ │
-│ - Calculadora   │ │ COLUMNA HUD DE PACIENTE      │ VIEWPORT DINÁMICO DE MÓDULOS (Flex-1)      │ │
-│ - Alimentos     │ │ (Sticky / 320px - 360px)     │                                            │ │
-│ - Ficha Técnica │ │                              │ [ HERO DEL MÓDULO ACTIVO ]                 │ │
-│ - Salud & Pesos │ │ - Avatar & Especie           │                                            │ │
-│ - Recordatorios │ │ - Peso & Barra de Estado     │ [ BLOQUE PRINCIPAL / FORMULARIO CONTINUO ] │ │
-│ - Recetas BARF  │ │ - Requerimiento MER/RER      │ - Acordeón 1: Biometría & Dieta            │ │
-│ - Razas         │ │ - Ración sugerida en gramos  │ - Acordeón 2: Plato & Desglose Nutricional │ │
-│ - Guías & Tips  │ │ - Accesos de edición in situ │ - Acordeón 3: Recomendaciones & Marcas     │ │
-│                 │ └──────────────────────────────┴────────────────────────────────────────────┘ │
-└─────────────────┴───────────────────────────────────────────────────────────────────────────────┘
+│                          MÓDULOS DE VISUALIZACIÓN AVANZADA NUTRIPET                             │
+└────────────────────────────────────────────────┬────────────────────────────────────────────────┘
+                                                 │
+           ┌─────────────────────────────────────┴────────────────────────────────────┐
+           ▼                                                                          ▼
+┌─────────────────────────────────────────┐                ┌──────────────────────────────────────────┐
+│ 1. GRÁFICO INTERACTIVO DE EVOLUCIÓN     │                │ 2. MEDIDORES CIRCULARES DE PROGRESO     │
+│    (WeightCurveChart.tsx & Medical)     │                │    (RadialHealthGauges.tsx & HUD)        │
+│                                         │                │                                          │
+│ - Curva Bézier de peso histórico        │                │ - Anillo 1: Hidratación diaria (ml/día)  │
+│ - Banda sombreada de Peso Ideal         │                │ - Anillo 2: Balance Calórico (Kcal/día)  │
+│ - Tooltip flotante con fecha y notas    │                │ - Anillo 3: % Progreso a Peso Objetivo   │
+│ - Selector de rango (3M, 6M, 1A, Todo)  │                │ - Animación fluida de llenado con SVG    │
+└─────────────────────────────────────────┘                └──────────────────────────────────────────┘
 ```
 
-### B. Distribución por Módulo
+### B. Especificaciones del Gráfico de Evolución de Peso (`WeightCurveChart.tsx`)
+- **Visualización**: Curva de interpolación suave (catmull-rom / bézier) que une cada registro de peso histórico de la mascota.
+- **Zona de Confort**: Banda horizontal con sombreado sutil en verde salvia (`#52796f/15`) que representa el rango de peso ideal óptimo para la raza y edad.
+- **Tooltips Táctiles**: Al tocar un punto del gráfico, muestra un flotante con la fecha exacta, peso registrado, diferencia respecto a la toma anterior e impresiones clínicas/notas.
 
-#### 1. Módulo Calculadora Nutricional & Dosificación
-- **Columna HUD (Izquierda)**: Mantiene la ficha fija de la mascota con la foto, edad, raza, tipo de alimento actual (croquetas vs. BARF) y el calculador de porciones en tiempo real.
-- **Viewport Principal (Derecha)**:
-  - *Panel 1 (Biometría In Situ)*: Formulario compacto de entrada de peso, nivel de actividad y estado reproductivo con sliders suaves y botones de selección táctil.
-  - *Panel 2 (Plato Nutricional Interactivo)*: Presentación visual del plato en gramos con desglose por tomas (Toma 1, Toma 2, Toma 3) y contador animado (`AnimatedCounter`).
-
-#### 2. Módulo Semáforo Toxicológico
-- **Columna HUD**: Resumen de alertas activas de la especie (ej. *"Ingredientes mortales para Caninos"*).
-- **Viewport Principal**:
-  - *Barra de Filtros y Búsqueda Inmediata*: Filtros por categoría de riesgo (Mortal, Peligroso, Superalimento) y buscador por texto con autocompletado.
-  - *Grilla Asimétrica de Alimentos*: Tarjetas compactas de 1 línea con indicador de riesgo que al hacer clic expanden el panel inferior con la toxina, dosis peligrosa, síntomas y protocolo de emergencia.
-
-#### 3. Módulo Ficha Técnica & Carnet Imprimible
-- **Columna HUD**: Carnet de identidad sintético con código QR de acceso rápido a la ficha pública.
-- **Viewport Principal**:
-  - Vista unificada con secciones colapsables: Identificación, Contactos Veterinarios de Emergencia, Registro de Microchip/Placa y Botones de exportación directa a PDF e impresión.
-
-#### 4. Módulo Expediente Médico & Historial de Pesos
-- **Columna HUD**: Gráfico de evolución de peso simplificado con tendencia histórica.
-- **Viewport Principal**:
-  - *Línea de Tiempo Clínica*: Registro cronológico de consultas, exámenes, desparasitaciones y cirugías. Formulario de inserción deslizante directamente en la cabecera sin modal emergente.
+### C. Especificaciones de Medidores Circulares (`RadialHealthGauge`)
+- **Anillo de Agua**: Anillo SVG con progreso de $0\%$ a $100\%$ del agua sugerida, animado suavemente al cargar.
+- **Anillo de Condición Corporal**: Calibración porcentual del peso actual respecto al ideal ($100\% = \text{Peso Ideal}$, $<90\% = \text{Bajo Peso}$, $>110\% = \text{Sobrepeso}$).
 
 ---
 
 ## 3. Decisiones de Producto & Trade-Offs
 
-### 1. Panel Split Asimétrico vs. Re-renderizado Completo de Pantalla
-- **Elección**: Implementar el HUD lateral de paciente como un panel estibado de alta visibilidad en pantallas medianas y grandes, adaptándose en móviles como un banner de resumen colapsable.
-- **Justificación**: Elimina la desconexión contextual: el tutor siempre sabe qué mascota está modificando y ve el impacto inmediato de cambiar el peso o la dieta sobre los gramos diarios calculados.
+### 1. Gráficos Nativos SVG Interactivas vs. Librerías Pesadas Externas
+- **Elección**: Desarrollar componentes de gráficos SVG vectoriales nativos ultra optimizados con `framer-motion` y matemáticas vectoriales simples.
+- **Justificación**: Garantiza un tiempo de carga instantáneo (<10ms), cero dependencias pesadas en el bundle de JavaScript y adaptabilidad perfecta al modo oscuro y claro.
 
-### 2. Edición In Situ y Acordeones Deslizantes vs. Modales Emergentes
-- **Elección**: Reemplazar ventanas modales por paneles expansibles con animación muelle (`framer-motion` o CSS transitions).
-- **Justificación**: Aumenta la velocidad de interacción, reduce clics perdidos y mejora la usabilidad en dispositivos táctiles móviles.
+### 2. Anillos Radiales vs. Barras Rectangulares Comunes
+- **Elección**: Implementar anillos radials con centro informativo (valor numérico en `font-tabular` + etiqueta).
+- **Justificación**: Los anillos de progreso circulares transmiten un acabado de tecnología médica moderna (similar a Apple Health y monitores clínicos), rompiendo la monotonía de barras rectangulares convencionales.
 
 ---
 
-## 4. Arquitectura Técnica & Mapa de Modificación de Componentes
+## 4. Arquitectura Técnica & Plan de Ejecución
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        ARQUITECTURA DE CONTENEDORES                    │
+│                        ARQUITECTURA DE ARCHIVOS                        │
 └────────────────────────────────────┬───────────────────────────────────┘
                                      │
            ┌─────────────────────────┴────────────────────────┐
            ▼                                                  ▼
 ┌─────────────────────────────────────┐    ┌───────────────────────────────────┐
-│     COMPONENTES DE MAQUETACIÓN      │    │     SISTEMA DE COMPONENTES        │
-│  - App.tsx (Layout Split & Grid)    │    │  - PetProfileHUD.tsx (HUD Fijo)   │
-│  - Sidebar.tsx (Barra Lateral Nav)  │    │  - InlineExpander.tsx (Acordeón)  │
-│  - PetHeaderBar.tsx (Header Top)    │    │  - ModuleContainer.tsx (Viewport) │
+│      COMPONENTES DE GRÁFICOS        │    │     COMPONENTES DE VISTA          │
+│  - RadialHealthGauge.tsx (Anillos)  │    │  - App.tsx (Integración en View)  │
+│  - WeightCurveChart.tsx (Evolución) │    │  - PetProfileHUD.tsx (Gauge HUD)  │
+│  - MedicalHistory.tsx (Tab Pesos)   │    │  - PetTechSheet.tsx (Sección)     │
 └──────────────────┬──────────────────┘    └──────────────────┬────────────────┘
                    │                                          │
                    └────────────────────┬─────────────────────┘
@@ -116,18 +97,17 @@ NutriPet adoptará una distribución de **Centro de Comando Asimétrico**:
            ┌────────────────────────────┼────────────────────────────┐
            ▼                            ▼                            ▼
 ┌──────────────────────┐    ┌──────────────────────┐    ┌──────────────────────┐
-│ CALCULADORA & PLATO  │    │ SEMÁFORO TOXICOLÓGICO│    │ SALUD & EXPEDIENTE   │
-│ - UnifiedCalculator  │    │ - FoodTrafficLight   │    │ - MedicalHistory     │
-│ - FoodBagCalculator  │    │ - CountryFoodAdvisor │    │ - PetTechSheet       │
+│  MEDIDOR DE AGUA     │    │  MEDIDOR DE PESO     │    │  CURVA TEMPORAL      │
+│ - Gauge de Hidratación│   │ - Gauge de Objetivo  │    │ - SVG Interactivo    │
 └──────────────────────┘    └──────────────────────┘    └──────────────────────┘
 ```
 
-### Plan de Ejecución en Código:
-1. **Fase 1: Creación del Componente `PetProfileHUD.tsx`**:
-   - Módulo independiente que encapsula el perfil activo, avatar, peso, estado ideal y requerimientos calóricos (MER/RER) para ser montado de forma sticky en la columna izquierda.
-2. **Fase 2: Reestructuración de la Vista Principal en `App.tsx`**:
-   - Ajuste de la grilla de contenido de `activeTab === 'calculator'`, `'foods'`, `'sheet'`, `'medical'`, etc., usando la maquetación split `grid-cols-1 lg:grid-cols-12` con columna HUD (`lg:col-span-4`) y viewport (`lg:col-span-8`).
-3. **Fase 3: Refactorización de Módulos a Paneles In Situ**:
-   - Reemplazo de modales en `MedicalHistory.tsx`, `FoodTrafficLight.tsx` y `PetTechSheet.tsx` por acordeones y paneles deslizantes en línea.
-4. **Fase 4: Verificación de Build & Pruebas**:
-   - Ejecución de `compile_applet` y `lint_applet` para garantizar cero errores en TypeScript y Vite.
+### Pasos de Implementación:
+1. **Fase 1: Componente `RadialHealthGauge.tsx`**:
+   - Crear un medidor circular SVG reutilizable con stroke animado, gradiente verde bosque / salvia y número tabular central.
+2. **Fase 2: Rediseño del Gráfico `WeightCurveChart.tsx`**:
+   - Refactorizar la curva de peso para incluir banda de sombra objetivo ideal, puntos interactivos con tooltip táctil y selector de periodo.
+3. **Fase 3: Integración en el HUD y Ficha Técnica**:
+   - Insertar los medidores circulares en `PetProfileHUD.tsx` y en el desglose de `App.tsx` / `PetTechSheet.tsx`.
+4. **Fase 4: Verificación & Pruebas**:
+   - Validación mediante `compile_applet` y `lint_applet` para asegurar compilación sin errores.

@@ -14,6 +14,7 @@ import {
 import { PetProfile, CalculationResult, AppTab } from '../types';
 import { POPULAR_BREEDS, getSuggestedIdealWeight } from '../data';
 import { AnimatedCounter } from './AnimatedCounter';
+import { RadialHealthGauge } from './RadialHealthGauge';
 
 interface PetProfileHUDProps {
   profile: PetProfile;
@@ -176,6 +177,15 @@ export const PetProfileHUD: React.FC<PetProfileHUDProps> = ({
               </span>
             </div>
           </div>
+
+          {/* Medidor Circular Radial de Estado Nutricional */}
+          <RadialHealthGauge 
+            value={weightProgress}
+            label="Condición Corporativa"
+            sublabel={`${profile.weightKg} / ${targetWeight} kg`}
+            statusText={conditionMeta.text}
+            colorScheme={profile.condition === 'overweight' ? 'amber' : profile.condition === 'underweight' ? 'blue' : 'forest'}
+          />
 
           {/* Acciones Directas del Paciente */}
           <div className="pt-2 border-t border-stone-100 dark:border-stone-800 grid grid-cols-2 gap-2">

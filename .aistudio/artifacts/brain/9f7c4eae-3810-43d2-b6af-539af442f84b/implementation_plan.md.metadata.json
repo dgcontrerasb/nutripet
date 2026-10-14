@@ -1,6 +1,6 @@
 {
-  "summary": "Plan de reestructuración espacial y modular para NutriPet: maquetación en Panel Split Asimétrico (HUD fijo de paciente a la izquierda, flujo de contenido interactivo a la derecha), interacciones en acordeón deslizante sin modales emergentes y densidad progresiva equilibrada.",
-  "updatedAt": "2026-10-14T03:17:12.277074544Z",
+  "summary": "Plan de actualización para NutriPet: incorporación del módulo interactivo de Gráficos de Evolución de Peso y Consumo Calórico, medidores circulares de progreso (Radial Health Gauges) para hidratación y calorías, y preservación del enfoque exclusivo en la mascota activa.",
+  "updatedAt": "2026-10-14T03:33:57.502384177Z",
   "requestFeedback": true,
   "userFacing": true
 }
