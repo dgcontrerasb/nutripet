@@ -329,7 +329,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
   };
 
   return (
-    <div className="bg-white dark:bg-stone-900 border-2 border-emerald-500/20 dark:border-stone-800 rounded-3xl p-6 sm:p-7 shadow-xs space-y-6 print:border-stone-400 print:bg-white print:text-black print:p-4 print:shadow-none">
+    <div className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-6 sm:p-7 shadow-bento space-y-6 print:border-stone-400 print:bg-white print:text-black print:p-4 print:shadow-none">
       {/* Encabezado exclusivo para impresión */}
       <div className="hidden print:block pb-3 mb-3 border-b-2 border-stone-800">
         <h1 className="text-xl font-black text-black">NutriPet • Horario de Rutina y Alimentación</h1>
@@ -340,15 +340,15 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 dark:border-stone-800 pb-4 print:hidden">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-[#143826]/10 dark:bg-[#143826]/30 text-[#143826] dark:text-emerald-400 flex items-center justify-center shrink-0">
             <Clock className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-lg">
-              Organizador de Rutina y Horarios de {petName}
+            <h3 className="font-editorial font-medium text-stone-900 dark:text-stone-100 text-lg sm:text-xl">
+              Organizador de Rutina & Hábitos
             </h3>
             <p className="text-xs text-stone-500 dark:text-stone-400">
-              Horarios claros para nevera: paseos, tomas de comida ({result.gramsPerMeal}g) e hidratación
+              Cronograma diario para {petName}: paseos, tomas de comida ({result.gramsPerMeal}g) e hidratación
             </p>
           </div>
         </div>

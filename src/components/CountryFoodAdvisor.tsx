@@ -112,21 +112,22 @@ export const CountryFoodAdvisor: React.FC<Props> = ({ onOpenSubscriptionModal })
   return (
     <div className="space-y-6">
       {/* Cabecera Principal */}
-      <div className="glass-card rounded-3xl p-5 sm:p-7 shadow-xs space-y-4">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-100 pb-5">
+      <div className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-5 sm:p-7 shadow-bento space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-stone-100 dark:border-stone-800 pb-5">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-emerald-800 bg-emerald-100/80 px-3 py-1 rounded-full uppercase tracking-wider border border-emerald-200">
-                Guía por País & Presupuesto
+              <span className="text-xs font-mono uppercase tracking-widest text-[#143826] dark:text-[#52796f]">
+                Guía Geográfica & Presupuesto
               </span>
-              <span className="text-xs font-semibold text-stone-500">
-                Para {currentPetType === 'dog' ? 'Perros 🐶' : 'Gatos 🐱'}
+              <span aria-hidden="true" className="text-stone-300 dark:text-stone-700">·</span>
+              <span className="text-xs font-normal text-stone-500">
+                {currentPetType === 'dog' ? 'Caninos' : 'Felinos'}
               </span>
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-stone-900 font-heading mt-2">
+            <h2 className="text-xl sm:text-2xl font-editorial font-medium text-stone-900 dark:text-stone-100 mt-2">
               Marcas Recomendadas & Dieta Mixta
             </h2>
-            <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mt-1 max-w-3xl">
+            <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 leading-relaxed mt-1 max-w-3xl">
               Encuentra marcas disponibles en tu país y cómo combinarlas con comida natural (BARF) o entre sí.
             </p>
           </div>

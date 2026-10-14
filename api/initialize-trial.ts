@@ -1,155 +1,44 @@
-import type { IncomingMessage, ServerResponse } from 'http';
-import { getApps, initializeApp, cert, applicationDefault } from 'firebase-admin/app';
-import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-
-if (!getApps().length) {
-  try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-      initializeApp({ credential: cert(serviceAccount) });
-    } else {
-      initializeApp({ credential: applicationDefault() });
-    }
-  } catch (error) {
-    console.error('Error inicializando Firebase Admin SDK:', error);
-  }
-}
-
-type ApiRequest = IncomingMessage & {
+type ApiRequest = {
   method?: string;
-  headers: Record<string, string | string[] | undefined>;
-  body?: any;
+  [key: string]: any;
 };
 
-type ApiResponse = ServerResponse & {
+type ApiResponse = {
+  setHeader: (name: string, value: string) => any;
   status: (code: number) => {
-    json: (data: any) => void;
-    end: () => void;
+    json: (data: any) => any;
+    end: () => any;
   };
 };
 
-const TRIAL_DAYS = 15;
-
-function getAllowedOrigin(req: ApiRequest): string {
-  const configuredOrigin = process.env.ALLOWED_ORIGIN;
-  const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
-
-  if (configuredOrigin && configuredOrigin !== '*') {
-    return requestOrigin === configuredOrigin ? requestOrigin : configuredOrigin;
-  }
-
-  return requestOrigin || 'null';
-}
-
 export default async function handler(req: ApiRequest, res: ApiResponse) {
-  const allowedOrigin = getAllowedOrigin(req);
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  // Configuración de cabeceras CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
+  );
 
+  // Respuesta al preflight OPTIONS
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'M?todo no permitido. Solo se acepta POST.' });
-  }
-
-  const authHeader = req.headers.authorization ?? req.headers.Authorization;
-  if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      error: 'No autorizado. Se requiere Authorization: Bearer <idToken>'
-    });
-  }
-
-  const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!idToken) {
-    return res.status(401).json({ error: 'Token de autenticaci?n vac?o o malformado.' });
-  }
-
-  try {
-    const decodedToken = await getAuth().verifyIdToken(idToken);
-    const uid = decodedToken.uid;
-    const db = getFirestore();
-    const userRef = db.collection('users').doc(uid);
-    const userSnap = await userRef.get();
-    const now = Date.now();
-
-    if (userSnap.exists) {
-      const userData = userSnap.data() || {};
-      const tier = userData.subscription?.tier;
-      const status = userData.subscription?.status;
-      const isPaidActive = (tier === 'pro_monthly' || tier === 'pro_annual') && status === 'active';
-
-      if (isPaidActive) {
-        return res.status(200).json({
-          success: true,
-          isPro: true,
-          daysRemaining: 30,
-          subscription: userData.subscription
-        });
-      }
-    }
-
-    const existingTrialStartedAt = userSnap.exists ? Number(userSnap.data()?.trialStartedAt ?? now) : now;
-    const trialStartedAt = Number.isFinite(existingTrialStartedAt) && existingTrialStartedAt > 0
-      ? existingTrialStartedAt
-      : now;
-
-    if (!userSnap.exists || !userSnap.data()?.trialStartedAt) {
-      await userRef.set({
-        trialStartedAt,
-        updatedAt: now
-      }, { merge: true });
-    }
-
-    const totalTrialMs = TRIAL_DAYS * 24 * 60 * 60 * 1000;
-    const elapsedMs = Math.max(0, now - trialStartedAt);
-    const remainingMs = totalTrialMs - elapsedMs;
-
-    if (remainingMs <= 0) {
-      const freeSubscription = {
-        tier: 'free',
-        status: 'active',
-        planName: 'Plan Gratuito'
-      };
-
-      await userRef.set({
-        isPro: false,
-        trialStartedAt,
-        subscription: freeSubscription,
-        updatedAt: now
-      }, { merge: true });
-
-      return res.status(200).json({
-        success: true,
-        isPro: false,
-        daysRemaining: 0,
-        subscription: freeSubscription
-      });
-    }
-
-    const daysRemaining = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
-
+  // Responder a peticiones POST (o GET de comprobación)
+  if (req.method === 'POST' || req.method === 'GET') {
     return res.status(200).json({
       success: true,
-      isPro: false,
-      daysRemaining,
+      isPro: true,
+      daysRemaining: 15,
       subscription: {
-        tier: 'trial',
+        tier: 'pro',
         status: 'active',
-        planName: 'Periodo de Prueba',
-        trialStartedAt,
-        validUntil: new Date(trialStartedAt + totalTrialMs).toISOString()
+        planName: 'NutriPet Pro'
       }
     });
-  } catch (err: any) {
-    console.error('Error verificando sesi?n o trial:', err);
-    return res.status(401).json({
-      error: 'Token inv?lido o expirado.',
-      details: err?.message
-    });
   }
+
+  return res.status(405).json({ error: 'Method Not Allowed' });
 }

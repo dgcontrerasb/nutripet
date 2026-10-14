@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { usePets } from '../context/PetContext';
-import { ProFeatureLock } from './ProFeatureLock';
 import { 
   Plus, 
   Trash2, 
@@ -31,40 +30,8 @@ interface Props {
   onOpenSubscriptionModal?: () => void;
 }
 
-// Función auxiliar de cálculo de edad
-const calculateAge = (birthDateStr?: string) => {
-  if (!birthDateStr) return null;
-  const birth = new Date(birthDateStr);
-  if (isNaN(birth.getTime())) return null;
-
-  const now = new Date();
-  let years = now.getFullYear() - birth.getFullYear();
-  let months = now.getMonth() - birth.getMonth();
-
-  if (months < 0) {
-    years--;
-    months += 12;
-  }
-
-  if (years === 0 && months === 0) {
-    const diffTime = Math.abs(now.getTime() - birth.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return `${diffDays} días de nacido`;
-  }
-
-  if (years === 0) {
-    return `${months} ${months === 1 ? 'mes' : 'meses'}`;
-  }
-
-  if (months === 0) {
-    return `${years} ${years === 1 ? 'año' : 'años'}`;
-  }
-
-  return `${years} ${years === 1 ? 'año' : 'años'} y ${months} ${months === 1 ? 'mes' : 'meses'}`;
-};
-
-export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => {} }) => {
-  const { activePet, savePet, deletePet, pets, isSavingPet, isProOrTrial } = usePets();
+export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
+  const { activePet, savePet, deletePet, pets, isSavingPet } = usePets();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<PetProfile | null>(activePet);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -76,37 +43,45 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
     setIsEditing(false);
   }, [activePet?.id]);
 
-  // 🔒 1. Si no es Pro o no ha iniciado sesión, muestra la tarjeta de bloqueo
-  if (!isProOrTrial) {
+  if (!activePet || !formData) {
     return (
-      <div className="space-y-6">
-        <ProFeatureLock
-          featureName="Ficha Médica Imprimible & Código QR de Emergencia"
-          description="Genera la tarjeta de identificación médica oficial de tu mascota y el código QR para su collar en caso de pérdida o emergencia médica."
-          benefits={[
-            "Ficha clínica imprimible en formato profesional listo para guardarse en PDF",
-            "Código QR único para identificación inmediata con datos de contacto",
-            "Información vital de alergias, microchip y contacto de emergencia visible al instante"
-          ]}
-          onOpenSubscriptionModal={onOpenSubscriptionModal}
-        />
+      <div className="p-8 text-center bg-white rounded-3xl border border-stone-200">
+        <p className="text-stone-500 font-medium">No hay ninguna mascota seleccionada.</p>
       </div>
     );
   }
 
-  // 🐾 2. Si es Pro pero no tiene mascota activa seleccionada
-  if (!activePet || !formData) {
-    return (
-      <div className="p-8 text-center bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 space-y-3 max-w-lg mx-auto my-8">
-        <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
-          No hay ninguna mascota seleccionada
-        </h3>
-        <p className="text-stone-500 dark:text-stone-400 text-xs">
-          Selecciona o registra una mascota para generar su ficha técnica y código QR.
-        </p>
-      </div>
-    );
-  }
+  // Cálculo automático de edad según fecha de nacimiento
+  const calculateAge = (birthDateStr?: string) => {
+    if (!birthDateStr) return null;
+    const birth = new Date(birthDateStr);
+    if (isNaN(birth.getTime())) return null;
+
+    const now = new Date();
+    let years = now.getFullYear() - birth.getFullYear();
+    let months = now.getMonth() - birth.getMonth();
+
+    if (months < 0) {
+      years--;
+      months += 12;
+    }
+
+    if (years === 0 && months === 0) {
+      const diffTime = Math.abs(now.getTime() - birth.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return `${diffDays} días de nacido`;
+    }
+
+    if (years === 0) {
+      return `${months} ${months === 1 ? 'mes' : 'meses'}`;
+    }
+
+    if (months === 0) {
+      return `${years} ${years === 1 ? 'año' : 'años'}`;
+    }
+
+    return `${years} ${years === 1 ? 'año' : 'años'} y ${months} ${months === 1 ? 'mes' : 'meses'}`;
+  };
 
   const autoAge = calculateAge(formData.birthDate);
 
@@ -119,8 +94,8 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 256;
-        const MAX_HEIGHT = 256;
+        const MAX_WIDTH = 256;  // 🔽 Reducido de 400
+        const MAX_HEIGHT = 256;  // 🔽 Reducido de 400
         let width = img.width;
         let height = img.height;
 
@@ -142,7 +117,13 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
+          // 🔽 Calidad reducida de 0.7 a 0.5
           const compressedBase64 = canvas.toDataURL('image/jpeg', 0.5);
+          
+          // 🔍 Logging para verificar tamaño
+          const sizeInBytes = new Blob([compressedBase64]).size;
+          console.log('📸 Foto comprimida:', (sizeInBytes / 1024).toFixed(2), 'KB');
+          
           setFormData(prev => prev ? { ...prev, photoUrl: compressedBase64 } : null);
         }
       };
@@ -166,9 +147,11 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
   };
 
   const currentBreedInfo = POPULAR_BREEDS.find(b => b.id === formData.breedId);
+
   const suggestedIdealWeight = getSuggestedIdealWeight(formData);
   const effectiveIdealWeight = formData.idealWeightKg || suggestedIdealWeight;
 
+  // Estado del peso ideal comparado
   const getWeightStatus = () => {
     if (!effectiveIdealWeight || !formData.weightKg) return null;
     const diff = formData.weightKg - effectiveIdealWeight;
@@ -184,10 +167,10 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
   return (
     <div className="space-y-6">
       {/* Encabezado con estado y acción */}
-      <div className="glass-card rounded-3xl p-5 sm:p-7 shadow-xs">
-        <div className="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-4 pb-6 border-b border-stone-100">
+      <div className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-5 sm:p-7 shadow-bento">
+        <div className="flex flex-col sm:flex-row items-center justify-between text-center sm:text-left gap-4 pb-6 border-b border-stone-100 dark:border-stone-800">
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-stone-100 border-2 border-stone-200 overflow-hidden flex items-center justify-center shrink-0 shadow-xs">
+            <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-stone-100 dark:bg-stone-800 border border-stone-300 dark:border-stone-700 overflow-hidden flex items-center justify-center shrink-0 shadow-2xs">
               {formData.photoUrl ? (
                 <img src={formData.photoUrl} alt={formData.name} className="w-full h-full object-cover" />
               ) : (
@@ -195,17 +178,21 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
               )}
             </div>
             <div>
-              <div className="flex items-center justify-center sm:justify-start gap-2">
-                <h2 className="font-heading font-extrabold text-2xl text-stone-900 leading-tight">
+              <div className="flex items-baseline justify-center sm:justify-start gap-2">
+                <h2 className="font-editorial text-2xl font-medium text-stone-900 dark:text-stone-100 leading-tight">
                   {formData.name}
                 </h2>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase tracking-wider">
-                  {formData.type === 'dog' ? 'Canino' : 'Felino'}
+                <span className="text-xs text-stone-500 dark:text-stone-400 font-normal">
+                  ({formData.type === 'dog' ? 'Canino' : 'Felino'})
                 </span>
               </div>
-              <p className="text-sm text-stone-500 mt-0.5">
-                {currentBreedInfo ? currentBreedInfo.name : (formData.breedCustom || 'Mestizo / Criollo')} • {autoAge || `${formData.ageMonths} meses`}
-              </p>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 text-xs text-stone-500 dark:text-stone-400 mt-1">
+                <span className="font-medium text-stone-700 dark:text-stone-300">
+                  {currentBreedInfo ? currentBreedInfo.name : (formData.breedCustom || 'Mestizo / Criollo')}
+                </span>
+                <span aria-hidden="true" className="text-stone-300 dark:text-stone-700">·</span>
+                <span>{autoAge || `${formData.ageMonths} meses`}</span>
+              </div>
             </div>
           </div>
 
@@ -218,7 +205,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
                     setFormData(activePet);
                     setIsEditing(false);
                   }}
-                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-stone-300 hover:bg-stone-50 text-stone-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 font-medium text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
                 >
                   <X className="w-4 h-4" /> Cancelar
                 </button>
@@ -226,7 +213,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
                   type="button"
                   onClick={handleSave}
                   disabled={isSavingPet}
-                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-75"
+                  className="flex-1 sm:flex-none px-5 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1c4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer disabled:opacity-75 active:scale-95"
                 >
                   {isSavingPet ? (
                     <>
@@ -244,14 +231,14 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
                 <button
                   type="button"
                   onClick={() => setShowExportModal(true)}
-                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1c4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer active:scale-95"
                 >
                   <Download className="w-3.5 h-3.5" /> Exportar Carnet PDF
                 </button>
                 <button
                   type="button"
                   onClick={() => setIsEditing(true)}
-                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                  className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 font-medium text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all cursor-pointer active:scale-95"
                 >
                   <Edit3 className="w-3.5 h-3.5" /> Editar Ficha
                 </button>
@@ -260,12 +247,13 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
           </div>
         </div>
 
-        {/* CONTENIDO DE LA FICHA */}
+        {/* CONTENIDO DE LA FICHA: MODO VISTA O MODO EDICIÓN */}
         {!isEditing ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 pt-6">
-            {/* Tarjeta 1: Identidad */}
+            
+            {/* Tarjeta 1: Identidad & Edad */}
             <div className="p-4 rounded-2xl bg-stone-50/70 border border-stone-200/80 space-y-3">
-              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider block flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-emerald-600" /> Identidad y Registro
               </span>
               <div className="space-y-2 text-xs">
@@ -304,7 +292,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
 
             {/* Tarjeta 2: Físico y Peso */}
             <div className="p-4 rounded-2xl bg-stone-50/70 border border-stone-200/80 space-y-3">
-              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider block flex items-center gap-1.5">
                 <Activity className="w-3.5 h-3.5 text-emerald-600" /> Estado Físico y Peso
               </span>
               <div className="space-y-2 text-xs">
@@ -354,9 +342,9 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
               </div>
             </div>
 
-            {/* Tarjeta 3: Veterinario */}
+            {/* Tarjeta 3: Veterinario y Contacto */}
             <div className="p-4 rounded-2xl bg-stone-50/70 border border-stone-200/80 space-y-3">
-              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-bold text-stone-400 uppercase tracking-wider block flex items-center gap-1.5">
                 <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Veterinario de Cabecera
               </span>
               <div className="space-y-2 text-xs">
@@ -390,9 +378,9 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
               </div>
             </div>
 
-            {/* Tarjeta 4: Tutor & Contacto de Emergencia */}
+            {/* Tarjeta 4: Tutor Responsable & Contacto de Emergencia */}
             <div className="md:col-span-2 lg:col-span-3 p-4 rounded-2xl bg-emerald-50/50 border border-emerald-200/80 space-y-3">
-              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider flex items-center gap-1.5">
+              <span className="text-xs font-bold text-emerald-800 uppercase tracking-wider block flex items-center gap-1.5">
                 <User className="w-3.5 h-3.5 text-emerald-600" /> Tutor Responsable & Contactos de Emergencia
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
@@ -458,7 +446,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
 
           </div>
         ) : (
-          /* FORMULARIO DE EDICIÓN */
+          /* FORMULARIO DE EDICIÓN COMPLETO */
           <form onSubmit={handleSave} className="space-y-6 pt-6 animate-fade-in">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               
@@ -680,7 +668,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal = () => 
                 </div>
               </div>
 
-              {/* Datos del Propietario / Tutor y Emergencias */}
+              {/* Datos del Propietario / Tutor y Contacto de Emergencia */}
               <div className="space-y-4 p-4 bg-stone-50 rounded-2xl border border-stone-200 md:col-span-2 lg:col-span-3">
                 <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block">
                   Datos del Dueño / Tutor y Emergencias

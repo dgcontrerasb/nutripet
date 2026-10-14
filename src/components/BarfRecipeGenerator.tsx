@@ -3,18 +3,24 @@ import { usePets } from '../context/PetContext';
 import { ProFeatureLock } from './ProFeatureLock';
 import { 
   Utensils, 
+  CheckCircle2, 
+  AlertCircle, 
   ChefHat, 
+  Flame, 
   Copy, 
   Share2, 
   Crown, 
-  Scale, 
-  Droplets,
-  AlertCircle,
-  RefreshCw
+  ShieldCheck, 
+  FileText, 
+  RefreshCw,
+  Heart,
+  Scale,
+  Info,
+  Droplets
 } from 'lucide-react';
 
 interface Props {
-  onOpenSubscriptionModal?: () => void;
+  onOpenSubscriptionModal: () => void;
 }
 
 interface PresetRecipe {
@@ -56,7 +62,7 @@ const PRESET_RECIPES: PresetRecipe[] = [
     name: 'Menú Vital: Pavo Magro, Calabacín y Arándanos',
     category: 'Cocida',
     petType: 'both',
-    description: 'Rica en antioxidantes naturales y baja en alérgenos. Excelente opción para mantenimiento.',
+    description: 'Rica en antioxidantes naturales y baja en alergenos. Excelente opción para mantenimiento.',
     cookingMethod: 'Salteado al agua o cocción lenta.',
     benefits: ['Antioxidantes de arándanos para inmunidad', 'Hidratación extra con calabacín', 'Proteína hipoalergénica'],
     ingredientBreakdown: [
@@ -67,8 +73,8 @@ const PRESET_RECIPES: PresetRecipe[] = [
     ],
     instructions: [
       'Cocina la carne de pavo molida en una sartén a fuego medio usando un chorrito de agua (sin sal).',
-      'Agrega el calabacín rallado durante los últimos 3 minutos de cocción.',
-      'Mezcla con la manzana picada (retira todas las semillas) y los arándanos machacados.',
+      'Agrega el calabacín rascado durante los últimos 3 minutos de cocción.',
+      'Mezcla con la manzana picada (Asegúrate de retirar todas las semillas) y los arándanos machacados.',
       'Sirve a temperatura ambiente.'
     ]
   },
@@ -111,7 +117,7 @@ const PRESET_RECIPES: PresetRecipe[] = [
       'IMPORTANTE: Congela las carnes y huesos crudos durante al menos 3 a 5 días para eliminar bacterias antes de servir.',
       'Pesa los huesos carnosos crudos (ej: cuellos o carcasas de pollo desgrasadas). NUNCA los cocines porque se astillan.',
       'Tritura los vegetales en procesador para que el perro pueda absorber sus nutrientes.',
-      'Mezcla la carne muscular, vísceras picadas y puré vegetal en el plato.'
+      'Mezcla la carne muscular, vísceras picadas y puré vegetal en el recipiente.'
     ]
   },
   {
@@ -130,12 +136,12 @@ const PRESET_RECIPES: PresetRecipe[] = [
     instructions: [
       'Sirve el 60% de la ración de croquetas diarias recomendada para tu mascota.',
       'Agrega encima el pollo desmenuzado recién cocido.',
-      'Baña el plato con 2 a 3 cucharadas de caldo de huesos tibio sin condimentos para crear una salsa deliciosa.'
+      'Baña el plato con 2 a 3 cucharadas de caldo de huesos tibia sin condimentos para crear una salsa deliciosa.'
     ]
   }
 ];
 
-export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal = () => {} }) => {
+export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
   const { activePet, isProOrTrial } = usePets();
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(PRESET_RECIPES[0].id);
   const [customIngredients, setCustomIngredients] = useState<string>('');
@@ -143,48 +149,19 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal =
   const [aiRecipeResult, setAiRecipeResult] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
-  // 1. Candado Pro prioritario
-  if (!isProOrTrial) {
-    return (
-      <div className="space-y-6">
-        <ProFeatureLock
-          featureName="Generador de Recetas BARF & Menús Caseros"
-          description="Diseña recetas de comida natural balanceadas al gramo según la edad, condición corporal y nivel de actividad física de tu mascota."
-          benefits={[
-            "Cálculo exacto de huesos carnosos, carne magra, vísceras y vegetales",
-            "Menús listos para armar en dietas crudas BARF, cocinadas y mixtas",
-            "Guías paso a paso de preparación y medidas de inocuidad sanitaria"
-          ]}
-          onOpenSubscriptionModal={onOpenSubscriptionModal}
-        />
-      </div>
-    );
-  }
+  if (!activePet) return null;
 
-  // 2. Validación de mascota activa
-  if (!activePet) {
-    return (
-      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-10 text-center space-y-3 max-w-lg mx-auto my-8 shadow-xs">
-        <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
-          No hay ninguna mascota seleccionada
-        </h3>
-        <p className="text-xs text-stone-500 dark:text-stone-400">
-          Selecciona o registra una mascota para generar su formulación nutricional personalizada.
-        </p>
-      </div>
-    );
-  }
-
+  const isPro = isProOrTrial;
   const currentRecipe = PRESET_RECIPES.find(r => r.id === selectedRecipeId) || PRESET_RECIPES[0];
 
-  // Cálculo de ración diaria estimada (aprox 2.8% en perros a 3.5% en gatos)
+  // Cálculo de ración diaria estimada (aprox 2.5% a 3% del peso corporal para adultos)
   const estimatedDailyGrams = Math.round(activePet.weightKg * (activePet.type === 'cat' ? 35 : 28));
 
-  // Filtrar recetas por especie
+  // Filtrar recetas válidas para el tipo de mascota (dog/cat)
   const availableRecipes = PRESET_RECIPES.filter(r => r.petType === 'both' || r.petType === activePet.type);
 
   const handleCopyRecipe = () => {
-    let text = `🥩 *RECETA CASERA BALANCEADA PARA ${activePet.name.toUpperCase()}*\n`;
+    let text = `🥩 *RECETA CASERA BALANCEDA PARA ${activePet.name.toUpperCase()}*\n`;
     text += `📌 *Platillo:* ${currentRecipe.name}\n`;
     text += `🥣 *Ración Diaria Total:* ${estimatedDailyGrams} g/día\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━\n`;
@@ -194,7 +171,7 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal =
       text += `• ${ing.name}: *${grams} g* (${ing.percentage}%)\n`;
     });
     text += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `👨‍🍳 *PREPARACIÓN:*\n${currentRecipe.instructions.map((ins, i) => `${i + 1}.${ins}`).join('\n')}\n`;
+    text += `👨‍🍳 *PREPARACIÓN:*\n${currentRecipe.instructions.map((ins, i) => `${i + 1}. ${ins}`).join('\n')}\n`;
     text += `\n✨ _Calculado en NutriPet Pro_`;
 
     navigator.clipboard.writeText(text);
@@ -218,6 +195,11 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal =
 
   const handleGenerateCustomRecipe = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isPro) {
+      onOpenSubscriptionModal();
+      return;
+    }
+
     if (!customIngredients.trim()) return;
 
     setAiGenerating(true);
@@ -229,44 +211,44 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal =
 
 Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC para ${activePet.type === 'dog' ? 'caninos' : 'felinos'} de ${activePet.weightKg}kg:
 
-1. Base de proteína magra (${primaryIng}): ${Math.round(estimatedDailyGrams * 0.65)}g (Cocinar al vapor o en agua sin sal)
+1. Base de proteína magra (${primaryIng}): ${Math.round(estimatedDailyGrams * 0.65)}g (Cocinar al vapor o agua sin sal)
 2. Fibra y vegetales aptos: ${Math.round(estimatedDailyGrams * 0.25)}g (Hervir y triturar en puré)
 3. Ácidos grasos y complementos (Aceite de oliva virgen o salmón): ${Math.round(estimatedDailyGrams * 0.10)}g (Añadir en crudo al servir)
 
-💡 Consejo de Seguridad: Asegúrate de retirar semillas y nunca ofrecer huesos cocidos. No agregues cebolla, ajo, uvas ni sal.`);
+💡 Consejo: Asegúrate de retirar semillas y huesos cocidos. Nunca agregues cebolla, ajo, uvas ni sal.`);
       setAiGenerating(false);
-    }, 250);
+    }, 200);
   };
 
   return (
     <div className="space-y-6">
       
-      {/* Banner Principal de la Sección */}
-      <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-stone-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+      {/* Banner de Título */}
+      <div className="bg-[#143826] border border-[#234d38] rounded-2xl p-6 sm:p-8 text-[#faf8f5] shadow-bento relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[#2d5a42]/30 rounded-full blur-3xl pointer-events-none" />
         
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-xs font-black uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-mono text-[#c89b53]">
               <Crown className="w-3.5 h-3.5" />
-              <span>Función Exclusiva Pro</span>
+              <span>Formulación Natural Especializada</span>
             </div>
-            <h2 className="font-heading font-black text-2xl sm:text-3xl text-white">
-              Generador BARF & Recetas Caseras 🥩
+            <h2 className="font-editorial text-2xl sm:text-3xl text-white font-medium">
+              Generador BARF & Recetas Caseras
             </h2>
-            <p className="text-xs sm:text-sm text-stone-300 max-w-xl leading-relaxed">
+            <p className="text-xs sm:text-sm text-[#d6cebe] max-w-xl leading-relaxed">
               Formulaciones balanceadas de comida natural cocida, dieta BARF o toppers húmedos calculadas gramo a gramo para <strong>{activePet.name}</strong> ({activePet.weightKg} kg).
             </p>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/15 text-center shrink-0 min-w-[160px]">
-            <span className="text-[10px] font-extrabold uppercase text-emerald-300 block">
+          <div className="bg-[#1c4732]/70 backdrop-blur-md p-4 rounded-xl border border-[#2a5940] text-center shrink-0 min-w-[160px]">
+            <span className="text-[10px] font-mono uppercase tracking-wider text-[#c89b53] block">
               Ración Diaria Sugerida
             </span>
-            <span className="font-heading font-black text-2xl text-white block mt-0.5">
+            <span className="font-tabular font-bold text-2xl text-white block mt-0.5">
               ~{estimatedDailyGrams} g
             </span>
-            <span className="text-[10px] text-stone-300 block">
+            <span className="text-[10px] text-[#d6cebe] block font-mono">
               para {activePet.weightKg} kg de peso
             </span>
           </div>
@@ -287,12 +269,24 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
         </div>
       </div>
 
-      {/* Grid Principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {!isPro ? (
+        <ProFeatureLock
+          featureName="Generador de Dietas BARF & Recetas Caseras"
+          description={`Diseña menús crudos (BARF) y cocinados balanceados con proporciones exactas de hueso carnoso, carne magra, vísceras y suplementos adaptados a ${activePet.name}.`}
+          benefits={[
+            "Desglose exacto en gramos de músculo, huesos y vísceras",
+            "Soporte para dietas crudas BARF, cocidas y mixtas",
+            "Generador inteligente con IA según ingredientes de casa"
+          ]}
+          onOpenSubscriptionModal={onOpenSubscriptionModal}
+        />
+      ) : (
+        /* Grid Principal para Usuarios Pro */
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         
-        {/* Catálogo de Recetas */}
+        {/* Selector de Recetas del Catálogo Gratuito */}
         <div className="lg:col-span-5 space-y-3">
-          <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 dark:text-stone-400 flex items-center gap-1.5 px-1">
+          <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 flex items-center gap-1.5 px-1">
             <ChefHat className="w-4 h-4 text-emerald-600" />
             Catálogo de Recetas Balanceadas ({availableRecipes.length}):
           </h3>
@@ -309,29 +303,29 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                   }}
                   className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
                     isSelected 
-                      ? 'border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-600/20 shadow-sm' 
-                      : 'border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 hover:border-stone-300 dark:hover:border-stone-700'
+                      ? 'border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-600/20 shadow-sm' 
+                      : 'border-stone-200 bg-white hover:border-stone-300'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-1.5">
                     <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
                       recipe.category === 'BARF' 
-                        ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/80 dark:text-rose-300 dark:border-rose-800' 
+                        ? 'bg-rose-100 text-rose-800 border-rose-200' 
                         : recipe.category === 'Cocida' 
-                        ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/80 dark:text-amber-300 dark:border-amber-800' 
-                        : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/80 dark:text-emerald-300 dark:border-emerald-800'
+                        ? 'bg-amber-100 text-amber-800 border-amber-200' 
+                        : 'bg-emerald-100 text-emerald-800 border-emerald-200'
                     }`}>
                       {recipe.category}
                     </span>
-                    <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500">
+                    <span className="text-[10px] font-bold text-stone-400">
                       {recipe.petType === 'both' ? '🐶 Canino & 🐱 Felino' : recipe.petType === 'dog' ? '🐶 Solo Caninos' : '🐱 Solo Felinos'}
                     </span>
                   </div>
 
-                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm">
+                  <h4 className="font-heading font-extrabold text-stone-900 text-sm">
                     {recipe.name}
                   </h4>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 mt-1 line-clamp-2">
+                  <p className="text-xs text-stone-500 mt-1 line-clamp-2">
                     {recipe.description}
                   </p>
                 </div>
@@ -339,15 +333,15 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
             })}
           </div>
 
-          {/* Formulario Personalizado */}
-          <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl p-4 space-y-3 shadow-2xs">
+          {/* Formulario Generador con tus Ingredientes */}
+          <div className="bg-white border border-stone-200 rounded-2xl p-4 space-y-3 shadow-2xs">
             <div className="flex items-center gap-2">
-              <ChefHat className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider">
+              <ChefHat className="w-4 h-4 text-emerald-600" />
+              <h4 className="font-heading font-extrabold text-stone-900 text-xs uppercase tracking-wider">
                 Personalizar con tus Ingredientes
               </h4>
             </div>
-            <p className="text-[11px] text-stone-500 dark:text-stone-400 leading-tight">
+            <p className="text-[11px] text-stone-500 leading-tight">
               Escribe qué alimentos tienes en casa y calcularemos la proporción balanceada para {activePet.name}:
             </p>
             <form onSubmit={handleGenerateCustomRecipe} className="space-y-2">
@@ -355,8 +349,8 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                 type="text"
                 value={customIngredients}
                 onChange={(e) => setCustomIngredients(e.target.value)}
-                placeholder="Ej: Tengo pechuga, zanahoria y auyama..."
-                className="w-full px-3 py-2 text-xs border border-stone-300 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100"
+                placeholder="Ej: Tengo pechuga, zanahoria y camote..."
+                className="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-stone-50"
               />
               <button
                 type="submit"
@@ -370,37 +364,40 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
           </div>
         </div>
 
-        {/* Detalle de Receta Seleccionada */}
+        {/* Detalle de la Receta Seleccionada o Resultado */}
         <div className="lg:col-span-7 space-y-4">
           
           {aiRecipeResult ? (
-            <div className="bg-white dark:bg-stone-900 border-2 border-emerald-500/80 rounded-3xl p-6 space-y-4 shadow-md">
-              <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
+            /* Vista de Receta Personalizada */
+            <div className="bg-white border-2 border-emerald-500/80 rounded-3xl p-6 space-y-4 shadow-md">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                 <div className="flex items-center gap-2">
-                  <ChefHat className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                  <h3 className="font-heading font-black text-base text-stone-900 dark:text-stone-100">
+                  <ChefHat className="w-5 h-5 text-emerald-600" />
+                  <h3 className="font-heading font-black text-base text-stone-900">
                     Receta Personalizada Balanceada
                   </h3>
                 </div>
                 <button
                   type="button"
                   onClick={() => setAiRecipeResult(null)}
-                  className="text-xs text-emerald-700 dark:text-emerald-400 font-bold hover:underline cursor-pointer"
+                  className="text-xs text-emerald-700 font-bold hover:underline cursor-pointer"
                 >
                   Volver al Catálogo
                 </button>
               </div>
 
-              <div className="text-xs text-stone-800 dark:text-stone-200 space-y-2 font-mono whitespace-pre-wrap bg-amber-50/50 dark:bg-amber-950/30 p-4 rounded-2xl border border-amber-200/60 dark:border-amber-800/60 leading-relaxed">
+              <div className="text-xs text-stone-800 space-y-2 font-mono whitespace-pre-wrap bg-amber-50/50 p-4 rounded-2xl border border-amber-200/60 leading-relaxed">
                 {aiRecipeResult}
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+            /* Vista de Receta del Catálogo Estático */
+            <div className="bg-white border border-stone-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
               
-              <div className="space-y-2 border-b border-stone-100 dark:border-stone-800 pb-4">
+              {/* Header de la Receta */}
+              <div className="space-y-2 border-b border-stone-100 pb-4">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                  <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200">
                     {currentRecipe.category} • {currentRecipe.cookingMethod}
                   </span>
 
@@ -408,7 +405,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                     <button
                       type="button"
                       onClick={handleCopyRecipe}
-                      className="px-3 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                      className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
                       title="Copiar texto de la receta"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -426,19 +423,19 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                   </div>
                 </div>
 
-                <h3 className="font-heading font-black text-xl sm:text-2xl text-stone-900 dark:text-stone-100">
+                <h3 className="font-heading font-black text-xl sm:text-2xl text-stone-900">
                   {currentRecipe.name}
                 </h3>
-                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                <p className="text-xs text-stone-600 leading-relaxed">
                   {currentRecipe.description}
                 </p>
               </div>
 
-              {/* Porciones exactas calculadas */}
+              {/* Porciones exactas por peso de la mascota */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <h4 className="font-heading font-extrabold text-stone-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Scale className="w-4 h-4 text-emerald-600" />
                     Ingredientes Exactos para {activePet.name} ({estimatedDailyGrams}g totales / día):
                   </h4>
                 </div>
@@ -449,23 +446,23 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                     return (
                       <div 
                         key={idx}
-                        className="p-3.5 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 flex items-center justify-between"
+                        className="p-3.5 bg-stone-50 rounded-2xl border border-stone-200 flex items-center justify-between"
                       >
                         <div>
-                          <span className="font-extrabold text-stone-900 dark:text-stone-100 text-xs block">
+                          <span className="font-extrabold text-stone-900 text-xs block">
                             {ing.name}
                           </span>
                           {ing.note && (
-                            <span className="text-[10px] text-stone-500 dark:text-stone-400 block mt-0.5">
+                            <span className="text-[10px] text-stone-500 block mt-0.5">
                               {ing.note}
                             </span>
                           )}
                         </div>
                         <div className="text-right shrink-0 pl-2">
-                          <span className="font-heading font-black text-emerald-800 dark:text-emerald-400 text-sm block">
+                          <span className="font-heading font-black text-emerald-800 text-sm block">
                             {exactGrams} g
                           </span>
-                          <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500">
+                          <span className="text-[10px] font-bold text-stone-400">
                             {ing.percentage}%
                           </span>
                         </div>
@@ -475,30 +472,30 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                 </div>
               </div>
 
-              {/* Beneficios */}
-              <div className="bg-emerald-50/60 dark:bg-emerald-950/30 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-800/60 space-y-1.5">
-                <span className="text-[10px] font-black uppercase text-emerald-900 dark:text-emerald-300 block">
+              {/* Beneficios Nutricionales */}
+              <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-100 space-y-1.5">
+                <span className="text-[10px] font-black uppercase text-emerald-900 block">
                   ✨ Beneficios Clínicos del Menú:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {currentRecipe.benefits.map((b, i) => (
-                    <span key={i} className="text-xs text-emerald-800 dark:text-emerald-300 font-medium bg-white dark:bg-stone-850 px-2.5 py-1 rounded-lg border border-emerald-200/80 dark:border-emerald-800/80 shadow-3xs">
+                    <span key={i} className="text-xs text-emerald-800 font-medium bg-white px-2.5 py-1 rounded-lg border border-emerald-200/80 shadow-3xs">
                       ✓ {b}
                     </span>
                   ))}
                 </div>
               </div>
 
-              {/* Instrucciones */}
+              {/* Paso a Paso de Preparación */}
               <div className="space-y-3">
-                <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <ChefHat className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <h4 className="font-heading font-extrabold text-stone-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                  <ChefHat className="w-4 h-4 text-amber-600" />
                   Instrucciones Paso a Paso:
                 </h4>
 
-                <ol className="space-y-2 text-xs text-stone-700 dark:text-stone-300">
+                <ol className="space-y-2 text-xs text-stone-700">
                   {currentRecipe.instructions.map((step, idx) => (
-                    <li key={idx} className="flex items-start gap-3 bg-stone-50/80 dark:bg-stone-850/80 p-3 rounded-xl border border-stone-200/60 dark:border-stone-800">
+                    <li key={idx} className="flex items-start gap-3 bg-stone-50/80 p-3 rounded-xl border border-stone-200/60">
                       <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
                         {idx + 1}
                       </span>
@@ -508,9 +505,9 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                 </ol>
               </div>
 
-              {/* Disclaimer */}
-              <div className="p-3.5 bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-2xl text-[11px] text-amber-950 dark:text-amber-200 flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              {/* Disclaimer Nutricional */}
+              <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl text-[11px] text-amber-950 flex items-start gap-2.5">
+                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                 <p className="leading-snug">
                   <strong>Aviso de Salud NutriPet:</strong> Estas recetas son guías caseras complementarias orientativas. Si vas a alimentar a {activePet.name} 100% con comida casera a largo plazo, consulta con un nutricionista veterinario para adicionar suplementación de calcio, taurina o multivitamínico.
                 </p>
@@ -521,6 +518,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
 
         </div>
       </div>
+      )}
 
     </div>
   );

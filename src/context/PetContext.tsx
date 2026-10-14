@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import { User, onAuthStateChanged, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, signInAnonymously } from 'firebase/auth';
 import { useAuth } from './AuthContext';
 import { 
@@ -52,7 +52,6 @@ interface PetContextType {
   ) => Promise<boolean>;
   cancelSubscription: () => Promise<void>;
   resetSubscription: () => Promise<void>;
-  deleteUserAccount: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   loginWithGoogleRedirect: () => Promise<void>;
   logout: () => Promise<void>;
@@ -63,15 +62,16 @@ const PetContext = createContext<PetContextType | null>(null);
 const sanitizePets = (petList: any[]): PetProfile[] => {
   return petList.map(p => {
     let photo = p.photoUrl || p.photoURL || undefined;
+    // Si la foto en base64 supera ~250KB (>300.000 caracteres), la descartamos para evitar superar el límite de 1MB de Firestore
     if (typeof photo === 'string' && photo.startsWith('data:image') && photo.length > 300000) {
-      console.warn(`[NutriPet] Foto de mascota '${p.name || p.id}' demasiado grande (${Math.round(photo.length / 1024)} KB). Removida para sincronizaciÃ³n.`);
+      console.warn(`[NutriPet] Foto de mascota '${p.name || p.id}' demasiado grande (${Math.round(photo.length / 1024)} KB). Removida para sincronización.`);
       photo = undefined;
     }
 
     return {
       ...p,
       photoUrl: photo,
-      veterinarian: (p.veterinarian && (p.veterinarian.includes('Alejandro') || p.veterinarian.includes('MarÃ­a Paz') || p.veterinarian.includes('Dr.') || p.veterinarian.includes('Dra.'))) ? '' : p.veterinarian,
+      veterinarian: (p.veterinarian && (p.veterinarian.includes('Alejandro') || p.veterinarian.includes('María Paz') || p.veterinarian.includes('Dr.') || p.veterinarian.includes('Dra.'))) ? '' : p.veterinarian,
       veterinarianPhone: (p.veterinarianPhone && (p.veterinarianPhone.includes('+57') || p.veterinarianPhone.includes('300 123') || p.veterinarianPhone.includes('311 987'))) ? '' : p.veterinarianPhone,
       microchip: (p.microchip && p.microchip.startsWith('98109810')) ? '' : p.microchip
     };
@@ -81,7 +81,7 @@ const sanitizePets = (petList: any[]): PetProfile[] => {
 const sanitizeRecords = (records: MedicalRecord[]): MedicalRecord[] => {
   return records.map(r => ({
     ...r,
-    veterinarian: (r.veterinarian && (r.veterinarian.includes('Alejandro') || r.veterinarian.includes('MarÃ­a Paz') || r.veterinarian.includes('Dr.') || r.veterinarian.includes('Dra.'))) ? '' : r.veterinarian
+    veterinarian: (r.veterinarian && (r.veterinarian.includes('Alejandro') || r.veterinarian.includes('María Paz') || r.veterinarian.includes('Dr.') || r.veterinarian.includes('Dra.'))) ? '' : r.veterinarian
   }));
 };
 
@@ -91,14 +91,16 @@ const LOCAL_STORAGE_RECORDS_KEY = 'nutripet_local_records_v2';
 const LOCAL_STORAGE_REMINDERS_KEY = 'nutripet_local_reminders_v2';
 const LOCAL_STORAGE_WEIGHTS_KEY = 'nutripet_local_weights_v2';
 const LOCAL_STORAGE_BATHS_KEY = 'nutripet_local_baths_v2';
-export const MAX_PETS_PER_USER = 8;
+const LOCAL_STORAGE_SUBSCRIPTION_KEY = 'nutripet_subscription_v1';
+const LOCAL_STORAGE_TRIAL_KEY = 'nutripet_trial_start_v1';
 
 export function cleanFirestoreData<T extends Record<string, any>>(obj: T): Record<string, any> {
   const cleaned: Record<string, any> = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
+      // Proteger contra campos con base64 excesivo que superen el límite de 1MB de Firestore
       if (typeof value === 'string' && value.startsWith('data:image') && value.length > 300000) {
-        console.warn(`[Firestore] Campo '${key}' omitido por superar tamaÃ±o seguro (${Math.round(value.length / 1024)} KB).`);
+        console.warn(`[Firestore] Campo '${key}' omitido por superar tamaño seguro (${Math.round(value.length / 1024)} KB).`);
         continue;
       }
       if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
@@ -136,11 +138,12 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [loading, setLoading] = useState<boolean>(true);
   const [syncError, setSyncError] = useState<string | null>(null);
 
+  // Referencias para control de guardados y prevención de condiciones de carrera
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const pendingDebouncePetIdRef = useRef<string | null>(null);
   const deletedPetIdsRef = useRef<Set<string>>(new Set());
   const loadedPetsRef = useRef<Set<string>>(new Set());
-  const petCreateInFlightRef = useRef<number>(0);
+  const trialStartDateSyncedRef = useRef<boolean>(false);
 
   const [trialDaysRemaining, setTrialDaysRemaining] = useState<number>(0);
   const [isProState, setIsProState] = useState<boolean>(false);
@@ -154,76 +157,47 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const syncTrialFromBackend = useCallback(async (currentUser: User) => {
-    if (!currentUser || !auth.currentUser) {
-      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
-      setTrialDaysRemaining(0);
-      setIsProState(false);
-      setTrialStartedAt(null);
-      setTrialEndsAt(null);
-      return;
-    }
-
     try {
       const idToken = await currentUser.getIdToken();
       const response = await fetch('/api/initialize-trial', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + idToken,
-        },
+          'Authorization': `Bearer ${idToken}`
+        }
       });
 
-      if (!response.ok) {
-        setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
-        setTrialDaysRemaining(0);
-        setIsProState(false);
-        setTrialStartedAt(null);
-        setTrialEndsAt(null);
-        return;
-      }
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          if (data.subscription) {
+            setSubscription(data.subscription);
+          }
+          
+          let remaining = data.daysRemaining ?? 0;
+          if (data.subscription?.validUntil) {
+            const validUntilStr = data.subscription.validUntil.includes('T')
+              ? data.subscription.validUntil
+              : `${data.subscription.validUntil}T23:59:59`;
+            const validMs = new Date(validUntilStr).getTime();
+            if (!isNaN(validMs)) {
+              remaining = Math.max(0, Math.ceil((validMs - Date.now()) / (1000 * 60 * 60 * 24)));
+            }
+          }
 
-      const data = await response.json();
-      if (!data?.success || !data.subscription) {
-        setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
-        setTrialDaysRemaining(0);
-        setIsProState(false);
-        setTrialStartedAt(null);
-        setTrialEndsAt(null);
-        return;
-      }
-
-      if (data.subscription) {
-        setSubscription(data.subscription);
-      }
-
-      let remaining = data.daysRemaining ?? 0;
-      if (data.subscription?.validUntil) {
-        const validUntilStr = data.subscription.validUntil.includes('T')
-          ? data.subscription.validUntil
-          : `${data.subscription.validUntil}T23:59:59`;
-        const validMs = new Date(validUntilStr).getTime();
-        if (!isNaN(validMs)) {
-          remaining = Math.max(0, Math.ceil((validMs - Date.now()) / (1000 * 60 * 60 * 24)));
+          setTrialDaysRemaining(remaining);
+          setIsProState(Boolean(data.isPro) || remaining > 0);
+          if (data.trialStartedAt) setTrialStartedAt(data.trialStartedAt);
+          if (data.trialEndsAt) setTrialEndsAt(data.trialEndsAt);
+          console.log(`⏳ [Trial] trial consultado: ${remaining} días restantes para usuario ${currentUser.uid}`);
         }
       }
-
-      const nextIsPro = Boolean(data.isPro) && remaining > 0;
-      setTrialDaysRemaining(remaining);
-      setIsProState(nextIsPro);
-      if (data.trialStartedAt) setTrialStartedAt(data.trialStartedAt);
-      if (data.subscription?.validUntil) setTrialEndsAt(data.subscription.validUntil);
-      console.log(`? [Trial] trial consultado: ${remaining} d?as restantes para usuario ${currentUser.uid}`);
     } catch (err) {
-      console.warn('?? [Trial] Error al consultar trial con backend:', err);
-      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
-      setTrialDaysRemaining(0);
-      setIsProState(false);
-      setTrialStartedAt(null);
-      setTrialEndsAt(null);
+      console.warn('⚠️ [Trial] Error al consultar trial con backend:', err);
     }
   }, []);
 
-const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
+  const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
 
   const [pets, setPets] = useState<PetProfile[]>(() => {
     try {
@@ -279,6 +253,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
     }
   });
 
+  // OPTIMIZACIÓN: Memoizar valores derivados
   const filteredMedicalRecords = useMemo(() => 
     medicalRecords.filter(r => r.petId === activePetId),
     [medicalRecords, activePetId]
@@ -333,11 +308,11 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
 
   const mergeUserData = async (anonUid: string, googleUid: string) => {
     try {
-      console.log(`[Merge] Iniciando migraciÃ³n de cuenta invitada ${anonUid} a cuenta Google ${googleUid}...`);
+      console.log(`[Merge] Iniciando migración de cuenta invitada ${anonUid} a cuenta Google ${googleUid}...`);
 
       const anonDocSnap = await getDoc(doc(db, 'users', anonUid));
       if (anonDocSnap.exists()) {
-        // Autorizado exclusivamente por servidor
+        // Nota: Las funciones Full y el trial de 15 días son autorizados exclusivamente por el servidor para Google Auth.
       }
 
       const petsColSnap = await getDocs(collection(db, 'users', anonUid, 'pets'));
@@ -373,15 +348,16 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
 
       await deleteDoc(doc(db, 'users', anonUid));
     } catch (e) {
-      console.error('[Merge] Error migrando cuenta anÃ³nima:', e);
+      console.error('[Merge] Error migrando cuenta anónima:', e);
     }
   };
 
   useEffect(() => {
+    // Procesar retorno si el usuario inició sesión mediante signInWithRedirect
     getRedirectResult(auth)
       .then((result) => {
         if (result?.user) {
-          console.log('âœ… [Auth] SesiÃ³n iniciada exitosamente con Redirect:', result.user.email);
+          console.log('✅ [Auth] Sesión iniciada exitosamente con Redirect:', result.user.email);
         }
       })
       .catch((err) => {
@@ -393,6 +369,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       const prevAnonUid = prevAnonUidRef.current;
       
+      // Limpiar localStorage si hay datos "sucios" de pruebas anteriores
       try {
         const savedPets = localStorage.getItem(LOCAL_STORAGE_PETS_KEY);
         if (savedPets) {
@@ -454,7 +431,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
           }
         } catch (e: any) {
           if (e?.code === 'permission-denied') {
-            console.warn('ðŸš« [Trial] Intento cliente bloqueado de modificar suscripciÃ³n');
+            console.warn('🚫 [Trial] Intento cliente bloqueado de modificar suscripción');
           } else {
             console.error('Error syncing user profile:', e);
           }
@@ -471,21 +448,15 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
     return () => unsubscribe();
   }, [syncTrialFromBackend]);
 
-  // === CARGA OPTIMIZADA DE USUARIO Y SUSCRIPCIÃ“N (1 sola lectura puntual con getDoc) ===
   useEffect(() => {
     if (!user) return;
 
-    let isMounted = true;
+    const userDocRef = doc(db, 'users', user.uid);
+    const unsubscribeUserDoc = onSnapshot(userDocRef, async (snap) => {
+      const isAdmin = user.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
 
-    const fetchUserData = async () => {
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const snap = await getDoc(userDocRef);
-
-        if (!isMounted || !snap.exists()) return;
-
+      if (snap.exists()) {
         const data = snap.data();
-        const isAdmin = user.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
 
         if (data.lastActivePetId) {
           setActivePetIdState(data.lastActivePetId);
@@ -505,6 +476,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
           const sub = data.subscription as UserSubscription;
           setSubscription(sub);
 
+          // Soporte para mapa anidado subscription.trialEndsAt / subscription.trialStartedAt con fallback a raíz
           const startedAtIso = sub?.trialStartedAt || data.trialStartedAt || trialStartedAt;
           if (startedAtIso) setTrialStartedAt(startedAtIso);
 
@@ -526,20 +498,15 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
             setTrialDaysRemaining(30);
           }
         }
-      } catch (err: any) {
-        console.error('Error al obtener documento de usuario:', err);
-        setSyncError(`Error en usuario: ${err?.message || err}`);
       }
-    };
+    }, (err) => {
+      console.error('Error listening to user document:', err);
+      setSyncError(`Error en usuario: ${err.message}`);
+    });
 
-    fetchUserData();
-
-    return () => {
-      isMounted = false;
-    };
+    return () => unsubscribeUserDoc();
   }, [user]);
 
-  // === SINCRONIZACIÃ“N EN TIEMPO REAL DE MASCOTAS ===
   useEffect(() => {
     if (!user) return;
 
@@ -556,14 +523,18 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
           photoUrl: data.photoUrl || data.photoURL || undefined
         };
 
+        // Filtrar mascotas que hayan sido eliminadas recientemente en la sesión
         if (isValidPersistablePet(rawPet) && !deletedPetIdsRef.current.has(rawPet.id)) {
           cloudPets.push(rawPet);
         }
       });
 
       const sanitizedCloudPets = sanitizePets(cloudPets);
-      console.log(`ðŸ¾ Firestore cargÃ³ ${sanitizedCloudPets.length} mascotas.`);
+      console.log(`🐾 Firestore cargó ${sanitizedCloudPets.length} mascotas.`);
 
+      // FIRESTORE ES LA ÚNICA FUENTE DE VERDAD:
+      // Reemplazar estado React y caché de localStorage directamente.
+      // NUNCA hacer setDoc ni re-subir mascotas desde localStorage aquí.
       setPets(sanitizedCloudPets);
       try {
         localStorage.setItem(LOCAL_STORAGE_PETS_KEY, JSON.stringify(sanitizedCloudPets));
@@ -590,6 +561,8 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
   useEffect(() => {
     if (!user || !activePetId) return;
 
+    // Si los registros de esta mascota ya se cargaron en el estado durante la sesión actual,
+    // se leen directamente de la memoria / localStorage para evitar reconexión masiva y lecturas redundantes
     if (loadedPetsRef.current.has(activePetId)) {
       return;
     }
@@ -605,7 +578,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
         return [...others, ...records];
       });
     }, (err) => {
-      console.warn('Medical records listener offline:', err.message);
+      console.warn('Medical records listener offline / notice:', err.message);
     });
 
     const remindersRef = collection(db, 'users', user.uid, 'pets', activePetId, 'reminders');
@@ -617,7 +590,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
         return [...others, ...rems];
       });
     }, (err) => {
-      console.warn('Reminders listener offline:', err.message);
+      console.warn('Reminders listener offline / notice:', err.message);
     });
 
     const weightsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'weightLogs');
@@ -629,7 +602,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
         return [...others, ...weights];
       });
     }, (err) => {
-      console.warn('Weights listener offline:', err.message);
+      console.warn('Weights listener offline / notice:', err.message);
     });
 
     return () => {
@@ -647,9 +620,11 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
     }
   }, [user]);
 
+  // === FUNCIÓN setPetPublicId: PERSISTENCIA TOTAL DEL ID PÚBLICO (REACT + LOCALSTORAGE + FIRESTORE) ===
   const setPetPublicId = useCallback(async (petId: string, publicId: string) => {
     if (!petId || !publicId) return;
 
+    // 1. Actualizar el estado React local de las mascotas y sincronizar inmediatamente localStorage
     setPets(prev => {
       const nextPets = prev.map(p => p.id === petId ? { ...p, publicId } : p);
       try {
@@ -660,35 +635,38 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       return nextPets;
     });
 
+    // 2. Persistir en Firestore en users/{uid}/pets/{petId}
     if (user) {
       try {
         const currentUid = auth.currentUser?.uid || user.uid;
         const petDocRef = doc(db, 'users', currentUid, 'pets', petId);
         await setDoc(petDocRef, { publicId, updatedAt: new Date().toISOString() }, { merge: true });
-        console.log('âœ… [PetContext] publicId persistido para la mascota:', petId, publicId);
+        console.log('✅ [PetContext] publicId persistido para la mascota:', petId, publicId);
       } catch (e) {
-        console.warn('âš  [PetContext] Error persistiendo publicId en Firestore:', e);
+        console.warn('⚠️ [PetContext] Error persistiendo publicId en Firestore:', e);
       }
     }
   }, [user]);
 
+  // === FUNCIÓN updatePetLocal: SOLO ACTUALIZA MASCOTAS EXISTENTES CON ID VÁLIDO ===
   const updatePetLocal = useCallback((petData: PetProfile) => {
     if (!isValidPersistablePet(petData)) {
-      console.warn('âœ– Escritura bloqueada por mascota invÃ¡lida/temporal', petData?.id);
+      console.warn('✖ Escritura bloqueada por mascota inválida/temporal', petData?.id);
       return;
     }
 
     if (deletedPetIdsRef.current.has(petData.id)) {
-      console.warn('âœ– Escritura bloqueada por mascota eliminada', petData.id);
+      console.warn('✖ Escritura bloqueada por mascota eliminada', petData.id);
       return;
     }
 
     const petExists = pets.some(p => p.id === petData.id);
     if (!petExists) {
-      console.warn('âš ï¸ ActualizaciÃ³n bloqueada de mascota inexistente:', petData.id);
+      console.warn('⚠️ Actualización bloqueada de mascota inexistente:', petData.id);
       return;
     }
 
+    // Cancelar cualquier debounce pendiente previo
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
@@ -699,6 +677,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       updatedAt: new Date().toISOString()
     };
 
+    // Actualizar estado local SOLO para la mascota existente
     setPets(prev => {
       const nextPets = prev.map(p => p.id === petData.id ? updatedPet : p);
       try {
@@ -711,35 +690,56 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
 
     pendingDebouncePetIdRef.current = petData.id;
 
+    // Guardar en Firestore después de 800ms sin cambios (DEBOUNCE OPTIMIZADO)
     saveTimeoutRef.current = setTimeout(async () => {
       try {
-        if (deletedPetIdsRef.current.has(petData.id)) return;
-        if (pendingDebouncePetIdRef.current !== petData.id) return;
-        if (!isValidPersistablePet(petData)) return;
+        // Verificar que no haya sido eliminada en ese intervalo
+        if (deletedPetIdsRef.current.has(petData.id)) {
+          console.warn('✖ Escritura bloqueada por mascota eliminada', petData.id);
+          return;
+        }
+        if (pendingDebouncePetIdRef.current !== petData.id) {
+          return;
+        }
+        if (!isValidPersistablePet(petData)) {
+          console.warn('✖ Escritura bloqueada por mascota inválida/temporal', petData?.id);
+          return;
+        }
 
         let petToSave = { ...petData };
         if (petToSave.photoUrl && petToSave.photoUrl.length > 150_000) {
-          console.warn('âœ– Foto omitida en sync por superar 150KB');
+          console.warn('✖ Foto demasiado grande para Firestore (>150 KB). Se omite photoUrl.');
           petToSave.photoUrl = undefined;
         }
 
         if (user) {
           const currentUid = auth.currentUser?.uid || user.uid;
           const petDocRef = doc(db, "users", currentUid, "pets", petToSave.id);
-          console.log('ðŸ’¾ [Spark-Optimized] Guardando mascota...', petToSave.id);
+          console.log('💾 [PetContext] Iniciando actualización de mascota en Firestore...', petToSave.id);
           await setDoc(petDocRef, cleanFirestoreData({ ...petToSave, userId: currentUid, updatedAt: new Date().toISOString() }), { merge: true });
+          console.log('✅ [PetContext] Mascota actualizada exitosamente en Firestore:', petToSave.id);
         }
       } catch (e: any) {
-        console.error("âŒ Error en auto-guardado:", e);
+        console.error("❌ [PetContext] Error en actualización de mascota en Firestore:", e);
+        const code = e?.code || '';
+        if (code === 'permission-denied') {
+          setSyncError('No tienes permisos suficientes para actualizar esta mascota.');
+        } else if (code === 'resource-exhausted') {
+          setSyncError('Límite de cuota o recurso alcanzado en la base de datos.');
+        } else if (code === 'unavailable') {
+          setSyncError('Servicio no disponible temporalmente. Los cambios locales se sincronizarán al reconectarse.');
+        } else {
+          setSyncError(`Error guardando mascota: ${e?.message || e}`);
+        }
       } finally {
         if (pendingDebouncePetIdRef.current === petData.id) {
           pendingDebouncePetIdRef.current = null;
         }
       }
-    }, 2000);
-
+    }, 800);
   }, [user, pets]);
 
+  // Limpiar timeout al desmontar
   useEffect(() => {
     return () => {
       if (saveTimeoutRef.current) {
@@ -748,7 +748,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
     };
   }, []);
 
-  // === FUNCIÃ“N savePet: CREACIÃ“N O ACTUALIZACIÃ“N CON LÃMITE DE 8 MASCOTAS ===
+  // === FUNCIÓN savePet: CREACIÓN O ACTUALIZACIÓN EXPLÍCITA ===
   const savePet = useCallback(async (petData: PetProfile) => {
     if (!isValidPersistablePet(petData)) {
       console.warn('✖ Escritura bloqueada por mascota inválida/temporal', petData?.id);
@@ -760,24 +760,11 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       return;
     }
 
-    const exists = pets.some(p => p.id === petData.id);
-    const effectiveCreateCount = pets.length + petCreateInFlightRef.current;
-
-    if (!exists && effectiveCreateCount >= MAX_PETS_PER_USER) {
-      const limitMessage = `Has alcanzado el límite máximo de ${MAX_PETS_PER_USER} mascotas permitidas.`;
-      console.warn(`⚠️ [PetContext] ${limitMessage}`);
-      setSyncError(limitMessage);
-      throw new Error(limitMessage);
-    }
-
+    // Cancelar cualquier debounce pendiente para esta mascota
     if (saveTimeoutRef.current && pendingDebouncePetIdRef.current === petData.id) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
       pendingDebouncePetIdRef.current = null;
-    }
-
-    if (!exists) {
-      petCreateInFlightRef.current += 1;
     }
 
     let petToSave = { ...petData };
@@ -791,9 +778,12 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       updatedAt: new Date().toISOString()
     };
 
-    const isNewPet = !exists;
+    let isNewPet = false;
 
+    // Actualizar estado local inmediatamente
     setPets(prev => {
+      const exists = prev.some(p => p.id === updatedPet.id);
+      isNewPet = !exists;
       const nextPets = exists 
         ? prev.map(p => p.id === updatedPet.id ? updatedPet : p)
         : [...prev, updatedPet];
@@ -815,6 +805,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
         console.log('💾 [PetContext] Guardando mascota en Firestore...', updatedPet.id);
         await setDoc(petDocRef, cleanFirestoreData({ ...updatedPet, userId: currentUid, updatedAt: new Date().toISOString() }), { merge: true });
         
+        // Sincronizar ficha pública si ya existía para esta mascota (sin duplicar)
         await syncPublicPetCardIfExists(updatedPet, auth.currentUser || user);
 
         if (isNewPet) {
@@ -838,31 +829,33 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       }
       throw err;
     } finally {
-      if (!exists) {
-        petCreateInFlightRef.current = Math.max(0, petCreateInFlightRef.current - 1);
-      }
       setIsSavingPet(false);
     }
-  }, [user, pets]);
+  }, [user]);
 
+  // === FUNCIÓN deletePet: ELIMINACIÓN TOTAL Y SEGURA ===
   const deletePet = useCallback(async (petId: string) => {
     if (!petId || petId === 'temp_empty_pet' || petId.toLowerCase().includes('default')) {
-      console.warn('âš ï¸ Intento de eliminar mascota con ID invÃ¡lido/temporal bloqueado:', petId);
+      console.warn('⚠️ Intento de eliminar mascota con ID inválido/temporal bloqueado:', petId);
       return;
     }
 
+    // 1. Obtener la mascota antes de borrarla para conocer su publicId
     const petToDelete = pets.find(p => p.id === petId);
     const targetPublicId = petToDelete?.publicId || petId;
 
+    // 2. Marcar el ID como eliminado en memoria antes de borrar para bloquear re-escrituras
     deletedPetIdsRef.current.add(petId);
     loadedPetsRef.current.delete(petId);
 
+    // 2. Cancelar cualquier debounce de guardado pendiente para ese ID
     if (saveTimeoutRef.current && pendingDebouncePetIdRef.current === petId) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
       pendingDebouncePetIdRef.current = null;
     }
 
+    // 3. Eliminar el ID del estado React y de localStorage inmediatamente, determinando el siguiente ID activo sin valores obsoletos
     let nextActiveId = '';
     setPets(prev => {
       const remaining = prev.filter(p => p.id !== petId);
@@ -873,10 +866,12 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       return remaining;
     });
 
+    // Limpiar expedientes, recordatorios y pesos asociados en memoria local
     setMedicalRecords(prev => prev.filter(r => r.petId !== petId));
     setReminders(prev => prev.filter(r => r.petId !== petId));
     setWeightLogs(prev => prev.filter(w => w.petId !== petId));
 
+    // 4. Actualizar activePetId si coincide con la eliminada de forma atómica
     setActivePetIdState(currentActiveId => {
       if (currentActiveId === petId) {
         try { localStorage.setItem(LOCAL_STORAGE_ACTIVE_KEY, nextActiveId); } catch {}
@@ -888,10 +883,12 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       return currentActiveId;
     });
 
+    // 5. Eliminar explícitamente las subcolecciones y el documento en Firestore
     try {
       if (user) {
         const currentUid = auth.currentUser?.uid || user.uid;
 
+        // Limpiar subcolección medicalRecords
         try {
           const medSnap = await getDocs(collection(db, 'users', currentUid, 'pets', petId, 'medicalRecords'));
           for (const d of medSnap.docs) {
@@ -901,6 +898,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
           console.warn('Nota limpiando medicalRecords en Firestore:', e);
         }
 
+        // Limpiar subcolección reminders
         try {
           const remSnap = await getDocs(collection(db, 'users', currentUid, 'pets', petId, 'reminders'));
           for (const d of remSnap.docs) {
@@ -910,6 +908,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
           console.warn('Nota limpiando reminders en Firestore:', e);
         }
 
+        // Limpiar subcolección weightLogs
         try {
           const weightSnap = await getDocs(collection(db, 'users', currentUid, 'pets', petId, 'weightLogs'));
           for (const d of weightSnap.docs) {
@@ -919,17 +918,20 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
           console.warn('Nota limpiando weightLogs en Firestore:', e);
         }
 
+        // Eliminar también la ficha pública asociada en publicPets/{targetPublicId}
         await deletePublicPetCard(targetPublicId, auth.currentUser || user);
+
+        // Eliminar documento principal de la mascota
         await deleteDoc(doc(db, 'users', currentUid, 'pets', petId));
       }
-      console.log('ðŸ—‘ï¸ Mascota eliminada:', petId);
+      console.log('🗑️ Mascota eliminada:', petId);
       setSyncError(null);
     } catch (err) {
       console.error('Error deleting pet from Firestore:', err);
       setSyncError(`Error eliminando mascota: ${err}`);
       throw err;
     }
-  }, [user, pets]);
+  }, [user]);
 
   const addMedicalRecord = useCallback(async (data: Omit<MedicalRecord, 'id' | 'petId' | 'userId'>) => {
     const newRecord: MedicalRecord = {
@@ -1113,17 +1115,12 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
   }, []);
 
   const updateSubscription = useCallback(async (
-    tier: SubscriptionTier,
-    planName: string,
+    tier: SubscriptionTier, 
+    planName: string, 
     verificationDetails?: { wompiTransactionId?: string; transactionReference?: string; paypalOrderId?: string }
   ): Promise<boolean> => {
     const currentUser = auth.currentUser || user;
-    if (!currentUser) {
-      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
-      setTrialDaysRemaining(0);
-      setIsProState(false);
-      return false;
-    }
+    if (!currentUser) return false;
 
     try {
       const idToken = await currentUser.getIdToken();
@@ -1131,47 +1128,38 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ' + idToken,
+          'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({
-          planId: tier === 'pro_annual' ? 'pro_annual' : 'pro_monthly',
+          planId: tier === 'pro_annual' ? 'plan_pro_annual' : 'plan_pro_monthly',
+          planName,
           wompiTransactionId: verificationDetails?.wompiTransactionId,
-          paypalOrderId: verificationDetails?.paypalOrderId,
+          transactionReference: verificationDetails?.transactionReference,
+          paypalOrderId: verificationDetails?.paypalOrderId
         })
       });
 
-      if (!res.ok) {
+      if (res.ok) {
+        const data = await res.json();
+        if (data.subscription) {
+          setSubscription(data.subscription);
+          setIsProState(true);
+          setTrialDaysRemaining(365);
+          console.log('✅ [Subscription] Suscripción activada exitosamente por backend:', data.subscription);
+          return true;
+        }
+      } else {
         const errData = await res.json().catch(() => ({}));
-        console.warn('?? [Subscription] Activaci?n bloqueada por backend:', errData);
-        setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
-        setTrialDaysRemaining(0);
-        setIsProState(false);
-        return false;
+        console.warn('🔒 [Subscription] Activación bloqueada por backend:', errData);
       }
-
-      const data = await res.json();
-      if (res.ok && data?.success === true && data.subscription) {
-        setSubscription(data.subscription);
-        setIsProState(true);
-        setTrialDaysRemaining(data.subscription.tier === 'trial' ? (data.daysRemaining ?? 0) : 365);
-        console.log('? [Subscription] Suscripci?n activada exitosamente por backend:', data.subscription);
-        return true;
-      }
-
-      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
-      setTrialDaysRemaining(0);
-      setIsProState(false);
       return false;
     } catch (e: any) {
-      console.error('Error activando suscripci?n:', e);
-      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
-      setTrialDaysRemaining(0);
-      setIsProState(false);
+      console.error('Error activando suscripción:', e);
       return false;
     }
   }, [user]);
 
-const cancelSubscription = useCallback(async () => {
+  const cancelSubscription = useCallback(async () => {
     const cancelledSub: UserSubscription = {
       ...subscription,
       autoRenew: false,
@@ -1188,58 +1176,6 @@ const cancelSubscription = useCallback(async () => {
     };
     setSubscription(freeSub);
   }, []);
-
-  // === FUNCIÃ“N DE ELIMINACIÃ“N TOTAL DE CUENTA Y DATOS ===
-  const deleteUserAccount = useCallback(async () => {
-    if (!user) return;
-    const currentUid = user.uid;
-
-    try {
-      console.log(`ðŸ—‘ï¸ [PetContext] Iniciando eliminaciÃ³n definitiva de cuenta para ${currentUid}...`);
-
-      // 1. Obtener y eliminar todas las mascotas y sus subcolecciones
-      const petsSnap = await getDocs(collection(db, 'users', currentUid, 'pets'));
-      for (const petDoc of petsSnap.docs) {
-        await deletePet(petDoc.id);
-      }
-
-      // 2. Eliminar el documento raÃ­z del usuario en Firestore
-      await deleteDoc(doc(db, 'users', currentUid));
-
-      // 3. Limpiar toda la cachÃ© local del navegador
-      try {
-        localStorage.removeItem(LOCAL_STORAGE_PETS_KEY);
-        localStorage.removeItem(LOCAL_STORAGE_ACTIVE_KEY);
-        localStorage.removeItem(LOCAL_STORAGE_RECORDS_KEY);
-        localStorage.removeItem(LOCAL_STORAGE_REMINDERS_KEY);
-        localStorage.removeItem(LOCAL_STORAGE_WEIGHTS_KEY);
-        localStorage.removeItem(LOCAL_STORAGE_BATHS_KEY);
-      } catch (lsErr) {
-        console.warn('Error limpiando almacenamiento local tras eliminar cuenta:', lsErr);
-      }
-
-      // 4. Limpiar estados en memoria
-      setPets([]);
-      setActivePetIdState('');
-      setMedicalRecords([]);
-      setReminders([]);
-      setWeightLogs([]);
-      setBathLogs([]);
-
-      // 5. Eliminar usuario de Firebase Auth (o cerrar sesiÃ³n si el token expirÃ³)
-      try {
-        await user.delete();
-      } catch (authErr) {
-        console.warn('user.delete() requiriÃ³ cerrar sesiÃ³n:', authErr);
-        await signOut(auth);
-      }
-
-      console.log('âœ… [PetContext] Cuenta y datos eliminados satisfactoriamente.');
-    } catch (error) {
-      console.error('âŒ [PetContext] Error al eliminar cuenta de usuario:', error);
-      throw error;
-    }
-  }, [user, deletePet]);
 
   const isProActive = subscription.tier !== 'free' && subscription.status === 'active';
   const isProOrTrial = isProState || isProActive || trialDaysRemaining > 0;
@@ -1278,7 +1214,6 @@ const cancelSubscription = useCallback(async () => {
         updateSubscription,
         cancelSubscription,
         resetSubscription,
-        deleteUserAccount,
         loginWithGoogle,
         loginWithGoogleRedirect,
         logout

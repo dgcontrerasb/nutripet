@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { usePets } from '../context/PetContext';
-import { Plus, X, LogIn, LogOut, Check, ShieldCheck, Sparkles, Crown, ChevronDown, Trash2, AlertTriangle, Loader2, User as UserIcon } from 'lucide-react';
+import { Plus, X, LogIn, LogOut, Check, ShieldCheck, Sparkles, Crown, ChevronDown, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { PetProfile, PetType } from '../types';
 import { POPULAR_BREEDS } from '../data';
 
@@ -26,19 +26,15 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
     setActivePetId, 
     savePet, 
     deletePet, 
-    deleteUserAccount,
     loginWithGoogle, 
     logout 
   } = usePets();
 
   const isPro = subscription.tier !== 'free' && subscription.status === 'active';
   const isAdminUser = user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
-  const hasReachedPetLimit = pets.length >= 8;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
@@ -59,17 +55,14 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
     };
-    if (isDropdownOpen || isUserMenuOpen) {
+    if (isDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isDropdownOpen, isUserMenuOpen]);
+  }, [isDropdownOpen]);
 
   // Bloquear scroll del body cuando hay modales abiertos
   useEffect(() => {
@@ -118,34 +111,6 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
       setDeleteError('Hubo un error al intentar eliminar la mascota. Por favor intenta de nuevo.');
     } finally {
       setIsDeleting(false);
-    }
-  };
-
-  const handleDeleteUserAccount = async () => {
-    const confirmDelete = window.confirm(
-      '⚠️ ¿Estás completamente seguro de que deseas eliminar tu cuenta permanentemente?\n\nEsta acción borrará de forma irreversible todas tus mascotas, fichas clínicas, recordatorios y datos de nuestra base de datos.'
-    );
-    if (!confirmDelete) return;
-
-    const secondConfirm = window.prompt(
-      'Para confirmar, escribe "ELIMINAR" en mayúsculas:'
-    );
-    if (secondConfirm !== 'ELIMINAR') {
-      alert('Operación cancelada. El texto ingresado no coincide.');
-      return;
-    }
-
-    try {
-      await deleteUserAccount();
-      alert('Tu cuenta y todos tus datos personales han sido eliminados correctamente de NutriPet.');
-      window.location.reload();
-    } catch (err: any) {
-      console.error('Error al eliminar cuenta:', err);
-      alert(
-        err?.code === 'auth/requires-recent-login'
-          ? 'Por motivos de seguridad de Google, debes cerrar sesión, volver a iniciar sesión e intentarlo de nuevo inmediatamente.'
-          : 'Ocurrió un error al procesar la solicitud. Si el problema persiste, escríbenos a nutripet.v2@gmail.com.'
-      );
     }
   };
 
@@ -344,9 +309,7 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                 <div className="pt-2 border-t border-stone-100 dark:border-stone-800">
                   <button
                     type="button"
-                    disabled={hasReachedPetLimit}
                     onClick={() => {
-                      if (hasReachedPetLimit) return;
                       setIsDropdownOpen(false);
                       if (!isPro && pets.length >= 1) {
                         if (onOpenSubscriptionModal) onOpenSubscriptionModal();
@@ -354,19 +317,10 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                         setShowAddModal(true);
                       }
                     }}
-                    className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-2xs ${
-                      hasReachedPetLimit
-                        ? 'border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed'
-                        : 'border-dashed border-emerald-300 dark:border-emerald-700/70 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 cursor-pointer active:scale-98'
-                    }`}
-                    title={hasReachedPetLimit ? 'Límite máximo alcanzado (8/8 mascotas)' : 'Registrar nueva mascota'}
+                    className="w-full py-2 px-3 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-700/70 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-98"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>
-                      {hasReachedPetLimit 
-                        ? 'Límite alcanzado (8/8 mascotas)' 
-                        : `Agregar Nueva Mascota (${pets.length}/8)${!isPro && pets.length >= 1 ? ' 👑' : ''}`}
-                    </span>
+                    <span>Agregar Nueva Mascota {!isPro && pets.length >= 1 && '👑'}</span>
                   </button>
                 </div>
               </div>
@@ -412,61 +366,23 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
             )}
 
             {user ? (
-              <div className="relative shrink-0" ref={userMenuRef}>
+              <div className="flex items-center gap-1 bg-emerald-50/90 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/80 p-1 sm:px-2 sm:py-1 rounded-2xl shadow-2xs shrink-0">
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center text-[10px] font-bold text-emerald-800 dark:text-emerald-200 shrink-0 ring-1 ring-emerald-400">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt={user.displayName || 'Google Account'} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{(user.email || 'G').charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
                 <button
                   type="button"
-                  onClick={() => setIsUserMenuOpen(prev => !prev)}
-                  className="flex items-center gap-1.5 bg-emerald-50/90 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/80 p-1 sm:px-2 sm:py-1 rounded-2xl shadow-2xs hover:bg-emerald-100/70 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
-                  title="Opciones de cuenta"
+                  onClick={logout}
+                  title="Cerrar sesión"
+                  aria-label="Cerrar sesión"
+                  className="text-stone-500 hover:text-red-600 dark:text-stone-400 dark:hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
                 >
-                  <div className="w-6 h-6 rounded-full overflow-hidden bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center text-[10px] font-bold text-emerald-800 dark:text-emerald-200 shrink-0 ring-1 ring-emerald-400">
-                    {user.photoURL ? (
-                      <img src={user.photoURL} alt={user.displayName || 'Google Account'} className="w-full h-full object-cover" />
-                    ) : (
-                      <span>{(user.email || 'G').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <ChevronDown className={`w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  <LogOut className="w-3.5 h-3.5" />
                 </button>
-
-                {/* Menú Desplegable de Usuario (Sesión y Privacidad Legal) */}
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl z-50 p-2 space-y-1 animate-fade-in ring-1 ring-black/5 dark:ring-white/10">
-                    <div className="px-3 py-2 border-b border-stone-100 dark:border-stone-800">
-                      <p className="text-xs font-black text-stone-900 dark:text-stone-100 truncate">
-                        {user.displayName || 'Usuario NutriPet'}
-                      </p>
-                      <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
-                        {user.email}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        logout();
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
-                    >
-                      <LogOut className="w-3.5 h-3.5 text-stone-500" />
-                      <span>Cerrar Sesión</span>
-                    </button>
-
-                    {/* Botón de Eliminación Definitiva de Cuenta (Cumplimiento Legal y Privacidad) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        handleDeleteUserAccount();
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer flex items-center gap-2 border-t border-stone-100 dark:border-stone-800 pt-2"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                      <span>Eliminar cuenta y datos</span>
-                    </button>
-                  </div>
-                )}
               </div>
             ) : (
               <button
@@ -486,6 +402,7 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
               </button>
             )}
 
+            {/* Botón Admin trasladado al menú deslizable para evitar sobrecarga en la barra */}
           </div>
 
         </div>
