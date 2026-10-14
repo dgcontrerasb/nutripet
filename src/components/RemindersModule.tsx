@@ -1238,7 +1238,7 @@ export const RemindersModule: React.FC = () => {
                           <span className="hidden md:inline">Calendar</span>
                         </button>
 
-                        {isConfirming ? (
+{isConfirming ? (
                           <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/60 px-2 py-1 rounded-xl border border-red-200 dark:border-red-900 animate-in fade-in">
                             <span className="text-[11px] font-bold text-red-700 dark:text-red-300">¿Eliminar?</span>
                             <button
@@ -1261,7 +1261,6 @@ export const RemindersModule: React.FC = () => {
                           </div>
                         ) : (
                           <button
-                           <button
                             type="button"
                             onClick={() => setConfirmDeleteId(rem.id)}
                             className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
