@@ -1261,6 +1261,7 @@ export const RemindersModule: React.FC = () => {
                           </div>
                         ) : (
                           <button
+                           <button
                             type="button"
                             onClick={() => setConfirmDeleteId(rem.id)}
                             className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
@@ -1275,8 +1276,6 @@ export const RemindersModule: React.FC = () => {
                 })}
               </div>
             )}
-          </div>
-        )}
       </div>
 
       <div className="p-5 rounded-3xl bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-900/50 shadow-3xs space-y-3 animate-fade-in no-print mt-6">
