@@ -58,6 +58,7 @@ import { SubscriptionModal } from './components/SubscriptionModal';
 import { AnimatedCounter } from './components/AnimatedCounter';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { RegistrationLockModal } from './components/RegistrationLockModal';
+import { PetProfileHUD } from './components/PetProfileHUD';
 import { InstallPwaBanner } from './components/InstallPwaBanner';
 import { NutriPetLogo } from './components/NutriPetLogo';
 import { BarfRecipeGenerator } from './components/BarfRecipeGenerator';
@@ -1617,74 +1618,192 @@ export default function App() {
 
           {/* VISTA ORGANIZADOR DE RUTINA */}
           {activeTab === 'routine' && (
-            <div className="space-y-6">
-              <RoutineSchedule
-                profile={profile}
-                result={result}
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <RoutineSchedule profile={profile} result={result} />
+              </div>
             </div>
           )}
 
           {/* VISTA 2: FICHA TÉCNICA */}
           {activeTab === 'sheet' && (
-            <div className="space-y-6">
-              <PetTechSheet onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <PetTechSheet onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+              </div>
             </div>
           )}
 
           {/* VISTA 3: EXPEDIENTE MÉDICO */}
           {activeTab === 'medical' && (
-            <div className="space-y-6">
-              <MedicalHistory />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <MedicalHistory />
+              </div>
             </div>
           )}
 
           {/* VISTA 4: RECORDATORIOS */}
           {activeTab === 'reminders' && (
-            <div className="space-y-6">
-              <RemindersModule />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <RemindersModule />
+              </div>
             </div>
           )}
 
           {/* VISTA RECETAS */}
           {activeTab === 'recipes' && (
-            <div className="space-y-6">
-              <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+              </div>
             </div>
           )}
 
           {/* VISTA 5: MARCAS POR PAÍS */}
           {activeTab === 'advisor' && (
-            <div className="space-y-6">
-              <CountryFoodAdvisor onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <CountryFoodAdvisor onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+              </div>
             </div>
           )}
 
           {/* VISTA 6: GUÍA DE RAZAS */}
           {activeTab === 'breeds' && (
-            <div className="space-y-6">
-              <BreedEncyclopedia
-                onSelectBreedForCalculation={(type, breedId) => {
-                  setProfile(prev => ({
-                    ...prev,
-                    type,
-                    breedId,
-                    name: prev.name || 'Mi Mascota',
-                  }));
-                  setActiveTab('calculator');
-                }}
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <BreedEncyclopedia
+                  onSelectBreedForCalculation={(type, breedId) => {
+                    setProfile(prev => ({
+                      ...prev,
+                      type,
+                      breedId,
+                      name: prev.name || 'Mi Mascota',
+                    }));
+                    setActiveTab('calculator');
+                  }}
+                />
+              </div>
             </div>
           )}
 
           {/* VISTA: SEMÁFORO DE ALIMENTOS */}
           {activeTab === 'foods' && (
-            <FoodTrafficLight />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <FoodTrafficLight />
+              </div>
+            </div>
           )}
 
           {/* VISTA: TIPS Y PRIMEROS AUXILIOS */}
           {activeTab === 'guides' && (
-            <TipsAndGuidesModule />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
+                <PetProfileHUD 
+                  profile={profile} 
+                  result={result} 
+                  onSelectTab={setActiveTab} 
+                  onEditBiometrics={() => {
+                    setActiveTab('calculator');
+                    setIsBiometricsExpanded(true);
+                  }}
+                />
+              </div>
+              <div className="lg:col-span-8 space-y-6">
+                <TipsAndGuidesModule />
+              </div>
+            </div>
           )}
 
         </main>

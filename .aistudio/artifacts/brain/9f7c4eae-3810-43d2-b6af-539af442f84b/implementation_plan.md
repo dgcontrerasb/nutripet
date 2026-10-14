@@ -1,111 +1,114 @@
-# Rediseño Integral de Identidad & UI de NutriPet: Dirección Editorial Veterinaria de Alta Gama
+# Reestructuración Espacial y Arquitectura Modular Avanzada: NutriPet
 
-Plan de transformación visual y de experiencia de usuario para NutriPet, reemplazando la estética genérica de interfaces de IA (degradados violetas, tarjetas flotantes y píldoras decorativas) por un sistema de diseño editorial veterinario, sofisticado y estructurado, con tonos bosque profundo, pergamino crema cálido, tipografía de alta jerarquía y microinteracciones táctiles de precisión clínica.
+Plan de arquitectura de interfaz y maquetación de módulos para NutriPet, evolucionando de la maquetación estandarizada tipo tarjeta apilada hacia un **Panel Split Asimétrico de Alto Rendimiento**. Esta distribución separa de manera fija el cabezal de control e indicador biométrico del paciente (HUD de Mascota) en la columna izquierda, mientras despliega el flujo dinámico de trabajo a la derecha con contenedores desplegables de densidad progresiva y transiciones continuas sin modales emergentes invasivos.
 
 ---
 
-## Decisiones Críticas & Revisión del Usuario
+## Decisiones Críticas & Confirmaciones del Usuario
 
 > [!IMPORTANT]
-> A partir de tus respuestas en la fase de clarificación, se han fijado las bases estéticas maestras del proyecto para garantizar un resultado con identidad de marca auténtica, profesional y diferenciada:
+> Basado en tus respuestas en la entrevista de diseño, las reglas de maquetación y la infoarquitectura espacial del proyecto quedan fijadas bajo los siguientes pilares:
 
-- **Dirección Estética Confirmada**: *Editorial Veterinario Elegante*. Estructura inspirada en monografías científicas y clínicas de alta gama, con generoso espacio negativo, bordes capilares sutiles y balance armónico entre calidez orgánica y rigor técnico.
-- **Paleta Cromática Confirmada**: *Verde Bosque Profundo (`#143826`), Crema Alabastro Cálido (`#FAF8F5`), Carbón Ébano Suave (`#1C1917`)* con acentos en Salvia Muted (`#4D7C68`) y Ocre Dorado Clínico (`#B4833E`).
-- **Comportamiento de Animaciones Confirmado**: *Sutil, Físico y Táctil*. Microinteracciones suaves con muelles controlados (`spring` amortiguado), respuestas al pulsar a escala `0.98`, transiciones de página fluidas sin saltos bruscos ni rebotes innecesarios.
-- **Decisión de Maquetación y Navegación**: Mantener la arquitectura actual de navegación lateral de escritorio anclada y barra móvil ergonómica, pero elevando cada componente a un acabado artesanal con contraste accesible (WCAG AA).
-
----
-
-## 1. Visión General & Concepto de Marca
-
-### ¿Qué es y qué soluciona este rediseño?
-NutriPet pasará de sentirse como un "software estándar generado por asistente" a consolidarse como una **plataforma veterinaria editorial de referencia**. En marketing y publicidad digital, la confianza del tutor de mascotas depende de la percepción de rigor médico y calidez afectiva:
-1. **Erradicación del "AI Slop"**: Eliminación total de tarjetas con bordes luminosos de neón, píldoras informativas innecesarias amontonadas y fondos genéricos.
-2. **Jerarquía Visual Superior**: La información calórica, el plato nutricional y el historial clínico deben leerse con la claridad y belleza de una publicación científica de autor.
-3. **Identidad Visual Coherente**: Unificación visual entre el header, sidebar, calculadora de porciones, recetarios BARF, expedientes médicos y semáforo de toxicidad.
-
-### Público Objetivo & Experiencia Emocional
-- **Tutores comprometidos**: Buscan certeza, seriedad científica y una herramienta agradable de usar a diario.
-- **Veterinarios y nutricionistas**: Exigen datos numéricos legibles (cifras tabulares `tabular-nums`), formatos de carnet que transmitan prestigio profesional y cero distracciones visuales.
+- **Estructura Espacial Principal**: *Panel Split Asimétrico (HUD + Viewport)*.
+  - **Columna Fija de Control (Izquierda / Sticky HUD)**: Muestra en todo momento el perfil del paciente activo ({profile.name}), su foto, especie, barra de peso con respecto al objetivo ideal, requerimientos calóricos base y selector rápido de mascota sin interferir con la navegación.
+  - **Viewport Principal de Trabajo (Derecha)**: Espacio de lectura y edición amplia donde se renderizan la Calculadora, Ficha Clínica, Semáforo Toxicológico, Expediente y Recetarios BARF.
+- **Patrón de Interacción y Navegación Interna**: *Flujo Continuo sin Modales Restrictivos*.
+  - Sustitución de modales emergentes intrusivos por paneles deslizantes en línea, acordeones expandibles con transiciones suaves y tarjetas de edición in situ.
+- **Densidad de Datos e Infoarquitectura**: *Progresiva y Equilibrada*.
+  - La tarjeta presenta primero la métrica o recomendación principal (ej. gramos diarios, alimentos prohibidos o próximo recordatorio) y permite expandir el desglose nutricional profundo o histórico con un solo clic táctil.
 
 ---
 
-## 2. Experiencia de Usuario & Sistema Visual
+## 1. Visión General & Concepto de Distribución
 
-### A. Paleta de Color & Atmósfera Cromática
+### Problema de las Interfaces de IA Cliché
+Las interfaces generadas por IA suelen pecar de dos patrones repetitivos:
+1. *Grid Simétrico de Tarjetas Flotantes*: Tarjetas de igual tamaño apiladas verticalmente que obligan al usuario a hacer scroll infinito para encontrar datos básicos.
+2. *Cúmulo de Modales Emergentes*: Cada acción (editar peso, ver vacunas, agregar alimento) abre una ventana flotante que interrumpe la navegación.
 
-| Token de Diseño | Valor Hex / Tailwind | Propósito & Aplicación |
-| :--- | :--- | :--- |
-| **Canvas Background (Light)** | `#FAF8F5` (`stone-50` cálido) | Lienzo cálido estilo papel editorial que reduce la fatiga visual. |
-| **Card Surface (Light)** | `#FFFFFF` con borde `rgba(28, 25, 23, 0.08)` | Tarjetas con delimitación capilar de 1px, sin sombras artificiales pesadas. |
-| **Primary Brand (Forest)** | `#143826` (Bosque Profundo) | Botones primarios, encabezados de alto impacto y carnet oficial. |
-| **Brand Accent (Salvia)** | `#3F6E58` / `#52796F` | Indicadores de balance calórico, estados activos y destacados serenos. |
-| **Warm Accent (Ocre)** | `#B4833E` / `#C89B53` | Alertas nutricionales, recordatorios de vacunación y etiquetas pro. |
-| **Text Primary (Ébano)** | `#1C1917` (Carbón Piedra) | Máxima legibilidad tipográfica con contraste 14:1. |
-| **Text Secondary (Musgo)** | `#57534E` / `#78716C` | Leyendas clínicas, instrucciones y metadatos no invasivos. |
-| **Dark Mode Atmosphere** | `#121714` (Fondo) / `#1A231D` (Superficies) | Modo oscuro orgánico de bosque nocturno (evitando el gris puro plano). |
+### La Solución NutriPet: Command Center Split
+NutriPet adoptará una distribución de **Centro de Comando Asimétrico**:
+- Al entrar a cualquier vista (Calculadora, Ficha, Salud, Alimentos, Recordatorios), el tutor siempre ve a su mascota en la columna fija izquierda con sus métricas vitales (HUD).
+- A la derecha, el módulo activo se despliega como un cuaderno continuo con secciones colapsables que no pierden el contexto biométrico.
 
-### B. Sistema Tipográfico & Reglas Editoriales
+---
+
+## 2. Experiencia de Usuario & Maquetación Espacial
+
+### A. Anatomía de la Pantalla (Desktop & Tablet)
 
 ```
-[ ARQUITECTURA TIPOGRÁFICA EDITORIAL ]
-
-Titulares & Portadas    ──►  Fraunces / Playfair Display / Outfit (Serif / Display refinado)
-                             - Peso 600/700, tracking -0.02em, ritmo literario y cálido
-                             
-Cuerpo & Controles UI   ──►  Plus Jakarta Sans / DM Sans (Sans contemporánea nítida)
-                             - Altura de x generosa, legibilidad óptima en 13px - 15px
-                             
-Métricas & Dosificación ──►  JetBrains Mono / Tabular Nums (Números de precisión)
-                             - Gramos, Kcal/día, porcentajes y fechas sin saltos de línea
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                               HEADER PERMANENTE (LG:LEFT-64)                                    │
+│       Aviso Institucional · Selector de Mascota Rapido · Cuenta Pro / Administrador · Tema     │
+├─────────────────┬───────────────────────────────────────────────────────────────────────────────┤
+│ SIDEBAR FIJO    │ PANEL SPLIT ASIMÉTRICO (viewport principal lg:pl-64)                          │
+│ (256px ancho)   │                                                                               │
+│                 │ ┌──────────────────────────────┬────────────────────────────────────────────┐ │
+│ - Calculadora   │ │ COLUMNA HUD DE PACIENTE      │ VIEWPORT DINÁMICO DE MÓDULOS (Flex-1)      │ │
+│ - Alimentos     │ │ (Sticky / 320px - 360px)     │                                            │ │
+│ - Ficha Técnica │ │                              │ [ HERO DEL MÓDULO ACTIVO ]                 │ │
+│ - Salud & Pesos │ │ - Avatar & Especie           │                                            │ │
+│ - Recordatorios │ │ - Peso & Barra de Estado     │ [ BLOQUE PRINCIPAL / FORMULARIO CONTINUO ] │ │
+│ - Recetas BARF  │ │ - Requerimiento MER/RER      │ - Acordeón 1: Biometría & Dieta            │ │
+│ - Razas         │ │ - Ración sugerida en gramos  │ - Acordeón 2: Plato & Desglose Nutricional │ │
+│ - Guías & Tips  │ │ - Accesos de edición in situ │ - Acordeón 3: Recomendaciones & Marcas     │ │
+│                 │ └──────────────────────────────┴────────────────────────────────────────────┘ │
+└─────────────────┴───────────────────────────────────────────────────────────────────────────────┘
 ```
 
-- **Disciplina "Zero-Pill"**:
-  - *Antes*: Etiquetas estáticas envueltas en cápsulas de colores llamativos que saturaban la pantalla.
-  - *Nuevo*: Metadatos limpios en texto continuo separados por puntos medios (`Adulto · Canino · 14.5 kg · Esterilizado`), reservando los contenedores interactivos únicamente para botones y pestañas funcionales.
-- **Micro-Composición de Tarjetas**:
-  - Padding exterior proporcional $\ge 24\text{px}$ en tarjetas principales.
-  - Radio de esquinas curadas: `rounded-2xl` ($16\text{px}$) consistente con radios interiores calculados ($r_{\text{inner}} = r_{\text{outer}} - \text{padding}$).
+### B. Distribución por Módulo
 
-### C. Animaciones & Respuestas Táctiles
-- **Feedback al Pulsar**: `active:scale-[0.98]` con transición de `150ms ease-out` en botones, selectores de especie y tabs.
-- **Entradas y Revelaciones**: Despliegues suaves mediante `framer-motion` (`opacity: 0, y: 8` hacia `opacity: 1, y: 0`) con curva `easeOutQuart` (300ms).
-- **Indicadores de Progreso**: Barras de cálculo nutricional con llenado cinético continuo y números animados mediante `AnimatedCounter`.
+#### 1. Módulo Calculadora Nutricional & Dosificación
+- **Columna HUD (Izquierda)**: Mantiene la ficha fija de la mascota con la foto, edad, raza, tipo de alimento actual (croquetas vs. BARF) y el calculador de porciones en tiempo real.
+- **Viewport Principal (Derecha)**:
+  - *Panel 1 (Biometría In Situ)*: Formulario compacto de entrada de peso, nivel de actividad y estado reproductivo con sliders suaves y botones de selección táctil.
+  - *Panel 2 (Plato Nutricional Interactivo)*: Presentación visual del plato en gramos con desglose por tomas (Toma 1, Toma 2, Toma 3) y contador animado (`AnimatedCounter`).
+
+#### 2. Módulo Semáforo Toxicológico
+- **Columna HUD**: Resumen de alertas activas de la especie (ej. *"Ingredientes mortales para Caninos"*).
+- **Viewport Principal**:
+  - *Barra de Filtros y Búsqueda Inmediata*: Filtros por categoría de riesgo (Mortal, Peligroso, Superalimento) y buscador por texto con autocompletado.
+  - *Grilla Asimétrica de Alimentos*: Tarjetas compactas de 1 línea con indicador de riesgo que al hacer clic expanden el panel inferior con la toxina, dosis peligrosa, síntomas y protocolo de emergencia.
+
+#### 3. Módulo Ficha Técnica & Carnet Imprimible
+- **Columna HUD**: Carnet de identidad sintético con código QR de acceso rápido a la ficha pública.
+- **Viewport Principal**:
+  - Vista unificada con secciones colapsables: Identificación, Contactos Veterinarios de Emergencia, Registro de Microchip/Placa y Botones de exportación directa a PDF e impresión.
+
+#### 4. Módulo Expediente Médico & Historial de Pesos
+- **Columna HUD**: Gráfico de evolución de peso simplificado con tendencia histórica.
+- **Viewport Principal**:
+  - *Línea de Tiempo Clínica*: Registro cronológico de consultas, exámenes, desparasitaciones y cirugías. Formulario de inserción deslizante directamente en la cabecera sin modal emergente.
 
 ---
 
 ## 3. Decisiones de Producto & Trade-Offs
 
-### 1. Tipografía Editorial vs. Fuentes de Sistema Genéricas
-- **Elección**: Incorporar una familia editorial con carácter (`Fraunces` o `Outfit` balanceado) para encabezados clave y carnets, combinada con `Plus Jakarta Sans` para formularios e inputs.
-- **Justificación**: Crea una ruptura inmediata con las interfaces genéricas de software SaaS de plantilla y le otorga a NutriPet un aire de botica / clínica veterinaria de autor.
-- **Alternativas Descartadas**: Mantener `Inter` o `Roboto` (percibidas como código predeterminado sin identidad de marca).
+### 1. Panel Split Asimétrico vs. Re-renderizado Completo de Pantalla
+- **Elección**: Implementar el HUD lateral de paciente como un panel estibado de alta visibilidad en pantallas medianas y grandes, adaptándose en móviles como un banner de resumen colapsable.
+- **Justificación**: Elimina la desconexión contextual: el tutor siempre sabe qué mascota está modificando y ve el impacto inmediato de cambiar el peso o la dieta sobre los gramos diarios calculados.
 
-### 2. Estilo de Contenedores: Papel Alabastro y Bordes Capilares vs. Neomorfismo / Glassmorphism Excesivo
-- **Elección**: Reemplazar los fondos semitransparentes pesados y brillos artificiales por superficies sólidas o suavemente traslúcidas de papel alabastro con bordes ultrafinos de 1px (`border-stone-200/80`).
-- **Justificación**: Aumenta drásticamente la legibilidad bajo la luz solar, acelera el renderizado y transmite limpieza quirúrgica y orden editorial.
-
-### 3. Preservación Estricta de Funcionalidades Existentes
-- **Elección**: Conservar intacta toda la lógica de cálculo calórico (MER/RER, factores de actividad), persistencia de Firebase, pasarelas de pago (Wompi, PayPal), generador de carnet impreso y estados de suscripción Pro.
-- **Justificación**: El objetivo es una renovación estética de nivel superior, sin riesgo de regresiones operativas ni pérdida de datos de usuarios.
+### 2. Edición In Situ y Acordeones Deslizantes vs. Modales Emergentes
+- **Elección**: Reemplazar ventanas modales por paneles expansibles con animación muelle (`framer-motion` o CSS transitions).
+- **Justificación**: Aumenta la velocidad de interacción, reduce clics perdidos y mejora la usabilidad en dispositivos táctiles móviles.
 
 ---
 
-## 4. Arquitectura Técnica & Mapa de Componentes
+## 4. Arquitectura Técnica & Mapa de Modificación de Componentes
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│                          APLICACIÓN NUTRIPET                           │
-│       Tema: Editorial Veterinario (Bosque Profundo / Crema / Ébano)     │
+│                        ARQUITECTURA DE CONTENEDORES                    │
 └────────────────────────────────────┬───────────────────────────────────┘
                                      │
            ┌─────────────────────────┴────────────────────────┐
            ▼                                                  ▼
 ┌─────────────────────────────────────┐    ┌───────────────────────────────────┐
-│     SISTEMA DE DISEÑO GLOBAL        │    │        ESTRUCTURA DE VISTA        │
-│  - Tailwind Tokens & index.css      │    │  - App.tsx (Layout & Header)      │
-│  - Google Fonts (Editorial + Sans)  │    │  - Sidebar.tsx (Navegación Fija)  │
-│  - Microinteracciones Framer Motion │    │  - PetHeaderBar.tsx (Mascota Top) │
+│     COMPONENTES DE MAQUETACIÓN      │    │     SISTEMA DE COMPONENTES        │
+│  - App.tsx (Layout Split & Grid)    │    │  - PetProfileHUD.tsx (HUD Fijo)   │
+│  - Sidebar.tsx (Barra Lateral Nav)  │    │  - InlineExpander.tsx (Acordeón)  │
+│  - PetHeaderBar.tsx (Header Top)    │    │  - ModuleContainer.tsx (Viewport) │
 └──────────────────┬──────────────────┘    └──────────────────┬────────────────┘
                    │                                          │
                    └────────────────────┬─────────────────────┘
@@ -113,24 +116,18 @@ Métricas & Dosificación ──►  JetBrains Mono / Tabular Nums (Números de 
            ┌────────────────────────────┼────────────────────────────┐
            ▼                            ▼                            ▼
 ┌──────────────────────┐    ┌──────────────────────┐    ┌──────────────────────┐
-│  MÓDULO CALCULADORA  │    │   EXPEDIENTES & HOJA │    │ MÓDULOS DE BIENESTAR │
-│ - Formulario Paciente│    │ - PetTechSheet.tsx   │    │ - BarfRecipeGen.tsx  │
-│ - Plato Nutricional  │    │ - MedicalHistory.tsx │    │ - FoodTrafficLight   │
-│ - Métricas Energéticas│   │ - RemindersModule    │    │ - BreedEncyclopedia  │
+│ CALCULADORA & PLATO  │    │ SEMÁFORO TOXICOLÓGICO│    │ SALUD & EXPEDIENTE   │
+│ - UnifiedCalculator  │    │ - FoodTrafficLight   │    │ - MedicalHistory     │
+│ - FoodBagCalculator  │    │ - CountryFoodAdvisor │    │ - PetTechSheet       │
 └──────────────────────┘    └──────────────────────┘    └──────────────────────┘
 ```
 
-### Plan de Ejecución por Capas:
-1. **Fase 1: Capa de Estilos Globales & Tipografía (`index.html`, `src/index.css`)**:
-   - Integración de fuentes Google Fonts editoriales (`Fraunces` / `Outfit` / `Plus Jakarta Sans`).
-   - Reemplazo de variables de color, sombras bento refinadas, bordes capilares y paleta bosque/crema para modos claro y oscuro.
-2. **Fase 2: Estructura Central & Navegación (`src/App.tsx`, `src/components/Sidebar.tsx`, `src/components/PetHeaderBar.tsx`)**:
-   - Pulido del header superior, banner informativo con tipografía de precisión, navegación lateral con estados activos de alto contraste y transición suave.
-3. **Fase 3: Vista Principal de la Calculadora & Carnet Nutricional (`src/App.tsx`)**:
-   - Rediseño del hero de la calculadora con estética editorial.
-   - Refactorización de las tarjetas de entrada biométrica y presentación del plato con acento visual en los gramos recomendados (`tabular-nums`).
-   - Aplicación estricta de la regla zero-pill en datos de paciente (raza, edad, estado reproductivo).
-4. **Fase 4: Armonización de Módulos Complementarios**:
-   - Ajustes de estilo en la Ficha Técnica, Carnet Imprimible, Semáforo de Alimentos, Recetario BARF y Recordatorios Clínicos.
-5. **Fase 5: Validación Técnica & Build**:
-   - Comprobación con `compile_applet` y `lint_applet` asegurando cero errores en TypeScript y Vite.
+### Plan de Ejecución en Código:
+1. **Fase 1: Creación del Componente `PetProfileHUD.tsx`**:
+   - Módulo independiente que encapsula el perfil activo, avatar, peso, estado ideal y requerimientos calóricos (MER/RER) para ser montado de forma sticky en la columna izquierda.
+2. **Fase 2: Reestructuración de la Vista Principal en `App.tsx`**:
+   - Ajuste de la grilla de contenido de `activeTab === 'calculator'`, `'foods'`, `'sheet'`, `'medical'`, etc., usando la maquetación split `grid-cols-1 lg:grid-cols-12` con columna HUD (`lg:col-span-4`) y viewport (`lg:col-span-8`).
+3. **Fase 3: Refactorización de Módulos a Paneles In Situ**:
+   - Reemplazo de modales en `MedicalHistory.tsx`, `FoodTrafficLight.tsx` y `PetTechSheet.tsx` por acordeones y paneles deslizantes en línea.
+4. **Fase 4: Verificación de Build & Pruebas**:
+   - Ejecución de `compile_applet` y `lint_applet` para garantizar cero errores en TypeScript y Vite.
