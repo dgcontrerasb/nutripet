@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { usePets } from '../context/PetContext';
 import { 
   Bell, 
@@ -23,6 +23,23 @@ import {
 import { Reminder, BathLog } from '../types';
 import { RemindersCalendar } from './RemindersCalendar';
 
+/**
+ * Utilidades para manejo seguro de fechas locales (evita desfasajes por zona horaria UTC)
+ */
+const getLocalDateString = (dateObj: Date = new Date()): string => {
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const addDaysToDate = (baseDateStr: string, days: number): string => {
+  const [y, m, d] = baseDateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return getLocalDateString(date);
+};
+
 export const RemindersModule: React.FC = () => {
   const { 
     activePet, 
@@ -43,6 +60,8 @@ export const RemindersModule: React.FC = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
+  const todayStr = useMemo(() => getLocalDateString(), []);
+
   const [completingReminderState, setCompletingReminderState] = useState<{
     reminder: Reminder;
     completionDate: string;
@@ -59,7 +78,7 @@ export const RemindersModule: React.FC = () => {
     nextBathDays: number;
     notes: string;
   }>({
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateString(),
     type: 'routine',
     shampooUsed: '',
     nextBathDays: 21,
@@ -92,7 +111,7 @@ export const RemindersModule: React.FC = () => {
   }>({
     type: 'vaccine',
     name: '',
-    dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    dueDate: addDaysToDate(getLocalDateString(), 14),
     dosage: '',
     notes: ''
   });
@@ -117,9 +136,56 @@ export const RemindersModule: React.FC = () => {
     };
   }, [isAnyModalOpen]);
 
-  if (!activePet) return null;
+  // Historial de baños ordenado cronológicamente descendente
+  const sortedBathLogs = useMemo(() => {
+    return [...bathLogs].sort((a, b) => b.date.localeCompare(a.date));
+  }, [bathLogs]);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const lastBath = sortedBathLogs[0] || null;
+
+  const daysSinceLastBath = useMemo(() => {
+    if (!lastBath) return null;
+    const [ly, lm, ld] = lastBath.date.split('-').map(Number);
+    const [ty, tm, td] = todayStr.split('-').map(Number);
+    const lastDate = new Date(ly, lm - 1, ld).getTime();
+    const curDate = new Date(ty, tm - 1, td).getTime();
+    return Math.max(0, Math.floor((curDate - lastDate) / (1000 * 60 * 60 * 24)));
+  }, [lastBath, todayStr]);
+
+  const nextBathReminder = useMemo(() => {
+    return reminders.find(r => r.type === 'bath' && !r.completed);
+  }, [reminders]);
+
+  const healthReminders = useMemo(() => {
+    return reminders.filter(r => r.type !== 'bath');
+  }, [reminders]);
+
+  const filteredHealthReminders = useMemo(() => {
+    return healthReminders.filter(r => {
+      if (filter === 'pending') return !r.completed;
+      if (filter === 'completed') return r.completed;
+      return true;
+    });
+  }, [healthReminders, filter]);
+
+  const bathRemindersList = useMemo(() => {
+    return reminders.filter(r => r.type === 'bath');
+  }, [reminders]);
+
+  const filteredBathReminders = useMemo(() => {
+    return bathRemindersList.filter(r => {
+      if (filter === 'pending') return !r.completed;
+      if (filter === 'completed') return r.completed;
+      return true;
+    });
+  }, [bathRemindersList, filter]);
+
+  // Conteo total de recordatorios vencidos memoizado
+  const totalOverdue = useMemo(() => {
+    return reminders.filter(r => !r.completed && r.dueDate < todayStr).length;
+  }, [reminders, todayStr]);
+
+  if (!activePet) return null;
 
   const getPetAgeInfo = () => {
     const ageMonths = activePet.ageMonths || 24;
@@ -143,36 +209,27 @@ export const RemindersModule: React.FC = () => {
 
   const shareViaWhatsApp = (rem: Reminder) => {
     const text = `🐾 *Recordatorio NutriPet para ${activePet.name}*\n📌 *Evento:* ${rem.name}\n📅 *Fecha:* ${rem.dueDate}${rem.dosage ? `\n💊 *Dosis:* ${rem.dosage}` : ''}${rem.notes ? `\n📝 *Notas:* ${rem.notes}` : ''}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 
   const exportToCalendar = (rem: Reminder) => {
     const title = `[NutriPet] ${rem.name} - ${activePet.name}`;
     const details = `Recordatorio para ${activePet.name}. Dosis: ${rem.dosage || 'N/A'}. ${rem.notes || ''}`;
     const dateFormatted = rem.dueDate.replace(/-/g, '');
-    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${title}\nDESCRIPTION:${details}\nDTSTART:${dateFormatted}T090000Z\nDTEND:${dateFormatted}T100000Z\nEND:VEVENT\nEND:VCALENDAR`;
+    
+    // Tarea de día completo en calendario para evitar desfasaje de horas
+    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//NutriPet//ES\nBEGIN:VEVENT\nSUMMARY:${title}\nDESCRIPTION:${details}\nDTSTART;VALUE=DATE:${dateFormatted}\nDTEND;VALUE=DATE:${dateFormatted}\nEND:VEVENT\nEND:VCALENDAR`;
+    
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
+    link.href = url;
     link.setAttribute('download', `nutripet_${rem.name.toLowerCase().replace(/\s+/g, '_')}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
-
-  const healthReminders = reminders.filter(r => r.type !== 'bath');
-  const filteredHealthReminders = healthReminders.filter(r => {
-    if (filter === 'pending') return !r.completed;
-    if (filter === 'completed') return r.completed;
-    return true;
-  });
-
-  const bathRemindersList = reminders.filter(r => r.type === 'bath');
-  const filteredBathReminders = bathRemindersList.filter(r => {
-    if (filter === 'pending') return !r.completed;
-    if (filter === 'completed') return r.completed;
-    return true;
-  });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,7 +248,7 @@ export const RemindersModule: React.FC = () => {
     setForm({
       type: 'vaccine',
       name: '',
-      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      dueDate: addDaysToDate(getLocalDateString(), 14),
       dosage: '',
       notes: ''
     });
@@ -259,9 +316,7 @@ export const RemindersModule: React.FC = () => {
     await toggleReminder(reminder.id, false);
 
     if (autoReschedule && recurringDays > 0) {
-      const baseDate = new Date(completionDate + 'T00:00:00');
-      const nextDateObj = new Date(baseDate.getTime() + recurringDays * 24 * 60 * 60 * 1000);
-      const nextDueDate = nextDateObj.toISOString().split('T')[0];
+      const nextDueDate = addDaysToDate(completionDate, recurringDays);
 
       let nextNotes = reminder.notes;
       if (!nextNotes || !nextNotes.includes('Programado automáticamente')) {
@@ -300,7 +355,9 @@ export const RemindersModule: React.FC = () => {
   const getUrgency = (dueDate: string, completed: boolean) => {
     if (completed) return { label: 'Completado', color: 'text-stone-400 bg-stone-100 border-stone-200' };
     if (dueDate < todayStr) {
-      const diffDays = Math.ceil((new Date(todayStr + 'T00:00:00').getTime() - new Date(dueDate + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24));
+      const [ty, tm, td] = todayStr.split('-').map(Number);
+      const [dy, dm, dd] = dueDate.split('-').map(Number);
+      const diffDays = Math.ceil((new Date(ty, tm - 1, td).getTime() - new Date(dy, dm - 1, dd).getTime()) / (1000 * 60 * 60 * 24));
       return { 
         label: `⚠️ Vencido (hace ${diffDays} día${diffDays > 1 ? 's' : ''})`, 
         color: 'text-red-700 bg-red-100 border-red-300 font-extrabold shadow-2xs' 
@@ -308,14 +365,16 @@ export const RemindersModule: React.FC = () => {
     }
     if (dueDate === todayStr) return { label: '¡Toca Hoy!', color: 'text-amber-800 bg-amber-100 border-amber-300 font-extrabold' };
     
-    const diffDays = Math.ceil((new Date(dueDate + 'T00:00:00').getTime() - new Date(todayStr + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24));
+    const [ty, tm, td] = todayStr.split('-').map(Number);
+    const [dy, dm, dd] = dueDate.split('-').map(Number);
+    const diffDays = Math.ceil((new Date(dy, dm - 1, dd).getTime() - new Date(ty, tm - 1, td).getTime()) / (1000 * 60 * 60 * 24));
     if (diffDays <= 7) return { label: `En ${diffDays} días`, color: 'text-amber-700 bg-amber-50 border-amber-200' };
 
     return { label: `El ${dueDate}`, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
   };
 
   const addQuickTemplate = (name: string, type: Reminder['type'], defaultDays: number, dosage?: string) => {
-    const targetDate = new Date(Date.now() + defaultDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const targetDate = addDaysToDate(todayStr, defaultDays);
     
     setConfirmQuickTemplate({
       name,
@@ -347,7 +406,7 @@ export const RemindersModule: React.FC = () => {
       bathType,
       daysToNext,
       shampooUsed,
-      bathDate: new Date().toISOString().split('T')[0]
+      bathDate: todayStr
     });
   };
 
@@ -361,8 +420,7 @@ export const RemindersModule: React.FC = () => {
       notes: `Registrado vía plantilla rápida (${confirmQuickBath.name})`
     });
 
-    const nextDate = new Date(new Date(confirmQuickBath.bathDate + 'T00:00:00').getTime() + confirmQuickBath.daysToNext * 24 * 60 * 60 * 1000)
-      .toISOString().split('T')[0];
+    const nextDate = addDaysToDate(confirmQuickBath.bathDate, confirmQuickBath.daysToNext);
 
     await addReminder({
       type: 'bath',
@@ -376,13 +434,6 @@ export const RemindersModule: React.FC = () => {
     setConfirmQuickBath(null);
   };
 
-  const lastBath = bathLogs.length > 0 ? bathLogs[0] : null;
-  const daysSinceLastBath = lastBath 
-    ? Math.floor((new Date().getTime() - new Date(lastBath.date + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24))
-    : null;
-
-  const nextBathReminder = reminders.find(r => r.type === 'bath' && !r.completed);
-
   const handleSaveBathLog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bathForm.date) return;
@@ -394,8 +445,7 @@ export const RemindersModule: React.FC = () => {
       notes: bathForm.notes.trim() || undefined,
     });
 
-    const nextDate = new Date(new Date(bathForm.date + 'T00:00:00').getTime() + bathForm.nextBathDays * 24 * 60 * 60 * 1000)
-      .toISOString().split('T')[0];
+    const nextDate = addDaysToDate(bathForm.date, bathForm.nextBathDays);
 
     const bathTypeLabel = 
       bathForm.type === 'routine' ? 'Baño Rutinario' :
@@ -413,7 +463,7 @@ export const RemindersModule: React.FC = () => {
 
     setShowBathModal(false);
     setBathForm({
-      date: new Date().toISOString().split('T')[0],
+      date: todayStr,
       type: 'routine',
       shampooUsed: '',
       nextBathDays: 21,
@@ -430,7 +480,7 @@ export const RemindersModule: React.FC = () => {
               Vacunas y Notificaciones de {activePet.name}
             </h3>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              {reminders.filter(r => !r.completed).length} pendientes
+              {healthReminders.filter(r => !r.completed).length} pendientes
             </span>
           </div>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
@@ -490,38 +540,30 @@ export const RemindersModule: React.FC = () => {
         </div>
       </div>
 
-      {(() => {
-        const overdueHealthCount = healthReminders.filter(r => !r.completed && r.dueDate < todayStr).length;
-        const overdueBathCount = bathRemindersList.filter(r => !r.completed && r.dueDate < todayStr).length;
-        const totalOverdue = overdueHealthCount + overdueBathCount;
-
-        if (totalOverdue === 0) return null;
-
-        return (
-          <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-900/50 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs animate-in fade-in">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-red-600 text-white rounded-2xl shrink-0 shadow-xs">
-                <AlertTriangle className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-sm sm:text-base">
-                  ⚠️ Tienes {totalOverdue} recordatorio(s) vencido(s)
-                </h4>
-                <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5 leading-relaxed">
-                  Los recordatorios vencidos <strong>permanecen visibles</strong> para cuidar la salud de {activePet.name}. Haz clic en el ícono (⭕) para completarlos y re-programar el siguiente ciclo automáticamente.
-                </p>
-              </div>
+      {totalOverdue > 0 && (
+        <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-900/50 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-red-600 text-white rounded-2xl shrink-0 shadow-xs">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
             </div>
-            <button
-              type="button"
-              onClick={() => setFilter('pending')}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0 shadow-xs"
-            >
-              Ver Pendientes ({totalOverdue})
-            </button>
+            <div>
+              <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-sm sm:text-base">
+                ⚠️ Tienes {totalOverdue} recordatorio(s) vencido(s)
+              </h4>
+              <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5 leading-relaxed">
+                Los recordatorios vencidos <strong>permanecen visibles</strong> para cuidar la salud de {activePet.name}. Haz clic en el ícono (⭕) para completarlos y re-programar el siguiente ciclo automáticamente.
+              </p>
+            </div>
           </div>
-        );
-      })()}
+          <button
+            type="button"
+            onClick={() => setFilter('pending')}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0 shadow-xs"
+          >
+            Ver Pendientes ({totalOverdue})
+          </button>
+        </div>
+      )}
 
       <div id="reminders-printable-container" className="space-y-6">
         {activeTab === 'calendar' && (
@@ -574,7 +616,7 @@ export const RemindersModule: React.FC = () => {
                   className="px-5 py-3 bg-white text-teal-900 hover:bg-teal-50 font-extrabold text-xs rounded-2xl shadow-lg transition-all cursor-pointer flex items-center gap-2 shrink-0 border border-white/40"
                 >
                   <Droplets className="w-4 h-4 text-teal-600" />
-                  <span>🛁 Registrar Baño Realizado Hoy</span>
+                  <span>Registrar Baño Realizado Hoy</span>
                 </button>
               </div>
             </div>
@@ -637,11 +679,11 @@ export const RemindersModule: React.FC = () => {
                   </h5>
                 </div>
                 <span className="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-800">
-                  {bathLogs.length} baños registrados
+                  {sortedBathLogs.length} baños registrados
                 </span>
               </div>
 
-              {bathLogs.length === 0 ? (
+              {sortedBathLogs.length === 0 ? (
                 <div className="text-center py-8 space-y-2">
                   <Droplets className="w-10 h-10 text-teal-400 mx-auto opacity-60" />
                   <p className="text-xs font-bold text-stone-700 dark:text-stone-300">Aún no has registrado ningún baño para {activePet.name}.</p>
@@ -651,7 +693,7 @@ export const RemindersModule: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {bathLogs.map(log => {
+                  {sortedBathLogs.map(log => {
                     const badgeColor = 
                       log.type === 'routine' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' :
                       log.type === 'medicated' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
@@ -781,7 +823,8 @@ export const RemindersModule: React.FC = () => {
                             onClick={() => shareViaWhatsApp(rem)}
                             className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
                           >
-                            <span>💬 WhatsApp</span>
+                            <span className="text-xs">💬</span>
+                            <span className="hidden md:inline">WhatsApp</span>
                           </button>
 
                           {isConfirming ? (
@@ -1653,7 +1696,7 @@ export const RemindersModule: React.FC = () => {
               <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-1">
                 <span className="text-stone-500 dark:text-stone-400 block text-[11px]">⏰ Próximo Recordatorio Automático:</span>
                 <p className="font-bold text-teal-800 dark:text-teal-300">
-                  En {confirmQuickBath.daysToNext} días ({new Date(new Date(confirmQuickBath.bathDate + 'T00:00:00').getTime() + confirmQuickBath.daysToNext * 24 * 60 * 60 * 1000).toISOString().split('T')[0]})
+                  En {confirmQuickBath.daysToNext} días ({addDaysToDate(confirmQuickBath.bathDate, confirmQuickBath.daysToNext)})
                 </p>
               </div>
             </div>
@@ -1823,16 +1866,9 @@ export const RemindersModule: React.FC = () => {
                       <span className="text-stone-700 dark:text-stone-300 font-medium">días</span>
                     </div>
 
-                    {(() => {
-                      const baseDate = new Date(completingReminderState.completionDate + 'T00:00:00');
-                      const nextDate = new Date(baseDate.getTime() + completingReminderState.recurringDays * 24 * 60 * 60 * 1000);
-                      const nextStr = nextDate.toISOString().split('T')[0];
-                      return (
-                        <div className="p-2.5 bg-white/90 dark:bg-stone-900 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-300 font-bold">
-                          🗓️ Próxima fecha calculada: <span className="text-emerald-700 dark:text-emerald-400 font-black">{nextStr}</span> (sumando {completingReminderState.recurringDays} días).
-                        </div>
-                      );
-                    })()}
+                    <div className="p-2.5 bg-white/90 dark:bg-stone-900 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-300 font-bold">
+                      🗓️ Próxima fecha calculada: <span className="text-emerald-700 dark:text-emerald-400 font-black">{addDaysToDate(completingReminderState.completionDate, completingReminderState.recurringDays)}</span> (sumando {completingReminderState.recurringDays} días).
+                    </div>
                   </div>
                 )}
               </div>
