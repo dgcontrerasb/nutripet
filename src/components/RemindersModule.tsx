@@ -43,7 +43,6 @@ export const RemindersModule: React.FC = () => {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
-  // Estado para el modal inteligente de completar recordatorio con re-programación
   const [completingReminderState, setCompletingReminderState] = useState<{
     reminder: Reminder;
     completionDate: string;
@@ -53,7 +52,6 @@ export const RemindersModule: React.FC = () => {
     shampooUsed: string;
   } | null>(null);
 
-  // Estado para registro de baño
   const [bathForm, setBathForm] = useState<{
     date: string;
     type: BathLog['type'];
@@ -68,7 +66,6 @@ export const RemindersModule: React.FC = () => {
     notes: ''
   });
   
-  // Estado para confirmación de plantillas rápidas
   const [confirmQuickTemplate, setConfirmQuickTemplate] = useState<{
     name: string;
     type: Reminder['type'];
@@ -78,7 +75,6 @@ export const RemindersModule: React.FC = () => {
     editableDate: string;
   } | null>(null);
 
-  // Estado para confirmación rápida de plantilla de baño
   const [confirmQuickBath, setConfirmQuickBath] = useState<{
     name: string;
     bathType: BathLog['type'];
@@ -101,7 +97,6 @@ export const RemindersModule: React.FC = () => {
     notes: ''
   });
 
-  // Bloqueo de scroll del body cuando cualquier modal está abierto
   const isAnyModalOpen = Boolean(
     showAddModal || 
     showBathModal || 
@@ -126,7 +121,6 @@ export const RemindersModule: React.FC = () => {
 
   const todayStr = new Date().toISOString().split('T')[0];
 
-  // Calcular edad y etapa de la mascota
   const getPetAgeInfo = () => {
     const ageMonths = activePet.ageMonths || 24;
     const ageYears = Math.floor(ageMonths / 12);
@@ -166,7 +160,6 @@ export const RemindersModule: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  // Recordatorios de salud (vacunas, medicación, desparasitaciones)
   const healthReminders = reminders.filter(r => r.type !== 'bath');
   const filteredHealthReminders = healthReminders.filter(r => {
     if (filter === 'pending') return !r.completed;
@@ -174,7 +167,6 @@ export const RemindersModule: React.FC = () => {
     return true;
   });
 
-  // Recordatorios de baño
   const bathRemindersList = reminders.filter(r => r.type === 'bath');
   const filteredBathReminders = bathRemindersList.filter(r => {
     if (filter === 'pending') return !r.completed;
@@ -431,7 +423,6 @@ export const RemindersModule: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Cabecera y acciones optimizada con flex-wrap para prevenir desbordes */}
       <div className="glass-card rounded-3xl p-5 sm:p-7 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -448,7 +439,6 @@ export const RemindersModule: React.FC = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
-          {/* View Mode Switcher Adaptable */}
           <div className="flex flex-wrap bg-stone-100 dark:bg-stone-800 p-1 rounded-xl gap-1">
             <button
               type="button"
@@ -500,7 +490,6 @@ export const RemindersModule: React.FC = () => {
         </div>
       </div>
 
-      {/* BANNER DE ALERTA POR RECORDATORIOS VENCIDOS */}
       {(() => {
         const overdueHealthCount = healthReminders.filter(r => !r.completed && r.dueDate < todayStr).length;
         const overdueBathCount = bathRemindersList.filter(r => !r.completed && r.dueDate < todayStr).length;
@@ -544,7 +533,6 @@ export const RemindersModule: React.FC = () => {
 
         {activeTab === 'bath' && (
           <div className="space-y-6">
-            {/* Banner Destacado de Estado y Resumen de Baño */}
             <div className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
               <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -591,7 +579,6 @@ export const RemindersModule: React.FC = () => {
               </div>
             </div>
 
-            {/* Plantillas Rápidas de Higiene */}
             <div className="p-5 bg-teal-50/70 dark:bg-teal-950/20 rounded-3xl border border-teal-200/80 dark:border-teal-900/40 shadow-3xs space-y-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-teal-700 dark:text-teal-400 animate-pulse" />
@@ -641,7 +628,6 @@ export const RemindersModule: React.FC = () => {
               </div>
             </div>
 
-            {/* Historial de Baños Realizados */}
             <div className="bg-white dark:bg-[#1a231d] rounded-3xl border border-stone-200 dark:border-stone-800 p-5 space-y-4 shadow-2xs">
               <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
                 <div className="flex items-center gap-2">
@@ -712,7 +698,6 @@ export const RemindersModule: React.FC = () => {
               )}
             </div>
 
-            {/* Recordatorios Programados de Baño */}
             <div className="bg-white dark:bg-[#1a231d] rounded-3xl border border-stone-200 dark:border-stone-800 p-5 space-y-4 shadow-2xs">
               <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
                 <div className="flex items-center gap-2">
@@ -837,7 +822,6 @@ export const RemindersModule: React.FC = () => {
               )}
             </div>
 
-            {/* Guía Veterinaria de Baño e Higiene */}
             <div className="p-5 rounded-3xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 space-y-3">
               <div className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-amber-700 dark:text-amber-400" />
@@ -868,7 +852,6 @@ export const RemindersModule: React.FC = () => {
 
         {activeTab === 'vaccines' && (
           <div className="space-y-6">
-            {/* 1. PLANTILLAS RÁPIDAS DE VACUNAS Y SALUD */}
             <div className="p-5 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-3xl border border-emerald-200/65 dark:border-emerald-900/40 shadow-3xs space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 dark:text-emerald-200 flex items-center gap-2">
@@ -948,7 +931,6 @@ export const RemindersModule: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. ESQUEMA DE VACUNACIÓN SUGERIDO */}
             <div className="p-5 rounded-3xl bg-white dark:bg-[#1a231d] border border-stone-200 dark:border-stone-800 shadow-2xs space-y-4 no-print">
               <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-2.5">
                 <HeartPulse className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
@@ -1061,7 +1043,6 @@ export const RemindersModule: React.FC = () => {
               </div>
             </div>
 
-            {/* 3. TÍTULO Y LISTA DE VACUNAS Y MEDICACIÓN */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200 dark:border-stone-800 pb-2 pt-2">
               <div className="flex items-center gap-2">
                 <span className="text-xl">📋</span>
@@ -1255,7 +1236,6 @@ export const RemindersModule: React.FC = () => {
         )}
       </div>
 
-      {/* BANNER DE ADVERTENCIA LEGAL Y MÉDICA */}
       <div className="p-5 rounded-3xl bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-900/50 shadow-3xs space-y-3 animate-fade-in no-print mt-6">
         <div className="flex items-start gap-3">
           <div className="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -1275,9 +1255,6 @@ export const RemindersModule: React.FC = () => {
         </p>
       </div>
 
-      </div> {/* Fin de #reminders-printable-container */}
-
-      {/* MODAL VACIAR TODOS LOS RECORDATORIOS */}
       {showClearAllModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-sm w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1333,7 +1310,6 @@ export const RemindersModule: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL CONFIRMACIÓN PLANTILLA RÁPIDA */}
       {confirmQuickTemplate && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1409,7 +1385,6 @@ export const RemindersModule: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL CREAR RECORDATORIO */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1510,7 +1485,6 @@ export const RemindersModule: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL REGISTRAR BAÑO */}
       {showBathModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1624,7 +1598,6 @@ export const RemindersModule: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL CONFIRMAR PLANTILLA RÁPIDA DE BAÑO */}
       {confirmQuickBath && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1705,11 +1678,9 @@ export const RemindersModule: React.FC = () => {
         </div>
       )}
 
-      {/* MODAL INTELIGENTE DE COMPLETAR RECORDATORIO Y RE-PROGRAMAR */}
       {completingReminderState && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-lg w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
-            
             <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a231d]">
               <div className="flex items-center gap-2.5">
                 <div className={`p-2.5 rounded-2xl ${
@@ -1918,11 +1889,9 @@ export const RemindersModule: React.FC = () => {
                 Confirmar y Completar
               </button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 };
