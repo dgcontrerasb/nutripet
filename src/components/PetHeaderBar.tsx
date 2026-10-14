@@ -306,7 +306,7 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                   )}
                 </div>
 
-                <div className="pt-2 border-t border-stone-100 dark:border-stone-800">
+                <div className="pt-2 border-t border-stone-100 dark:border-stone-800 space-y-1.5">
                   <button
                     type="button"
                     onClick={() => {
@@ -322,6 +322,21 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                     <Plus className="w-3.5 h-3.5" />
                     <span>Agregar Nueva Mascota {!isPro && pets.length >= 1 && '👑'}</span>
                   </button>
+
+                  {/* Opción de Panel Administrador en el menú desplegable */}
+                  {isAdminUser && onOpenAdminModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        onOpenAdminModal();
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-98"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      <span>Panel Administrador</span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -329,6 +344,19 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
 
           {/* Estado de Suscripción, Sincronización y Cuenta Google */}
           <div className="flex items-center justify-end gap-2 shrink-0">
+            {/* Acceso rápido a Panel Administrador visible en versión web */}
+            {isAdminUser && onOpenAdminModal && (
+              <button
+                type="button"
+                onClick={onOpenAdminModal}
+                title="Abrir Panel Administrador"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Panel Admin</span>
+              </button>
+            )}
+
             {user && (
               <button
                 type="button"
@@ -401,8 +429,6 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                 <span className="sm:hidden font-bold">Ingresar</span>
               </button>
             )}
-
-            {/* Botón Admin trasladado al menú deslizable para evitar sobrecarga en la barra */}
           </div>
 
         </div>
@@ -688,7 +714,7 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
               </p>
             </div>
 
-            <div className="space-y-2.5 bg-stone-50 dark:bg-stone-850 p-3.5 rounded-2xl border border-stone-200/60 dark:border-stone-750 text-xs">
+            <div className="space-y-2.5 bg-stone-50 dark:bg-stone-850 p-3.5 rounded-2xl border border-stone-200/60 dark:border-stone-755 text-xs">
               <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300 font-semibold">
                 <span>☁️</span> <span>Sincronización automática multi-dispositivo</span>
               </div>
