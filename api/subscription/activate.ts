@@ -10,6 +10,7 @@ import {
   activateVerifiedPayment,
   PaymentAlreadyProcessedError
 } from '../../server/subscriptionPayments.ts';
+import { getWompiApiBaseUrl } from '../../server/paymentProviders.ts';
 
 type ApiRequest = IncomingMessage & {
   method?: string;
@@ -58,7 +59,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return res.status(400).json({ error: 'Identificador de transacción inválido.' });
     }
 
-    const wompiBaseUrl = (process.env.WOMPI_API_BASE_URL || 'https://production.wompi.co/v1').replace(/\/+$/, '');
+    const wompiBaseUrl = getWompiApiBaseUrl();
     const verificationResponse = await fetch(
       `${wompiBaseUrl}/transactions/${encodeURIComponent(transactionId)}`
     );

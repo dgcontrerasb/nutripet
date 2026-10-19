@@ -62,8 +62,8 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
     try {
       const idToken = await user.getIdToken();
 
-      // 1. Pagos en Colombia (COP): Todos se redirigen y procesan por Wompi (Nequi, Daviplata, PSE, Tarjetas, Bancolombia)
-      if (currency === 'COP' || paymentMethod === 'wompi') {
+      // Colombia uses Wompi; international USD payments use PayPal.
+      if (paymentMethod === 'wompi') {
         const wompiRes = await fetch('/api/wompi/create-checkout', {
           method: 'POST',
           headers: {
@@ -74,21 +74,30 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
             planId: selectedPlan
           })
         });
-        const wompiData = await wompiRes.json();
+        const wompiData = await wompiRes.json().catch(() => null);
 
-        if (wompiData.isConfigured && wompiData.publicKey) {
-          keepProcessing = true;
-          const wompiUrl = `https://checkout.wompi.co/p/?public-key=${wompiData.publicKey}&currency=COP&amount-in-cents=${wompiData.amountInCents}&reference=${wompiData.reference}${wompiData.signature ? `&signature:integrity=${wompiData.signature}` : ''}&redirect-url=${encodeURIComponent(wompiData.redirectUrl)}`;
-          window.location.href = wompiUrl;
-          return;
-        } else {
-          alert('La pasarela Wompi no está configurada actualmente. Por favor intenta más tarde.');
-          return;
+        if (!wompiRes.ok) {
+          throw new Error(wompiData?.error || `Wompi rechazó la solicitud (${wompiRes.status}).`);
         }
+
+        if (
+          wompiData?.isConfigured !== true ||
+          typeof wompiData.publicKey !== 'string' ||
+          typeof wompiData.amountInCents !== 'number' ||
+          typeof wompiData.reference !== 'string' ||
+          typeof wompiData.signature !== 'string' ||
+          typeof wompiData.redirectUrl !== 'string'
+        ) {
+          throw new Error('El servidor no devolvió los datos necesarios para iniciar el pago con Wompi.');
+        }
+
+        keepProcessing = true;
+        const wompiUrl = `https://checkout.wompi.co/p/?public-key=${encodeURIComponent(wompiData.publicKey)}&currency=COP&amount-in-cents=${wompiData.amountInCents}&reference=${encodeURIComponent(wompiData.reference)}&signature:integrity=${encodeURIComponent(wompiData.signature)}&redirect-url=${encodeURIComponent(wompiData.redirectUrl)}`;
+        window.location.href = wompiUrl;
+        return;
       }
 
-      // 2. Pagos Internacionales (USD): Se procesan por PayPal
-      if (currency === 'USD' || paymentMethod === 'paypal') {
+      if (paymentMethod === 'paypal') {
         const paypalRes = await fetch('/api/paypal/create-order', {
           method: 'POST',
           headers: {
@@ -99,20 +108,27 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
             planId: selectedPlan
           })
         });
-        const paypalData = await paypalRes.json();
+        const paypalData = await paypalRes.json().catch(() => null);
 
-        if (paypalData?.approveUrl) {
-          keepProcessing = true;
-          window.location.href = paypalData.approveUrl;
-          return;
-        } else {
-          alert('No se pudo conectar con la pasarela PayPal. Verifica tus datos e intenta nuevamente.');
-          return;
+        if (!paypalRes.ok) {
+          throw new Error(paypalData?.error || `PayPal rechazó la solicitud (${paypalRes.status}).`);
         }
+
+        if (typeof paypalData?.approveUrl !== 'string') {
+          throw new Error('El servidor no devolvió el enlace de aprobación de PayPal.');
+        }
+
+        keepProcessing = true;
+        window.location.href = paypalData.approveUrl;
+        return;
       }
+
+      throw new Error('Selecciona una pasarela de pago válida.');
     } catch (err: any) {
       console.warn('Subscription checkout error:', err);
-      alert('Hubo un inconveniente al conectar con la pasarela de pago. Por favor intenta más tarde.');
+      alert(err instanceof Error
+        ? err.message
+        : 'Hubo un inconveniente al conectar con la pasarela de pago. Por favor intenta más tarde.');
     } finally {
       if (!keepProcessing) {
         setIsProcessing(false);
