@@ -6,6 +6,7 @@
 .env.production
 .env*.local
 .env*
+!.env.example
 firebase-applet-config.json
 
 # Dependencias

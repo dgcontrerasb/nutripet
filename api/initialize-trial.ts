@@ -1,25 +1,17 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { getApps, initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
-
-if (!getApps().length) {
-  try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-      initializeApp({ credential: cert(serviceAccount) });
-    } else {
-      initializeApp({ credential: applicationDefault() });
-    }
-  } catch (error) {
-    console.error('Error inicializando Firebase Admin SDK:', error);
-  }
-}
+import {
+  applyApiCors,
+  getBearerToken,
+  initializeFirebaseAdmin,
+  isFirebaseAuthError
+} from '../server/firebaseAdmin.ts';
+import { getOrCreateTrialStart } from '../server/trialState.ts';
 
 type ApiRequest = IncomingMessage & {
   method?: string;
   headers: Record<string, string | string[] | undefined>;
-  body?: any;
 };
 
 type ApiResponse = ServerResponse & {
@@ -31,83 +23,96 @@ type ApiResponse = ServerResponse & {
 
 const TRIAL_DAYS = 15;
 
-function getAllowedOrigin(req: ApiRequest): string {
-  const configuredOrigin = process.env.ALLOWED_ORIGIN;
-  const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
-
-  if (configuredOrigin && configuredOrigin !== '*') {
-    return requestOrigin === configuredOrigin ? requestOrigin : configuredOrigin;
+function toTimestamp(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value;
   }
-
-  return requestOrigin || 'null';
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+  if (typeof value === 'object' && value !== null && 'toMillis' in value) {
+    const toMillis = value.toMillis;
+    if (typeof toMillis === 'function') {
+      const parsed = toMillis.call(value);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    }
+  }
+  return null;
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
-  const allowedOrigin = getAllowedOrigin(req);
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
+  applyApiCors(req, res);
+  if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'M?todo no permitido. Solo se acepta POST.' });
+    return res.status(405).json({ error: 'Método no permitido. Solo se acepta POST.' });
   }
 
-  const authHeader = req.headers.authorization ?? req.headers.Authorization;
-  if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      error: 'No autorizado. Se requiere Authorization: Bearer <idToken>'
-    });
-  }
-
-  const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
+  const idToken = getBearerToken(req);
   if (!idToken) {
-    return res.status(401).json({ error: 'Token de autenticaci?n vac?o o malformado.' });
+    return res.status(401).json({ error: 'Se requiere un token de sesión válido.' });
   }
 
   try {
-    const decodedToken = await getAuth().verifyIdToken(idToken);
-    const uid = decodedToken.uid;
-    const db = getFirestore();
-    const userRef = db.collection('users').doc(uid);
+    initializeFirebaseAdmin();
+    const { uid } = await getAuth().verifyIdToken(idToken);
+    const firestore = getFirestore();
+    const userRef = firestore.collection('users').doc(uid);
     const userSnap = await userRef.get();
+    const userData = userSnap.data() || {};
+    const storedSubscription = userData.subscription || {};
+    const storedTier = storedSubscription.tier;
     const now = Date.now();
+    const rawTrialStartedAt = toTimestamp(userData.trialStartedAt);
+    const trustedTrialStartedAt = rawTrialStartedAt !== null && rawTrialStartedAt <= now
+      ? rawTrialStartedAt
+      : null;
+    const preferredTrialStart = trustedTrialStartedAt ??
+      toTimestamp(storedSubscription.activatedAt);
+    const trialStartedAt = await getOrCreateTrialStart(uid, preferredTrialStart);
+    const needsProfileTrialSync = trustedTrialStartedAt !== trialStartedAt;
+    const paidUntil = Date.parse(storedSubscription.validUntil || '');
+    const isPaidSubscription = (storedTier === 'pro_monthly' || storedTier === 'pro_annual') &&
+      storedSubscription.status === 'active';
+    const isPaidTier = isPaidSubscription &&
+      Number.isFinite(paidUntil) &&
+      paidUntil > Date.now() &&
+      storedSubscription.paymentVerified === true &&
+      (storedSubscription.paymentProvider === 'wompi' || storedSubscription.paymentProvider === 'paypal') &&
+      typeof storedSubscription.transactionId === 'string';
 
-    if (userSnap.exists) {
-      const userData = userSnap.data() || {};
-      const tier = userData.subscription?.tier;
-      const status = userData.subscription?.status;
-      const isPaidActive = (tier === 'pro_monthly' || tier === 'pro_annual') && status === 'active';
+    if (isPaidTier) {
+      const paymentId = `${storedSubscription.paymentProvider}_${storedSubscription.transactionId}`;
+      const paymentSnap = await firestore.collection('processed_payments').doc(paymentId).get();
+      const payment = paymentSnap.data();
+      const isVerifiedPayment = paymentSnap.exists &&
+        payment?.verified === true &&
+        payment?.userId === uid &&
+        payment?.planId === storedTier &&
+        payment?.provider === storedSubscription.paymentProvider &&
+        payment?.transactionId === storedSubscription.transactionId;
 
-      if (isPaidActive) {
+      if (isVerifiedPayment) {
+        if (needsProfileTrialSync) {
+          await userRef.set({
+            trialStartedAt,
+            updatedAt: now
+          }, { merge: true });
+        }
+
         return res.status(200).json({
           success: true,
           isPro: true,
-          daysRemaining: 30,
-          subscription: userData.subscription
+          daysRemaining: Math.ceil((paidUntil - Date.now()) / (24 * 60 * 60 * 1000)),
+          subscription: storedSubscription
         });
       }
     }
 
-    const existingTrialStartedAt = userSnap.exists ? Number(userSnap.data()?.trialStartedAt ?? now) : now;
-    const trialStartedAt = Number.isFinite(existingTrialStartedAt) && existingTrialStartedAt > 0
-      ? existingTrialStartedAt
-      : now;
-
-    if (!userSnap.exists || !userSnap.data()?.trialStartedAt) {
-      await userRef.set({
-        trialStartedAt,
-        updatedAt: now
-      }, { merge: true });
-    }
-
     const totalTrialMs = TRIAL_DAYS * 24 * 60 * 60 * 1000;
-    const elapsedMs = Math.max(0, now - trialStartedAt);
-    const remainingMs = totalTrialMs - elapsedMs;
+    const remainingMs = totalTrialMs - Math.max(0, now - trialStartedAt);
+    const legacyProState = isPaidSubscription ||
+      (userData.isPro === true && storedTier !== 'trial');
 
     if (remainingMs <= 0) {
       const freeSubscription = {
@@ -116,12 +121,20 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         planName: 'Plan Gratuito'
       };
 
-      await userRef.set({
-        isPro: false,
-        trialStartedAt,
-        subscription: freeSubscription,
-        updatedAt: now
-      }, { merge: true });
+      if (
+        !userSnap.exists ||
+        needsProfileTrialSync ||
+        legacyProState ||
+        storedTier !== 'free' ||
+        userData.isPro === true
+      ) {
+        await userRef.set({
+          isPro: false,
+          trialStartedAt,
+          subscription: freeSubscription,
+          updatedAt: now
+        }, { merge: true });
+      }
 
       return res.status(200).json({
         success: true,
@@ -131,25 +144,37 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       });
     }
 
-    const daysRemaining = Math.max(1, Math.ceil(remainingMs / (24 * 60 * 60 * 1000)));
+    const daysRemaining = Math.ceil(remainingMs / (24 * 60 * 60 * 1000));
+    const trialSubscription = {
+      tier: 'trial',
+      status: 'active',
+      planName: 'Periodo de Prueba',
+      trialStartedAt,
+      validUntil: new Date(trialStartedAt + totalTrialMs).toISOString()
+    };
+
+    if (!userSnap.exists || needsProfileTrialSync || legacyProState) {
+      await userRef.set({
+        isPro: true,
+        trialStartedAt,
+        subscription: trialSubscription,
+        updatedAt: now
+      }, { merge: true });
+    }
 
     return res.status(200).json({
       success: true,
-      isPro: false,
+      isPro: true,
       daysRemaining,
-      subscription: {
-        tier: 'trial',
-        status: 'active',
-        planName: 'Periodo de Prueba',
-        trialStartedAt,
-        validUntil: new Date(trialStartedAt + totalTrialMs).toISOString()
-      }
+      trialStartedAt,
+      subscription: trialSubscription
     });
-  } catch (err: any) {
-    console.error('Error verificando sesi?n o trial:', err);
-    return res.status(401).json({
-      error: 'Token inv?lido o expirado.',
-      details: err?.message
-    });
+  } catch (error) {
+    if (isFirebaseAuthError(error)) {
+      return res.status(401).json({ error: 'El token de sesión no es válido o expiró.' });
+    }
+
+    console.error('Error al consultar el trial:', error);
+    return res.status(500).json({ error: 'No se pudo consultar el estado de la suscripción.' });
   }
 }

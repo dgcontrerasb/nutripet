@@ -112,31 +112,6 @@ export default function App() {
     return () => window.removeEventListener('sidebar_toggle', handleToggle);
   }, []);
 
-  useEffect(() => {
-    (window as any).testWompi = async () => {
-      console.log('🧪 Ejecutando simulación de verificación Wompi...');
-      const fakeReference = `NP_TEST_${Date.now()}`;
-      const verifiedPlan = 'pro_monthly';
-      const planName = 'NutriPet Pro Mensual (Promo 60 Días)';
-
-      const success = await updateSubscription(verifiedPlan, planName, {
-        wompiTransactionId: fakeReference,
-        transactionReference: fakeReference
-      });
-
-      if (success) {
-        alert(`¡Pago exitoso con Wompi! Tu suscripción ${planName} se ha activado automáticamente.`);
-        console.log(`✅ updateSubscription completado con éxito: ${verifiedPlan}`);
-      } else {
-        console.warn('⚠️ No se pudo completar la activación en el backend');
-      }
-    };
-
-    return () => {
-      delete (window as any).testWompi;
-    };
-  }, [updateSubscription]);
-
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('nutripet_dark_mode');
     if (saved !== null) return saved === 'true';
@@ -160,14 +135,18 @@ export default function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const wompiTxId = urlParams.get('id') || urlParams.get('transaction_id');
     if (wompiTxId) {
-      window.history.replaceState({}, document.title, window.location.pathname);
       const currentUser = auth.currentUser;
       if (currentUser) {
-        const planParam = urlParams.get('plan') || 'pro_monthly';
-        const planTier = planParam === 'plan_pro_annual' || planParam === 'pro_annual' ? 'pro_annual' : 'pro_monthly';
+        window.history.replaceState({}, document.title, window.location.pathname);
+        const planParam = urlParams.get('plan');
+        if (planParam !== 'pro_annual' && planParam !== 'pro_monthly') {
+          alert('No se pudo identificar el plan asociado al pago de Wompi.');
+          return;
+        }
+        const planTier = planParam;
         const planName = planTier === 'pro_annual' ? 'NutriPet Pro Anual' : 'NutriPet Pro Mensual';
 
-        updateSubscription(planTier as any, planName, { wompiTransactionId: wompiTxId }).then(success => {
+        updateSubscription(planTier, planName, { wompiTransactionId: wompiTxId }).then(success => {
           if (success) {
             alert(`¡Pago exitoso con Wompi! Tu suscripción ${planName} se ha activado automáticamente.`);
           } else {
@@ -180,9 +159,9 @@ export default function App() {
     const paypalToken = urlParams.get('token');
     const payerId = urlParams.get('PayerID');
     if (paypalToken && payerId) {
-      window.history.replaceState({}, document.title, window.location.pathname);
       const currentUser = auth.currentUser;
       if (currentUser) {
+        window.history.replaceState({}, document.title, window.location.pathname);
         currentUser.getIdToken().then((idToken: string) => {
           fetch('/api/paypal/capture-order', {
             method: 'POST',

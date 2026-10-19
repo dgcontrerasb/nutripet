@@ -14,9 +14,29 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.token.email.lower() == 'dgcontrerasb@gmail.com';
     }
 
+    function hasNoClientManagedSubscriptionFields() {
+      return !request.resource.data.keys().hasAny([
+        'isPro',
+        'subscription',
+        'trialStartedAt',
+        'trialEndsAt'
+      ]);
+    }
+
     // Perfiles y subcolecciones de usuarios
     match /users/{userId} {
-      allow read, write: if isOwner(userId) || isAdmin();
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAdmin() || (isOwner(userId) && hasNoClientManagedSubscriptionFields());
+      allow update: if isAdmin() || (
+        isOwner(userId) &&
+        !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'isPro',
+          'subscription',
+          'trialStartedAt',
+          'trialEndsAt'
+        ])
+      );
+      allow delete: if isOwner(userId) || isAdmin();
 
       match /pets/{petId} {
         allow read, write: if isOwner(userId) || isAdmin();
@@ -27,7 +47,8 @@ service cloud.firestore {
       }
 
       match /subscription/{docId} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read: if isOwner(userId) || isAdmin();
+        allow write: if isAdmin();
       }
     }
 

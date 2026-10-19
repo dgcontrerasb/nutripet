@@ -1,20 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'http';
-import { getApps, initializeApp, cert, applicationDefault } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
-import { getFirestore } from 'firebase-admin/firestore';
-
-if (!getApps().length) {
-  try {
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
-      const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-      initializeApp({ credential: cert(serviceAccount) });
-    } else {
-      initializeApp({ credential: applicationDefault() });
-    }
-  } catch (error) {
-    console.error('Error inicializando Firebase Admin SDK:', error);
-  }
-}
+import {
+  initializeFirebaseAdmin,
+  applyApiCors,
+  getBearerToken,
+  isFirebaseAuthError
+} from '../../server/firebaseAdmin.ts';
+import {
+  activateVerifiedPayment,
+  PaymentAlreadyProcessedError
+} from '../../server/subscriptionPayments.ts';
 
 type ApiRequest = IncomingMessage & {
   method?: string;
@@ -29,125 +24,93 @@ type ApiResponse = ServerResponse & {
   };
 };
 
-const ALLOWED_PLAN_IDS = new Set(['pro_monthly', 'pro_annual']);
-
-async function readJsonBody(req: ApiRequest): Promise<any> {
-  if (req.body && typeof req.body === 'object') {
-    return req.body;
-  }
-
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    req.on('data', (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
-    req.on('end', () => {
-      const raw = Buffer.concat(chunks).toString('utf8').trim();
-      if (!raw) return resolve({});
-      try {
-        resolve(JSON.parse(raw));
-      } catch (error) {
-        reject(error);
-      }
-    });
-    req.on('error', reject);
-  });
-}
-
-function getAllowedOrigin(req: ApiRequest): string {
-  const configuredOrigin = process.env.ALLOWED_ORIGIN;
-  const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
-
-  if (configuredOrigin && configuredOrigin !== '*') {
-    return requestOrigin === configuredOrigin ? requestOrigin : configuredOrigin;
-  }
-
-  return requestOrigin || 'null';
-}
-
 export default async function handler(req: ApiRequest, res: ApiResponse) {
-  const allowedOrigin = getAllowedOrigin(req);
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  applyApiCors(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'M?todo no permitido. Solo se acepta POST.' });
-  }
-
-  const authHeader = req.headers.authorization ?? req.headers.Authorization;
-  if (!authHeader || typeof authHeader !== 'string' || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({
-      error: 'No autorizado. Se requiere Authorization: Bearer <idToken>'
-    });
-  }
-
-  const idToken = authHeader.replace(/^Bearer\s+/i, '').trim();
-  if (!idToken) {
-    return res.status(401).json({ error: 'Token inv?lido o vac?o.' });
+    return res.status(405).json({ error: 'Método no permitido. Solo se acepta POST.' });
   }
 
   try {
+    const idToken = getBearerToken(req);
+    if (!idToken) {
+      return res.status(401).json({ error: 'Se requiere un token de sesión válido.' });
+    }
+
+    initializeFirebaseAdmin();
     const decodedToken = await getAuth().verifyIdToken(idToken);
     const uid = decodedToken.uid;
-    const body = await readJsonBody(req);
-    const planId = String(body?.planId || '');
-    const wompiTransactionId = body?.wompiTransactionId ? String(body.wompiTransactionId) : '';
-    const paypalOrderId = body?.paypalOrderId ? String(body.paypalOrderId) : '';
-    const transactionId = wompiTransactionId || paypalOrderId;
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const planId = String(body.planId || '');
+    const transactionId = typeof body.wompiTransactionId === 'string'
+      ? body.wompiTransactionId.trim()
+      : '';
 
-    if (!ALLOWED_PLAN_IDS.has(planId)) {
-      return res.status(400).json({ error: 'planId inv?lido. Usa pro_monthly o pro_annual.' });
+    if (planId !== 'pro_monthly' && planId !== 'pro_annual') {
+      return res.status(400).json({ error: 'planId inválido.' });
     }
 
-    if (!transactionId) {
-      return res.status(400).json({ error: 'Debe incluir wompiTransactionId o paypalOrderId.' });
+    if (!/^[A-Za-z0-9_-]{1,128}$/.test(transactionId)) {
+      return res.status(400).json({ error: 'Identificador de transacción inválido.' });
     }
 
-    const firestore = getFirestore();
-    const processedRef = firestore.collection('processed_payments').doc(transactionId);
-    const processedSnap = await processedRef.get();
-    if (processedSnap.exists) {
-      return res.status(409).json({ error: 'Transacci?n ya procesada.' });
+    const wompiBaseUrl = (process.env.WOMPI_API_BASE_URL || 'https://production.wompi.co/v1').replace(/\/+$/, '');
+    const verificationResponse = await fetch(
+      `${wompiBaseUrl}/transactions/${encodeURIComponent(transactionId)}`
+    );
+
+    if (!verificationResponse.ok) {
+      console.error('Wompi transaction verification failed with status:', verificationResponse.status);
+      return res.status(502).json({ error: 'No se pudo verificar el pago con Wompi.' });
     }
 
-    const planName = planId === 'pro_annual' ? 'NutriPet Pro Anual' : 'NutriPet Pro Mensual';
-    const subscription = {
-      tier: planId,
-      status: 'active',
-      planName,
-      activatedAt: Date.now(),
-      transactionId,
-      updatedAt: Date.now()
+    const verification = await verificationResponse.json() as {
+      data?: {
+        status?: string;
+        reference?: string;
+        amount_in_cents?: number;
+        currency?: string;
+      };
     };
+    const transaction = verification.data;
+    const expectedAmount = planId === 'pro_annual' ? 6_990_000 : 990_000;
+    const expectedReferencePrefix = `NUTRIPET_${uid}_${planId}_`;
 
-    const batch = firestore.batch();
-    batch.set(processedRef, {
-      userId: uid,
+    if (
+      transaction?.status !== 'APPROVED' ||
+      transaction.currency !== 'COP' ||
+      transaction.amount_in_cents !== expectedAmount ||
+      typeof transaction.reference !== 'string' ||
+      !transaction.reference.startsWith(expectedReferencePrefix)
+    ) {
+      return res.status(403).json({ error: 'El pago no está aprobado o no corresponde al plan y usuario.' });
+    }
+
+    const subscription = await activateVerifiedPayment({
+      uid,
       planId,
+      provider: 'wompi',
       transactionId,
-      processedAt: Date.now()
+      amount: expectedAmount,
+      currency: 'COP'
     });
-    batch.set(firestore.collection('users').doc(uid), {
-      isPro: true,
-      subscription,
-      updatedAt: Date.now()
-    }, { merge: true });
-
-    await batch.commit();
 
     return res.status(200).json({
       success: true,
       subscription
     });
-  } catch (error: any) {
-    console.error('Error activando suscripci?n:', error);
-    return res.status(401).json({
-      error: 'No autorizado o token inv?lido.',
-      details: error?.message || 'invalid token'
-    });
+  } catch (error) {
+    if (error instanceof PaymentAlreadyProcessedError) {
+      return res.status(409).json({ error: 'Esta transacción ya fue procesada por otra cuenta o plan.' });
+    }
+    if (isFirebaseAuthError(error)) {
+      return res.status(401).json({ error: 'El token de sesión no es válido o expiró.' });
+    }
+    console.error('Error activando suscripción Wompi:', error);
+    return res.status(500).json({ error: 'No se pudo completar la activación de la suscripción.' });
   }
 }

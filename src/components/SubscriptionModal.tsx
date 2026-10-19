@@ -19,7 +19,7 @@ interface SubscriptionModalProps {
 }
 
 export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, onClose }) => {
-  const { user, subscription, trialDaysRemaining, updateSubscription, cancelSubscription, loginWithGoogle } = usePets();
+  const { user, subscription, trialDaysRemaining, updateSubscription, loginWithGoogle } = usePets();
   const [selectedPlan, setSelectedPlan] = useState<'pro_monthly' | 'pro_annual'>('pro_monthly');
   const [currency, setCurrency] = useState<'USD' | 'COP'>('COP');
   const [paymentMethod, setPaymentMethod] = useState<'wompi' | 'paypal'>('wompi');
@@ -50,19 +50,28 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
 
   // 1. Estabilidad del botón de pago y estado de carga con bloque finally
   const handleSubscribe = async () => {
+    if (!user) {
+      alert('Inicia sesión antes de realizar el pago.');
+      return;
+    }
+
     setIsProcessing(true);
     setSuccessMessage(null);
     let keepProcessing = false;
 
     try {
+      const idToken = await user.getIdToken();
+
       // 1. Pagos en Colombia (COP): Todos se redirigen y procesan por Wompi (Nequi, Daviplata, PSE, Tarjetas, Bancolombia)
       if (currency === 'COP' || paymentMethod === 'wompi') {
         const wompiRes = await fetch('/api/wompi/create-checkout', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`
+          },
           body: JSON.stringify({
-            planId: selectedPlan === 'pro_annual' ? 'plan_pro_annual' : 'plan_pro_monthly',
-            returnUrl: window.location.origin
+            planId: selectedPlan
           })
         });
         const wompiData = await wompiRes.json();
@@ -82,9 +91,12 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
       if (currency === 'USD' || paymentMethod === 'paypal') {
         const paypalRes = await fetch('/api/paypal/create-order', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`
+          },
           body: JSON.stringify({
-            planId: selectedPlan === 'pro_annual' ? 'plan_pro_annual' : 'plan_pro_monthly'
+            planId: selectedPlan
           })
         });
         const paypalData = await paypalRes.json();
@@ -132,7 +144,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
             </div>
             <div>
               <span className="text-xs font-extrabold uppercase tracking-widest text-amber-200 block">
-                Suscripción Mensual NutriPet Pro
+                Acceso a NutriPet Pro
               </span>
               <h2 className="text-xl sm:text-2xl font-heading font-black">
                 Activa tu Plan NutriPet Pro
@@ -177,23 +189,13 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
                     </div>
                     <p className="text-xs text-stone-600 dark:text-stone-300 flex items-center gap-1.5 mt-0.5">
                       <Calendar className="w-3.5 h-3.5 text-stone-400" />
-                      Válido hasta: <strong className="text-stone-800 dark:text-stone-100">{subscription.validUntil || 'Próximo mes'}</strong>
+                      Válido hasta: <strong className="text-stone-800 dark:text-stone-100">{subscription.validUntil || '—'}</strong>
+                    </p>
+                    <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">
+                      Pago único. Al terminar este plazo, puedes renovar manualmente.
                     </p>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={async () => {
-                    if (confirm('¿Estás seguro de cancelar la renovación automática de tu suscripción? Mantendrás el acceso Pro hasta el final del ciclo.')) {
-                      await cancelSubscription();
-                      alert('Tu suscripción ha sido cancelada. Mantendrás el acceso hasta finalizar el periodo actual.');
-                    }
-                  }}
-                  className="text-stone-500 dark:text-stone-400 hover:text-rose-600 dark:hover:text-rose-400 text-xs font-bold underline cursor-pointer self-end sm:self-center"
-                >
-                  Cancelar renovación
-                </button>
               </div>
             </div>
           ) : (
@@ -207,7 +209,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
                     Acceso de Bienvenida Activo ({trialDaysRemaining} {trialDaysRemaining === 1 ? 'día restante' : 'días restantes'})
                   </h4>
                   <p className="text-xs text-emerald-800 dark:text-emerald-300 leading-relaxed mt-0.5">
-                    Cuentas con acceso a la IA Nutricional, ficha técnica en PDF y gráficas de evolución. Aprovecha la oferta 2x1 comprometiendo tu primer mes para recibir 60 días completos.
+                    Cuentas con acceso a la IA Nutricional, ficha técnica en PDF y gráficas de evolución. Puedes renovar manualmente al terminar el periodo.
                   </p>
                 </div>
               </div>
@@ -226,14 +228,14 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
                     <span>¡Oferta de Lanzamiento: 30 Días Gratis!</span>
                   </div>
                   <h4 className="font-heading font-black text-stone-900 dark:text-stone-100 text-sm sm:text-base leading-tight">
-                    Pagas tu primer mes hoy y recibes 60 Días Completos de NutriPet Pro
+                    Pagas una vez y recibes 60 días completos de NutriPet Pro
                   </h4>
                   <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed">
-                    Al comprometer tu primer mes ({currency === 'COP' ? '$9.900 COP' : '$2.99 USD'}), te regalamos <strong>30 días adicionales gratis</strong> de bienvenida. Disfrutas de <strong>2 meses completos</strong> con IA Veterinaria, Ficha Técnica en PDF y Mascotas Ilimitadas.
+                    Por un pago único de {currency === 'COP' ? '$9.900 COP' : '$2.99 USD'}, obtienes <strong>60 días de acceso</strong> con IA Veterinaria, Ficha Técnica en PDF y Mascotas Ilimitadas. No hay cobros automáticos.
                   </p>
                   <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] font-bold text-stone-600 dark:text-stone-400">
                     <span className="flex items-center gap-1 text-emerald-800 dark:text-emerald-400">✓ 60 días garantizados</span>
-                    <span className="flex items-center gap-1 text-emerald-800 dark:text-emerald-400">✓ Cancela cuando quieras</span>
+                  <span className="flex items-center gap-1 text-emerald-800 dark:text-emerald-400">✓ Renovación manual</span>
                     <span className="flex items-center gap-1 text-emerald-800 dark:text-emerald-400">✓ Nequi, PSE, Tarjeta o PayPal</span>
                   </div>
                 </div>
@@ -326,11 +328,11 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
                       <span className="text-2xl font-black text-stone-900 dark:text-stone-100">
                         {currency === 'COP' ? '$9.900' : '$2.99'}
                       </span>
-                      <span className="text-xs text-stone-500 dark:text-stone-400 font-bold"> / 60 días iniciales</span>
+                      <span className="text-xs text-stone-500 dark:text-stone-400 font-bold"> / 60 días (pago único)</span>
                     </div>
 
                     <p className="text-[11px] text-stone-600 dark:text-stone-300 leading-relaxed">
-                      Incluye <strong>30 días gratis de bienvenida</strong>. Tu próximo cobro es hasta dentro de 60 días.
+                      Pago único por <strong>60 días de acceso</strong>. Después puedes renovar manualmente.
                     </p>
                   </div>
 
@@ -388,7 +390,7 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ isOpen, on
                       <span className="text-2xl font-black text-stone-900 dark:text-stone-100">
                         {currency === 'COP' ? '$69.900' : '$19.99'}
                       </span>
-                      <span className="text-xs text-stone-500 dark:text-stone-400 font-bold"> / 14 meses</span>
+                      <span className="text-xs text-stone-500 dark:text-stone-400 font-bold"> / 14 meses (pago único)</span>
                     </div>
 
                     <p className="text-[11px] text-stone-600 dark:text-stone-300 leading-relaxed">

@@ -50,7 +50,6 @@ interface PetContextType {
     planName: string, 
     verificationDetails?: { wompiTransactionId?: string; transactionReference?: string; paypalOrderId?: string }
   ) => Promise<boolean>;
-  cancelSubscription: () => Promise<void>;
   resetSubscription: () => Promise<void>;
   deleteUserAccount: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
@@ -464,6 +463,8 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
         setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
         setTrialDaysRemaining(0);
         setIsProState(false);
+        setTrialStartedAt(null);
+        setTrialEndsAt(null);
         loadedPetsRef.current.clear();
       }
     });
@@ -501,30 +502,6 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
           });
           setTrialDaysRemaining(365);
           setIsProState(true);
-        } else if (data.subscription) {
-          const sub = data.subscription as UserSubscription;
-          setSubscription(sub);
-
-          const startedAtIso = sub?.trialStartedAt || data.trialStartedAt || trialStartedAt;
-          if (startedAtIso) setTrialStartedAt(startedAtIso);
-
-          const expiryDateStr = sub?.validUntil 
-            ? (sub.validUntil.includes('T') ? sub.validUntil : `${sub.validUntil}T23:59:59`)
-            : (sub?.trialEndsAt || data.trialEndsAt || trialEndsAt);
-
-          if (expiryDateStr) {
-            setTrialEndsAt(expiryDateStr);
-            const expiryMs = new Date(expiryDateStr).getTime();
-            if (!isNaN(expiryMs)) {
-              const diffDays = Math.max(0, Math.ceil((expiryMs - Date.now()) / (1000 * 60 * 60 * 24)));
-              setTrialDaysRemaining(diffDays);
-              const isActive = (sub.status === 'active' && sub.tier !== 'free') || diffDays > 0;
-              setIsProState(isActive);
-            }
-          } else if (sub.tier !== 'free' && sub.status === 'active') {
-            setIsProState(true);
-            setTrialDaysRemaining(30);
-          }
         }
       } catch (err: any) {
         console.error('Error al obtener documento de usuario:', err);
@@ -1117,8 +1094,14 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
     planName: string,
     verificationDetails?: { wompiTransactionId?: string; transactionReference?: string; paypalOrderId?: string }
   ): Promise<boolean> => {
-    const currentUser = auth.currentUser || user;
+    const currentUser = auth.currentUser;
     if (!currentUser) {
+      setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
+      setTrialDaysRemaining(0);
+      setIsProState(false);
+      return false;
+    }
+    if (tier !== 'pro_monthly' && tier !== 'pro_annual') {
       setSubscription({ tier: 'free', status: 'active', planName: 'Plan Gratuito' });
       setTrialDaysRemaining(0);
       setIsProState(false);
@@ -1150,10 +1133,18 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       }
 
       const data = await res.json();
-      if (res.ok && data?.success === true && data.subscription) {
+      const validUntil = Date.parse(data?.subscription?.validUntil || '');
+      if (
+        data?.success === true &&
+        data.subscription?.tier === tier &&
+        data.subscription?.status === 'active' &&
+        data.subscription?.paymentVerified === true &&
+        Number.isFinite(validUntil) &&
+        validUntil > Date.now()
+      ) {
         setSubscription(data.subscription);
         setIsProState(true);
-        setTrialDaysRemaining(data.subscription.tier === 'trial' ? (data.daysRemaining ?? 0) : 365);
+        setTrialDaysRemaining(Math.ceil((validUntil - Date.now()) / (24 * 60 * 60 * 1000)));
         console.log('? [Subscription] Suscripci?n activada exitosamente por backend:', data.subscription);
         return true;
       }
@@ -1169,16 +1160,7 @@ const [isSavingPet, setIsSavingPet] = useState<boolean>(false);
       setIsProState(false);
       return false;
     }
-  }, [user]);
-
-const cancelSubscription = useCallback(async () => {
-    const cancelledSub: UserSubscription = {
-      ...subscription,
-      autoRenew: false,
-      status: 'cancelled'
-    };
-    setSubscription(cancelledSub);
-  }, [subscription]);
+  }, []);
 
   const resetSubscription = useCallback(async () => {
     const freeSub: UserSubscription = {
@@ -1276,7 +1258,6 @@ const cancelSubscription = useCallback(async () => {
         addBathLog,
         deleteBathLog,
         updateSubscription,
-        cancelSubscription,
         resetSubscription,
         deleteUserAccount,
         loginWithGoogle,
