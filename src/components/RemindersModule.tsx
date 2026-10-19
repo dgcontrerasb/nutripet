@@ -1,17 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { usePets } from '../context/PetContext';
-import { ProFeatureLock } from './ProFeatureLock';
-import { 
-  Bell, 
-  Plus, 
-  Trash2, 
-  CheckCircle2, 
-  Circle, 
-  ShieldAlert, 
-  Calendar, 
-  Pill, 
-  Sparkles, 
-  Clock, 
+import {
+  Bell,
+  Plus,
+  Trash2,
+  CheckCircle2,
+  Circle,
+  ShieldAlert,
+  Calendar,
+  Pill,
+  Sparkles,
+  Clock,
   X,
   AlertTriangle,
   HeartPulse,
@@ -24,22 +23,34 @@ import {
 import { Reminder, BathLog } from '../types';
 import { RemindersCalendar } from './RemindersCalendar';
 
-interface Props {
-  onOpenSubscriptionModal?: () => void;
-}
+/**
+ * Utilidades para manejo seguro de fechas locales (evita desfasajes por zona horaria UTC)
+ */
+const getLocalDateString = (dateObj: Date = new Date()): string => {
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const day = String(dateObj.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
 
-export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () => {} }) => {
-  const { 
-    activePet, 
-    isProOrTrial,
-    reminders, 
-    addReminder, 
-    toggleReminder, 
-    deleteReminder, 
+const addDaysToDate = (baseDateStr: string, days: number): string => {
+  const [y, m, d] = baseDateStr.split('-').map(Number);
+  const date = new Date(y, m - 1, d);
+  date.setDate(date.getDate() + days);
+  return getLocalDateString(date);
+};
+
+export const RemindersModule: React.FC = () => {
+  const {
+    activePet,
+    reminders,
+    addReminder,
+    toggleReminder,
+    deleteReminder,
     clearAllReminders,
     bathLogs,
     addBathLog,
-    deleteBathLog 
+    deleteBathLog
   } = usePets();
 
   const [activeTab, setActiveTab] = useState<'vaccines' | 'bath' | 'calendar'>('vaccines');
@@ -49,7 +60,8 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
-  // Estado para el modal inteligente de completar recordatorio con re-programación
+  const todayStr = useMemo(() => getLocalDateString(), []);
+
   const [completingReminderState, setCompletingReminderState] = useState<{
     reminder: Reminder;
     completionDate: string;
@@ -59,7 +71,6 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
     shampooUsed: string;
   } | null>(null);
 
-  // Estado para registro de baño
   const [bathForm, setBathForm] = useState<{
     date: string;
     type: BathLog['type'];
@@ -67,14 +78,13 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
     nextBathDays: number;
     notes: string;
   }>({
-    date: new Date().toISOString().split('T')[0],
+    date: getLocalDateString(),
     type: 'routine',
     shampooUsed: '',
     nextBathDays: 21,
     notes: ''
   });
-  
-  // Estado para confirmación de plantillas rápidas con fecha editable
+
   const [confirmQuickTemplate, setConfirmQuickTemplate] = useState<{
     name: string;
     type: Reminder['type'];
@@ -84,7 +94,6 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
     editableDate: string;
   } | null>(null);
 
-  // Estado para confirmación rápida de plantilla de baño
   const [confirmQuickBath, setConfirmQuickBath] = useState<{
     name: string;
     bathType: BathLog['type'];
@@ -102,18 +111,17 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
   }>({
     type: 'vaccine',
     name: '',
-    dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    dueDate: addDaysToDate(getLocalDateString(), 14),
     dosage: '',
     notes: ''
   });
 
-  // Bloqueo de scroll del body cuando cualquier modal está abierto
   const isAnyModalOpen = Boolean(
-    showAddModal || 
-    showBathModal || 
-    showClearAllModal || 
-    confirmQuickTemplate || 
-    confirmQuickBath || 
+    showAddModal ||
+    showBathModal ||
+    showClearAllModal ||
+    confirmQuickTemplate ||
+    confirmQuickBath ||
     completingReminderState
   );
 
@@ -128,45 +136,61 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
     };
   }, [isAnyModalOpen]);
 
-  // 🔒 1. Validación de suscripción Pro
-  if (!isProOrTrial) {
-    return (
-      <div className="space-y-6">
-        <ProFeatureLock
-          featureName="Sistema Inteligente de Vacunas y Notificaciones"
-          description="Lleva el control de fechas de vacunación, desparasitaciones periódicas, citas veterinarias y corte de uñas sin olvidar ningún evento importante."
-          benefits={[
-            "Esquema completo de vacunación y refuerzos anuales para perros y gatos",
-            "Control y avisos de desparasitación interna y externa",
-            "Historial organizado de eventos médicos con alertas personalizadas"
-          ]}
-          onOpenSubscriptionModal={onOpenSubscriptionModal}
-        />
-      </div>
-    );
-  }
+  // Historial de baños ordenado cronológicamente descendente
+  const sortedBathLogs = useMemo(() => {
+    return [...bathLogs].sort((a, b) => b.date.localeCompare(a.date));
+  }, [bathLogs]);
 
-  // 🐾 2. Validación de mascota activa seleccionada
-  if (!activePet) {
-    return (
-      <div className="p-8 text-center bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 space-y-3 max-w-lg mx-auto my-8">
-        <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
-          No hay ninguna mascota seleccionada
-        </h3>
-        <p className="text-stone-500 dark:text-stone-400 text-xs">
-          Selecciona o registra una mascota para gestionar sus vacunas y recordatorios.
-        </p>
-      </div>
-    );
-  }
+  const lastBath = sortedBathLogs[0] || null;
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const daysSinceLastBath = useMemo(() => {
+    if (!lastBath) return null;
+    const [ly, lm, ld] = lastBath.date.split('-').map(Number);
+    const [ty, tm, td] = todayStr.split('-').map(Number);
+    const lastDate = new Date(ly, lm - 1, ld).getTime();
+    const curDate = new Date(ty, tm - 1, td).getTime();
+    return Math.max(0, Math.floor((curDate - lastDate) / (1000 * 60 * 60 * 24)));
+  }, [lastBath, todayStr]);
 
-  // Calcular edad y etapa de la mascota
+  const nextBathReminder = useMemo(() => {
+    return reminders.find(r => r.type === 'bath' && !r.completed);
+  }, [reminders]);
+
+  const healthReminders = useMemo(() => {
+    return reminders.filter(r => r.type !== 'bath');
+  }, [reminders]);
+
+  const filteredHealthReminders = useMemo(() => {
+    return healthReminders.filter(r => {
+      if (filter === 'pending') return !r.completed;
+      if (filter === 'completed') return r.completed;
+      return true;
+    });
+  }, [healthReminders, filter]);
+
+  const bathRemindersList = useMemo(() => {
+    return reminders.filter(r => r.type === 'bath');
+  }, [reminders]);
+
+  const filteredBathReminders = useMemo(() => {
+    return bathRemindersList.filter(r => {
+      if (filter === 'pending') return !r.completed;
+      if (filter === 'completed') return r.completed;
+      return true;
+    });
+  }, [bathRemindersList, filter]);
+
+  // Conteo total de recordatorios vencidos memoizado
+  const totalOverdue = useMemo(() => {
+    return reminders.filter(r => !r.completed && r.dueDate < todayStr).length;
+  }, [reminders, todayStr]);
+
+  if (!activePet) return null;
+
   const getPetAgeInfo = () => {
     const ageMonths = activePet.ageMonths || 24;
     const ageYears = Math.floor(ageMonths / 12);
-    
+
     if (ageMonths < 12) {
       return { stage: 'cachorro', label: 'Cachorro', advice: 'Esquema de vacunación inicial' };
     } else if (ageYears >= 7) {
@@ -185,38 +209,27 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
   const shareViaWhatsApp = (rem: Reminder) => {
     const text = `🐾 *Recordatorio NutriPet para ${activePet.name}*\n📌 *Evento:* ${rem.name}\n📅 *Fecha:* ${rem.dueDate}${rem.dosage ? `\n💊 *Dosis:* ${rem.dosage}` : ''}${rem.notes ? `\n📝 *Notas:* ${rem.notes}` : ''}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
   };
 
   const exportToCalendar = (rem: Reminder) => {
     const title = `[NutriPet] ${rem.name} - ${activePet.name}`;
     const details = `Recordatorio para ${activePet.name}. Dosis: ${rem.dosage || 'N/A'}. ${rem.notes || ''}`;
     const dateFormatted = rem.dueDate.replace(/-/g, '');
-    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${title}\nDESCRIPTION:${details}\nDTSTART:${dateFormatted}T090000Z\nDTEND:${dateFormatted}T100000Z\nEND:VEVENT\nEND:VCALENDAR`;
+
+    // Tarea de día completo en calendario para evitar desfasaje de horas
+    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//NutriPet//ES\nBEGIN:VEVENT\nSUMMARY:${title}\nDESCRIPTION:${details}\nDTSTART;VALUE=DATE:${dateFormatted}\nDTEND;VALUE=DATE:${dateFormatted}\nEND:VEVENT\nEND:VCALENDAR`;
+
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = window.URL.createObjectURL(blob);
+    link.href = url;
     link.setAttribute('download', `nutripet_${rem.name.toLowerCase().replace(/\s+/g, '_')}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
   };
-
-  // Recordatorios de salud (vacunas, medicación, desparasitaciones)
-  const healthReminders = reminders.filter(r => r.type !== 'bath');
-  const filteredHealthReminders = healthReminders.filter(r => {
-    if (filter === 'pending') return !r.completed;
-    if (filter === 'completed') return r.completed;
-    return true;
-  });
-
-  // Recordatorios de baño
-  const bathRemindersList = reminders.filter(r => r.type === 'bath');
-  const filteredBathReminders = bathRemindersList.filter(r => {
-    if (filter === 'pending') return !r.completed;
-    if (filter === 'completed') return r.completed;
-    return true;
-  });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -235,19 +248,18 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
     setForm({
       type: 'vaccine',
       name: '',
-      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      dueDate: addDaysToDate(getLocalDateString(), 14),
       dosage: '',
       notes: ''
     });
   };
 
-  // Inferencia inteligente de días de ciclo recurrente
   const inferIntervalDays = (rem: Reminder): number => {
     if (rem.recurringDays && rem.recurringDays > 0) {
       return rem.recurringDays;
     }
     const nameLower = (rem.name + ' ' + (rem.notes || '')).toLowerCase();
-    
+
     if (rem.type === 'bath' || nameLower.includes('baño') || nameLower.includes('grooming')) {
       if (nameLower.includes('medicado') || nameLower.includes('dermatol')) return 7;
       if (nameLower.includes('corte') || nameLower.includes('peluquer') || nameLower.includes('grooming')) return 45;
@@ -304,9 +316,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
     await toggleReminder(reminder.id, false);
 
     if (autoReschedule && recurringDays > 0) {
-      const baseDate = new Date(completionDate + 'T00:00:00');
-      const nextDateObj = new Date(baseDate.getTime() + recurringDays * 24 * 60 * 60 * 1000);
-      const nextDueDate = nextDateObj.toISOString().split('T')[0];
+      const nextDueDate = addDaysToDate(completionDate, recurringDays);
 
       let nextNotes = reminder.notes;
       if (!nextNotes || !nextNotes.includes('Programado automáticamente')) {
@@ -326,7 +336,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
     if (reminder.type === 'bath' && logBathHistory) {
       const nameLower = reminder.name.toLowerCase();
-      const bathType: BathLog['type'] = 
+      const bathType: BathLog['type'] =
         nameLower.includes('medicado') ? 'medicated' :
         nameLower.includes('corte') || nameLower.includes('peluquer') ? 'grooming' :
         nameLower.includes('seco') ? 'dry_wash' : 'routine';
@@ -343,25 +353,29 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
   };
 
   const getUrgency = (dueDate: string, completed: boolean) => {
-    if (completed) return { label: 'Completado', color: 'text-stone-400 bg-stone-100 dark:bg-stone-800 border-stone-200 dark:border-stone-700' };
+    if (completed) return { label: 'Completado', color: 'text-stone-400 bg-stone-100 border-stone-200' };
     if (dueDate < todayStr) {
-      const diffDays = Math.ceil((new Date(todayStr + 'T00:00:00').getTime() - new Date(dueDate + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24));
-      return { 
-        label: `⚠️ Vencido (hace ${diffDays} día${diffDays > 1 ? 's' : ''})`, 
-        color: 'text-red-700 bg-red-100 dark:bg-red-950/60 dark:text-red-400 border-red-300 font-extrabold shadow-2xs' 
+      const [ty, tm, td] = todayStr.split('-').map(Number);
+      const [dy, dm, dd] = dueDate.split('-').map(Number);
+      const diffDays = Math.ceil((new Date(ty, tm - 1, td).getTime() - new Date(dy, dm - 1, dd).getTime()) / (1000 * 60 * 60 * 24));
+      return {
+        label: `⚠️ Vencido (hace ${diffDays} día${diffDays > 1 ? 's' : ''})`,
+        color: 'text-red-700 bg-red-100 border-red-300 font-extrabold shadow-2xs'
       };
     }
-    if (dueDate === todayStr) return { label: '¡Toca Hoy!', color: 'text-amber-800 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300 font-extrabold' };
-    
-    const diffDays = Math.ceil((new Date(dueDate + 'T00:00:00').getTime() - new Date(todayStr + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 7) return { label: `En ${diffDays} días`, color: 'text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200' };
+    if (dueDate === todayStr) return { label: '¡Toca Hoy!', color: 'text-amber-800 bg-amber-100 border-amber-300 font-extrabold' };
 
-    return { label: `El ${dueDate}`, color: 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200' };
+    const [ty, tm, td] = todayStr.split('-').map(Number);
+    const [dy, dm, dd] = dueDate.split('-').map(Number);
+    const diffDays = Math.ceil((new Date(dy, dm - 1, dd).getTime() - new Date(ty, tm - 1, td).getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 7) return { label: `En ${diffDays} días`, color: 'text-amber-700 bg-amber-50 border-amber-200' };
+
+    return { label: `El ${dueDate}`, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
   };
 
   const addQuickTemplate = (name: string, type: Reminder['type'], defaultDays: number, dosage?: string) => {
-    const targetDate = new Date(Date.now() + defaultDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    
+    const targetDate = addDaysToDate(todayStr, defaultDays);
+
     setConfirmQuickTemplate({
       name,
       type,
@@ -374,7 +388,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
   const confirmQuickTemplateCreate = async () => {
     if (!confirmQuickTemplate) return;
-    
+
     await addReminder({
       type: confirmQuickTemplate.type,
       name: confirmQuickTemplate.name,
@@ -382,7 +396,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
       dosage: confirmQuickTemplate.dosage,
       completed: false
     });
-    
+
     setConfirmQuickTemplate(null);
   };
 
@@ -392,7 +406,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
       bathType,
       daysToNext,
       shampooUsed,
-      bathDate: new Date().toISOString().split('T')[0]
+      bathDate: todayStr
     });
   };
 
@@ -406,8 +420,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
       notes: `Registrado vía plantilla rápida (${confirmQuickBath.name})`
     });
 
-    const nextDate = new Date(new Date(confirmQuickBath.bathDate + 'T00:00:00').getTime() + confirmQuickBath.daysToNext * 24 * 60 * 60 * 1000)
-      .toISOString().split('T')[0];
+    const nextDate = addDaysToDate(confirmQuickBath.bathDate, confirmQuickBath.daysToNext);
 
     await addReminder({
       type: 'bath',
@@ -421,13 +434,6 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
     setConfirmQuickBath(null);
   };
 
-  const lastBath = bathLogs.length > 0 ? bathLogs[0] : null;
-  const daysSinceLastBath = lastBath 
-    ? Math.floor((new Date().getTime() - new Date(lastBath.date + 'T00:00:00').getTime()) / (1000 * 60 * 60 * 24))
-    : null;
-
-  const nextBathReminder = reminders.find(r => r.type === 'bath' && !r.completed);
-
   const handleSaveBathLog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!bathForm.date) return;
@@ -439,10 +445,9 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
       notes: bathForm.notes.trim() || undefined,
     });
 
-    const nextDate = new Date(new Date(bathForm.date + 'T00:00:00').getTime() + bathForm.nextBathDays * 24 * 60 * 60 * 1000)
-      .toISOString().split('T')[0];
+    const nextDate = addDaysToDate(bathForm.date, bathForm.nextBathDays);
 
-    const bathTypeLabel = 
+    const bathTypeLabel =
       bathForm.type === 'routine' ? 'Baño Rutinario' :
       bathForm.type === 'medicated' ? 'Baño Medicado' :
       bathForm.type === 'dry_wash' ? 'Baño en Seco' : 'Peluquería Completa';
@@ -458,7 +463,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
     setShowBathModal(false);
     setBathForm({
-      date: new Date().toISOString().split('T')[0],
+      date: todayStr,
       type: 'routine',
       shampooUsed: '',
       nextBathDays: 21,
@@ -468,15 +473,14 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
   return (
     <div className="space-y-6">
-      {/* Cabecera y acciones */}
-      <div className="glass-card rounded-3xl p-5 sm:p-7 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+      <div className="glass-card rounded-3xl p-5 sm:p-7 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h3 className="font-heading font-extrabold text-xl text-stone-900 dark:text-stone-100">
               Vacunas y Notificaciones de {activePet.name}
             </h3>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              {reminders.filter(r => !r.completed).length} pendientes
+            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+              {healthReminders.filter(r => !r.completed).length} pendientes
             </span>
           </div>
           <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
@@ -484,16 +488,15 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-          {/* View Mode Switcher */}
-          <div className="flex bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <div className="flex flex-wrap bg-stone-100 dark:bg-stone-800 p-1 rounded-xl gap-1">
             <button
               type="button"
               onClick={() => setActiveTab('vaccines')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'vaccines'
-                  ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-2xs'
-                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'
+                  ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs'
+                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
               }`}
             >
               <LayoutList className="w-3.5 h-3.5" />
@@ -505,8 +508,8 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               onClick={() => setActiveTab('bath')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'bath'
-                  ? 'bg-white dark:bg-stone-700 text-teal-900 dark:text-teal-300 shadow-2xs'
-                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'
+                  ? 'bg-white dark:bg-stone-900 text-teal-900 dark:text-teal-300 shadow-2xs'
+                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
               }`}
             >
               <Droplets className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
@@ -518,8 +521,8 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               onClick={() => setActiveTab('calendar')}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 activeTab === 'calendar'
-                  ? 'bg-white dark:bg-stone-700 text-blue-900 dark:text-blue-300 shadow-2xs'
-                  : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'
+                  ? 'bg-white dark:bg-stone-900 text-blue-900 dark:text-blue-300 shadow-2xs'
+                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
               }`}
             >
               <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -527,63 +530,51 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
             </button>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-            <button
-              type="button"
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" /> Crear Recordatorio
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setShowAddModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1b4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-medium text-xs flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Crear Recordatorio
+          </button>
         </div>
       </div>
 
-      {/* BANNER DE ALERTA POR RECORDATORIOS VENCIDOS */}
-      {(() => {
-        const overdueHealthCount = healthReminders.filter(r => !r.completed && r.dueDate < todayStr).length;
-        const overdueBathCount = bathRemindersList.filter(r => !r.completed && r.dueDate < todayStr).length;
-        const totalOverdue = overdueHealthCount + overdueBathCount;
-
-        if (totalOverdue === 0) return null;
-
-        return (
-          <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-800 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-red-600 text-white rounded-2xl shrink-0 shadow-xs">
-                <AlertTriangle className="w-6 h-6 animate-pulse" />
-              </div>
-              <div>
-                <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-sm sm:text-base">
-                  ⚠️ Tienes {totalOverdue} recordatorio(s) vencido(s)
-                </h4>
-                <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5 leading-relaxed">
-                  Los recordatorios vencidos <strong>permanecen visibles</strong> para cuidar la salud de {activePet.name}. Haz clic en el ícono (⭕) para completarlos y re-programar el siguiente ciclo automáticamente.
-                </p>
-              </div>
+      {totalOverdue > 0 && (
+        <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-900/50 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-red-600 text-white rounded-2xl shrink-0 shadow-xs">
+              <AlertTriangle className="w-6 h-6 animate-pulse" />
             </div>
-            <button
-              type="button"
-              onClick={() => setFilter('pending')}
-              className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0 shadow-xs"
-            >
-              Ver Pendientes ({totalOverdue})
-            </button>
+            <div>
+              <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-sm sm:text-base">
+                ⚠️ Tienes {totalOverdue} recordatorio(s) vencido(s)
+              </h4>
+              <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5 leading-relaxed">
+                Los recordatorios vencidos <strong>permanecen visibles</strong> para cuidar la salud de {activePet.name}. Haz clic en el ícono (⭕) para completarlos y re-programar el siguiente ciclo automáticamente.
+              </p>
+            </div>
           </div>
-        );
-      })()}
+          <button
+            type="button"
+            onClick={() => setFilter('pending')}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0 shadow-xs"
+          >
+            Ver Pendientes ({totalOverdue})
+          </button>
+        </div>
+      )}
 
       <div id="reminders-printable-container" className="space-y-6">
         {activeTab === 'calendar' && (
-          <RemindersCalendar 
-            onOpenAddModalWithDate={handleOpenAddModalWithDate} 
+          <RemindersCalendar
+            onOpenAddModalWithDate={handleOpenAddModalWithDate}
             onToggleReminder={handleAttemptToggle}
           />
         )}
 
         {activeTab === 'bath' && (
           <div className="space-y-6">
-            {/* Banner Destacado de Estado y Resumen de Baño */}
             <div className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
               <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
@@ -625,13 +616,12 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   className="px-5 py-3 bg-white text-teal-900 hover:bg-teal-50 font-extrabold text-xs rounded-2xl shadow-lg transition-all cursor-pointer flex items-center gap-2 shrink-0 border border-white/40"
                 >
                   <Droplets className="w-4 h-4 text-teal-600" />
-                  <span>🛁 Registrar Baño Realizado Hoy</span>
+                  <span>Registrar Baño Realizado Hoy</span>
                 </button>
               </div>
             </div>
 
-            {/* Plantillas Rápidas de Higiene */}
-            <div className="p-5 bg-teal-50/70 dark:bg-teal-950/20 rounded-3xl border border-teal-200/80 dark:border-teal-800/60 shadow-3xs space-y-3">
+            <div className="p-5 bg-teal-50/70 dark:bg-teal-950/20 rounded-3xl border border-teal-200/80 dark:border-teal-900/40 shadow-3xs space-y-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-teal-700 dark:text-teal-400 animate-pulse" />
                 <h5 className="text-xs font-extrabold uppercase tracking-wider text-teal-950 dark:text-teal-200">
@@ -645,43 +635,42 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Baño Rutinario con Agua y Shampoo', 'routine', 21, 'Shampoo neutro canino')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-teal-100 dark:hover:bg-teal-950 border border-teal-200 dark:border-teal-700 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                 >
                   🧼 + Baño Rutinario (21 días)
                 </button>
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Baño Medicado / Dermatológico', 'medicated', 7, 'Shampoo clorhexidina o hipoalergénico')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-teal-100 dark:hover:bg-teal-950 border border-teal-200 dark:border-teal-700 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                 >
                   🧴 + Baño Medicado (7 días)
                 </button>
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Peluquería y Corte de Pelo', 'grooming', 45, 'Servicio completo de peluquería')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-teal-100 dark:hover:bg-teal-950 border border-teal-200 dark:border-teal-700 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                 >
                   ✂️ + Peluquería & Corte (45 días)
                 </button>
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Corte de Uñas e Higiene de Oídos', 'routine', 15, 'Cortaúñas + solución auricular')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-teal-100 dark:hover:bg-teal-950 border border-teal-200 dark:border-teal-700 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                 >
                   💅 + Corte Uñas & Oídos (15 días)
                 </button>
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Cepillado Profundo de Pelaje', 'dry_wash', 3, 'Peine o cepillo deslanador')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-teal-100 dark:hover:bg-teal-950 border border-teal-200 dark:border-teal-700 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                 >
                   🪮 + Cepillado Profundo (3 días)
                 </button>
               </div>
             </div>
 
-            {/* Historial de Baños Registrados */}
-            <div className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 p-5 space-y-4 shadow-2xs">
+            <div className="bg-white dark:bg-[#1a231d] rounded-3xl border border-stone-200 dark:border-stone-800 p-5 space-y-4 shadow-2xs">
               <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-lg">🛁</span>
@@ -690,11 +679,11 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   </h5>
                 </div>
                 <span className="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-800">
-                  {bathLogs.length} baños registrados
+                  {sortedBathLogs.length} baños registrados
                 </span>
               </div>
 
-              {bathLogs.length === 0 ? (
+              {sortedBathLogs.length === 0 ? (
                 <div className="text-center py-8 space-y-2">
                   <Droplets className="w-10 h-10 text-teal-400 mx-auto opacity-60" />
                   <p className="text-xs font-bold text-stone-700 dark:text-stone-300">Aún no has registrado ningún baño para {activePet.name}.</p>
@@ -704,19 +693,19 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {bathLogs.map(log => {
-                    const badgeColor = 
-                      log.type === 'routine' ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' :
-                      log.type === 'medicated' ? 'bg-purple-100 dark:bg-purple-950 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
-                      log.type === 'dry_wash' ? 'bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800' : 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800';
+                  {sortedBathLogs.map(log => {
+                    const badgeColor =
+                      log.type === 'routine' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' :
+                      log.type === 'medicated' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
+                      log.type === 'dry_wash' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800' : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800';
 
-                    const typeName = 
+                    const typeName =
                       log.type === 'routine' ? 'Baño Rutinario' :
                       log.type === 'medicated' ? 'Baño Medicado' :
                       log.type === 'dry_wash' ? 'Baño en Seco' : 'Peluquería Completa';
 
                     return (
-                      <div key={log.id} className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                      <div key={log.id} className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-900/40 border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${badgeColor}`}>
@@ -739,7 +728,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                         <button
                           type="button"
                           onClick={() => deleteBathLog(log.id)}
-                          className="p-1.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950 text-stone-400 hover:text-red-600 transition-colors self-end sm:self-center cursor-pointer"
+                          className="p-1.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/40 text-stone-400 hover:text-red-600 dark:hover:text-red-400 transition-colors self-end sm:self-center cursor-pointer"
                           title="Eliminar del historial"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -751,8 +740,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               )}
             </div>
 
-            {/* Recordatorios Programados de Baño */}
-            <div className="bg-white dark:bg-stone-900 rounded-3xl border border-stone-200 dark:border-stone-800 p-5 space-y-4 shadow-2xs">
+            <div className="bg-white dark:bg-[#1a231d] rounded-3xl border border-stone-200 dark:border-stone-800 p-5 space-y-4 shadow-2xs">
               <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5 text-teal-600 dark:text-teal-400" />
@@ -778,23 +766,23 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                     return (
                       <div
                         key={rem.id}
-                        className={`bg-white dark:bg-stone-850 border rounded-2xl p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                          rem.completed 
-                            ? 'border-stone-200 dark:border-stone-800 opacity-60 bg-stone-50/50 dark:bg-stone-900/40' 
-                            : rem.dueDate < todayStr 
-                            ? 'border-red-300 dark:border-red-800 bg-red-50/20 dark:bg-red-950/20 shadow-xs' 
-                            : 'border-teal-200 dark:border-teal-800 shadow-2xs'
+                        className={`bg-white dark:bg-stone-900 border rounded-2xl p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                          rem.completed
+                            ? 'border-stone-200 dark:border-stone-800 opacity-60 bg-stone-50/50 dark:bg-stone-900/30'
+                            : rem.dueDate < todayStr
+                            ? 'border-red-300 dark:border-red-900/50 bg-red-50/20 dark:bg-red-950/20 shadow-xs'
+                            : 'border-teal-200 dark:border-teal-900/40 shadow-2xs'
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           <button
                             type="button"
                             onClick={() => handleAttemptToggle(rem)}
-                            className="mt-0.5 text-stone-400 hover:text-emerald-600 cursor-pointer transition-colors"
+                            className="mt-0.5 text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer transition-colors"
                             title={rem.completed ? 'Marcar como pendiente' : 'Marcar como completado'}
                           >
                             {rem.completed ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                             ) : (
                               <Circle className="w-5 h-5" />
                             )}
@@ -802,10 +790,10 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border bg-teal-50 dark:bg-teal-950 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800">
+                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800">
                                 🛁 Baño
                               </span>
-                              <h4 className={`font-heading font-extrabold text-sm ${rem.completed ? 'line-through text-stone-400' : 'text-stone-900 dark:text-stone-100'}`}>
+                              <h4 className={`font-heading font-extrabold text-sm ${rem.completed ? 'line-through text-stone-400 dark:text-stone-500' : 'text-stone-900 dark:text-stone-100'}`}>
                                 {rem.name}
                               </h4>
                             </div>
@@ -833,13 +821,14 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                           <button
                             type="button"
                             onClick={() => shareViaWhatsApp(rem)}
-                            className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs hover:bg-emerald-100"
+                            className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
                           >
-                            <span>💬 WhatsApp</span>
+                            <span className="text-xs">💬</span>
+                            <span className="hidden md:inline">WhatsApp</span>
                           </button>
 
                           {isConfirming ? (
-                            <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/80 px-2 py-1 rounded-xl border border-red-200 dark:border-red-800">
+                            <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/60 px-2 py-1 rounded-xl border border-red-200 dark:border-red-900">
                               <span className="text-[11px] font-bold text-red-700 dark:text-red-300">¿Eliminar?</span>
                               <button
                                 type="button"
@@ -863,7 +852,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                             <button
                               type="button"
                               onClick={() => setConfirmDeleteId(rem.id)}
-                              className="text-stone-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors cursor-pointer"
+                              className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -876,8 +865,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               )}
             </div>
 
-            {/* Guía Veterinaria de Baño e Higiene */}
-            <div className="p-5 rounded-3xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-800/60 space-y-3">
+            <div className="p-5 rounded-3xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 space-y-3">
               <div className="flex items-center gap-2">
                 <Info className="w-5 h-5 text-amber-700 dark:text-amber-400" />
                 <h5 className="font-heading font-extrabold text-amber-950 dark:text-amber-200 text-sm">
@@ -886,17 +874,17 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-amber-900 dark:text-amber-300 leading-relaxed">
-                <div className="bg-white/80 dark:bg-stone-900/80 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-800/60 space-y-1">
+                <div className="bg-white/80 dark:bg-stone-900 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 space-y-1">
                   <strong className="font-bold text-amber-950 dark:text-amber-200 block">1. 👂 Oídos Protegidos</strong>
                   <p>Coloca bolitas de algodón seco en la entrada de sus oídos antes del baño para evitar el ingreso de agua y prevenir otitis.</p>
                 </div>
 
-                <div className="bg-white/80 dark:bg-stone-900/80 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-800/60 space-y-1">
+                <div className="bg-white/80 dark:bg-stone-900 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 space-y-1">
                   <strong className="font-bold text-amber-950 dark:text-amber-200 block">2. 🌡️ Agua Tibia y Shampoo Veterinario</strong>
                   <p>El pH de la piel de tu mascota es neutro (~7.5) vs el humano (~5.5). Usa exclusivamente shampoo veterinario y agua tibia a 37°C.</p>
                 </div>
 
-                <div className="bg-white/80 dark:bg-stone-900/80 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-800/60 space-y-1">
+                <div className="bg-white/80 dark:bg-stone-900 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 space-y-1">
                   <strong className="font-bold text-amber-950 dark:text-amber-200 block">3. 💨 Secado Garantizado</strong>
                   <p>Seca muy bien con toalla y secador en temperatura tibia a distancia. La humedad atrapada en el manto o pliegues puede generar dermatitis u hongos.</p>
                 </div>
@@ -907,13 +895,12 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
         {activeTab === 'vaccines' && (
           <div className="space-y-6">
-            {/* 1. PLANTILLAS RÁPIDAS DE VACUNAS Y SALUD */}
-            <div className="p-5 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-3xl border border-emerald-200/65 dark:border-emerald-800/60 shadow-3xs space-y-3">
+            <div className="p-5 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-3xl border border-emerald-200/65 dark:border-emerald-900/40 shadow-3xs space-y-3">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 dark:text-emerald-200 flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-emerald-700 dark:text-emerald-400 animate-pulse" /> Plantillas Rápidas para {activePet.type === 'dog' ? 'Caninos' : 'Felinos'}:
                 </span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                   {petAgeInfo.label} - {petAgeInfo.advice}
                 </span>
               </div>
@@ -926,28 +913,28 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Vacuna Antirrábica Anual', 'vaccine', 365, '1 dosis')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-emerald-100 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                     >
                       💉 + Antirrábica Anual
                     </button>
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Pipeta o Pastilla Antipulgas / Garrapatas', 'deworming', 30, '1 dosis mensual')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-emerald-100 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                     >
                       🧴 + Antipulgas Mensual
                     </button>
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Desparasitante Interno Oral', 'deworming', 90, '1 tableta según peso')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-emerald-100 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                     >
                       💊 + Desparasitación Trimestral
                     </button>
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Control Veterinario General', 'checkup', 180, 'Chequeo preventivo')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-emerald-100 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                     >
                       🩺 + Control Semestral
                     </button>
@@ -957,28 +944,28 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Vacuna Triple Felina Anual', 'vaccine', 365, '1 dosis')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-emerald-100 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                     >
                       💉 + Triple Felina Anual
                     </button>
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Pipeta Antipulgas Mensual', 'deworming', 30, '1 pipeta en cuello')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-emerald-100 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                     >
                       🧴 + Antipulgas Felino
                     </button>
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Malta o Pasta Antibolas de Pelo', 'medication', 7, '2 cm de pasta')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-emerald-100 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                     >
                       🐾 + Pasta de Malta Semanal
                     </button>
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Control Veterinario General', 'checkup', 180, 'Chequeo de rutina')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-850 hover:bg-emerald-100 dark:hover:bg-emerald-950 border border-emerald-200 dark:border-emerald-700 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
                     >
                       🩺 + Control Semestral
                     </button>
@@ -987,8 +974,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               </div>
             </div>
 
-            {/* 2. ESQUEMA DE VACUNACIÓN SUGERIDO */}
-            <div className="p-5 rounded-3xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xs space-y-4 no-print">
+            <div className="p-5 rounded-3xl bg-white dark:bg-[#1a231d] border border-stone-200 dark:border-stone-800 shadow-2xs space-y-4 no-print">
               <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-2.5">
                 <HeartPulse className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 <div>
@@ -1004,46 +990,46 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 {activePet.type === 'dog' ? (
                   <>
-                    <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
+                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
                       <div>
-                        <span className="text-[10px] font-black text-red-700 bg-red-100 dark:bg-red-950/80 dark:text-red-400 px-2 py-0.5 rounded border border-red-200 uppercase">Obligatoria Legal 🛡️</span>
+                        <span className="text-[10px] font-black text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 px-2 py-0.5 rounded border border-red-200 dark:border-red-900 uppercase">Obligatoria Legal 🛡️</span>
                         <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Vacuna Antirrábica</h5>
                         <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Previene la rabia, mortal y transmisible a humanos. Aplicación anual obligatoria.</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => addQuickTemplate('Vacuna Antirrábica Anual', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
+                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
                       >
                         Programar Recordatorio Anual
                       </button>
                     </div>
 
-                    <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
+                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
                       <div>
-                        <span className="text-[10px] font-black text-purple-700 bg-purple-100 dark:bg-purple-950/80 dark:text-purple-400 px-2 py-0.5 rounded border border-purple-200 uppercase">Esencial Crucial 💉</span>
+                        <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/60 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-900 uppercase">Esencial Crucial 💉</span>
                         <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Polivalente / Múltiple Canina</h5>
                         <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Protege contra Parvovirus, Moquillo (Distemper), Adenovirus y Leptospira.</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => addQuickTemplate('Vacuna Polivalente Canina (Sextuple)', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
+                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
                       >
                         Programar Recordatorio Anual
                       </button>
                     </div>
 
-                    <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
+                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
                       <div>
-                        <span className="text-[10px] font-black text-blue-700 bg-blue-100 dark:bg-blue-950/80 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 uppercase">Recomendada 🐕</span>
+                        <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900 uppercase">Recomendada 🐕</span>
                         <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Bordetella / Tos de Perreras</h5>
                         <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Previene infecciones respiratorias en parques o guarderías caninas.</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => addQuickTemplate('Vacuna Contra Tos de Perreras', 'vaccine', 180, '1 dosis semestral')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
+                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
                       >
                         Programar Recordatorio Semestral
                       </button>
@@ -1051,46 +1037,46 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   </>
                 ) : (
                   <>
-                    <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
+                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
                       <div>
-                        <span className="text-[10px] font-black text-purple-700 bg-purple-100 dark:bg-purple-950/80 dark:text-purple-400 px-2 py-0.5 rounded border border-purple-200 uppercase">Esencial Crucial 💉</span>
+                        <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/60 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-900 uppercase">Esencial Crucial 💉</span>
                         <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Triple Felina (RPC)</h5>
                         <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Protege contra Rinotraqueitis, Calicivirus y Panleucopenia Felina.</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => addQuickTemplate('Vacuna Triple Felina RPC', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
+                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
                       >
                         Programar Recordatorio Anual
                       </button>
                     </div>
 
-                    <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
+                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
                       <div>
-                        <span className="text-[10px] font-black text-blue-700 bg-blue-100 dark:bg-blue-950/80 dark:text-blue-400 px-2 py-0.5 rounded border border-blue-200 uppercase">Vital Exterior 🐈</span>
+                        <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900 uppercase">Vital Exterior 🐈</span>
                         <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Leucemia Felina (FeLV)</h5>
                         <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Vital para gatos que salen al exterior o conviven con otros felinos.</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => addQuickTemplate('Vacuna Leucemia Felina', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
+                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
                       >
                         Programar Recordatorio Anual
                       </button>
                     </div>
 
-                    <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
+                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
                       <div>
-                        <span className="text-[10px] font-black text-red-700 bg-red-100 dark:bg-red-950/80 dark:text-red-400 px-2 py-0.5 rounded border border-red-200 uppercase">Obligatoria Legal 🛡️</span>
+                        <span className="text-[10px] font-black text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 px-2 py-0.5 rounded border border-red-200 dark:border-red-900 uppercase">Obligatoria Legal 🛡️</span>
                         <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Antirrábica Felina</h5>
                         <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Previene la rabia en felinos. Aplicación anual obligatoria por salud pública.</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => addQuickTemplate('Vacuna Antirrábica Felina', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
+                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
                       >
                         Programar Recordatorio Anual
                       </button>
@@ -1100,7 +1086,6 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               </div>
             </div>
 
-            {/* 3. TÍTULO Y LISTA DE VACUNAS Y MEDICACIÓN */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200 dark:border-stone-800 pb-2 pt-2">
               <div className="flex items-center gap-2">
                 <span className="text-xl">📋</span>
@@ -1116,21 +1101,21 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   <button
                     type="button"
                     onClick={() => setFilter('all')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'all' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'}`}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'all' ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'}`}
                   >
                     Todos ({healthReminders.length})
                   </button>
                   <button
                     type="button"
                     onClick={() => setFilter('pending')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'pending' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'}`}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'pending' ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'}`}
                   >
                     Pendientes ({healthReminders.filter(r => !r.completed).length})
                   </button>
                   <button
                     type="button"
                     onClick={() => setFilter('completed')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'completed' ? 'bg-white dark:bg-stone-700 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200'}`}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'completed' ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'}`}
                   >
                     Completados ({healthReminders.filter(r => r.completed).length})
                   </button>
@@ -1140,7 +1125,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   <button
                     type="button"
                     onClick={() => setShowClearAllModal(true)}
-                    className="text-xs font-bold text-stone-500 dark:text-stone-400 hover:text-red-600 transition-colors flex items-center gap-1.5 self-end sm:self-center px-2.5 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
+                    className="text-xs font-bold text-stone-500 dark:text-stone-400 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1.5 self-end sm:self-center px-2.5 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-stone-400 hover:text-red-600" />
                     <span>Vaciar vacunas y medicación</span>
@@ -1149,15 +1134,15 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               </div>
 
               {filteredHealthReminders.length === 0 ? (
-                <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-8 text-center space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                <div className="bg-white dark:bg-[#1a231d] border border-stone-200 dark:border-stone-800 rounded-3xl p-8 text-center space-y-2">
+                  <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
                     <CheckCircle2 className="w-5 h-5" />
                   </div>
                   <h4 className="font-heading font-extrabold text-stone-800 dark:text-stone-200 text-sm">
-                    {filter === 'all' 
-                      ? 'No hay vacunas ni medicamentos programados' 
-                      : filter === 'pending' 
-                      ? '¡No tienes tareas pendientes!' 
+                    {filter === 'all'
+                      ? 'No hay vacunas ni medicamentos programados'
+                      : filter === 'pending'
+                      ? '¡No tienes tareas pendientes!'
                       : 'No hay recordatorios completados todavía.'}
                   </h4>
                   <p className="text-xs text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
@@ -1175,153 +1160,151 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                     return (
                       <div
                         key={rem.id}
-                        className={`bg-white dark:bg-stone-850 border rounded-2xl p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                          rem.completed 
-                            ? 'border-stone-200 dark:border-stone-800 opacity-60 bg-stone-50/50 dark:bg-stone-900/40' 
-                            : rem.dueDate < todayStr 
-                            ? 'border-red-300 dark:border-red-800 bg-red-50/20 dark:bg-red-950/20 shadow-xs' 
-                            : 'border-stone-200 dark:border-stone-800 shadow-2xs hover:border-emerald-300'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleAttemptToggle(rem)}
-                            className="mt-0.5 text-stone-400 hover:text-emerald-600 cursor-pointer transition-colors"
-                            title={rem.completed ? 'Marcar como pendiente' : 'Marcar como completado'}
-                          >
-                            {rem.completed ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                            ) : (
-                              <Circle className="w-5 h-5" />
-                            )}
-                          </button>
+                        className={`bg-white dark:bg-stone-900 border rounded-2xl p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                        rem.completed
+                          ? 'border-stone-200 dark:border-stone-800 opacity-60 bg-stone-50/50 dark:bg-stone-900/30'
+                          : rem.dueDate < todayStr
+                          ? 'border-red-300 dark:border-red-900/50 bg-red-50/20 dark:bg-red-950/20 shadow-xs'
+                          : 'border-stone-200 dark:border-stone-800 shadow-2xs hover:border-emerald-300 dark:hover:border-emerald-700'
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleAttemptToggle(rem)}
+                          className="mt-0.5 text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer transition-colors"
+                          title={rem.completed ? 'Marcar como pendiente' : 'Marcar como completado'}
+                        >
+                          {rem.completed ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                          ) : (
+                            <Circle className="w-5 h-5" />
+                          )}
+                        </button>
 
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${
-                                rem.type === 'vaccine' 
-                                  ? 'bg-blue-50 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800' 
-                                  : rem.type === 'deworming' 
-                                  ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' 
-                                  : 'bg-amber-50 dark:bg-amber-950 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                              }`}>
-                                {rem.type === 'vaccine' ? '💉 Vacuna' : rem.type === 'deworming' ? '🧴 Antiparasitario' : '💊 Medicación'}
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${
+                              rem.type === 'vaccine'
+                                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                : rem.type === 'deworming'
+                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                            }`}>
+                              {rem.type === 'vaccine' ? '💉 Vacuna' : rem.type === 'deworming' ? '🧴 Antiparasitario' : '💊 Medicación'}
+                            </span>
+                            <h4 className={`font-heading font-extrabold text-sm ${rem.completed ? 'line-through text-stone-400 dark:text-stone-500' : 'text-stone-900 dark:text-stone-100'}`}>
+                              {rem.name}
+                            </h4>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+                            {rem.dosage && (
+                              <span className="flex items-center gap-1 text-stone-700 dark:text-stone-300 font-medium">
+                                <Pill className="w-3.5 h-3.5 text-stone-400" /> {rem.dosage}
                               </span>
-                              <h4 className={`font-heading font-extrabold text-sm ${rem.completed ? 'line-through text-stone-400' : 'text-stone-900 dark:text-stone-100'}`}>
-                                {rem.name}
-                              </h4>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
-                              {rem.dosage && (
-                                <span className="flex items-center gap-1 text-stone-700 dark:text-stone-300 font-medium">
-                                  <Pill className="w-3.5 h-3.5 text-stone-400" /> {rem.dosage}
-                                </span>
-                              )}
-                              {rem.notes && (
-                                <span className="text-stone-500 dark:text-stone-400 italic">
-                                  • {rem.notes}
-                                </span>
-                              )}
-                            </div>
+                            )}
+                            {rem.notes && (
+                              <span className="text-stone-500 dark:text-stone-400 italic">
+                                • {rem.notes}
+                              </span>
+                            )}
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
-                          <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${urgency.color}`}>
-                            {urgency.label}
-                          </span>
+                      <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
+                        <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${urgency.color}`}>
+                          {urgency.label}
+                        </span>
 
-                          <button
-                            type="button"
-                            onClick={() => shareViaWhatsApp(rem)}
-                            className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs hover:bg-emerald-100"
-                            title="Enviar recordatorio por WhatsApp"
-                          >
-                            <span className="text-xs">💬</span>
-                            <span className="hidden md:inline">WhatsApp</span>
-                          </button>
+                        <button
+                          type="button"
+                          onClick={() => shareViaWhatsApp(rem)}
+                          className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                          title="Enviar recordatorio por WhatsApp"
+                        >
+                          <span className="text-xs">💬</span>
+                          <span className="hidden md:inline">WhatsApp</span>
+                        </button>
 
-                          <button
-                            type="button"
-                            onClick={() => exportToCalendar(rem)}
-                            className="px-2.5 py-1 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                            title="Añadir a Google/Apple Calendar (.ics)"
-                          >
-                            <Calendar className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
-                            <span className="hidden md:inline">Calendar</span>
-                          </button>
+                        <button
+                          type="button"
+                          onClick={() => exportToCalendar(rem)}
+                          className="px-2.5 py-1 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                          title="Añadir a Google/Apple Calendar (.ics)"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
+                          <span className="hidden md:inline">Calendar</span>
+                        </button>
 
-                          {isConfirming ? (
-                            <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/80 px-2 py-1 rounded-xl border border-red-200 dark:border-red-800">
-                              <span className="text-[11px] font-bold text-red-700 dark:text-red-300">¿Eliminar?</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  deleteReminder(rem.id);
-                                  setConfirmDeleteId(null);
-                                }}
-                                className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                              >
-                                Sí
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 text-stone-700 dark:text-stone-200 rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
+{isConfirming ? (
+                          <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/60 px-2 py-1 rounded-xl border border-red-200 dark:border-red-900 animate-in fade-in">
+                            <span className="text-[11px] font-bold text-red-700 dark:text-red-300">¿Eliminar?</span>
                             <button
                               type="button"
-                              onClick={() => setConfirmDeleteId(rem.id)}
-                              className="text-stone-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors cursor-pointer"
-                              title="Eliminar este recordatorio"
+                              onClick={() => {
+                                deleteReminder(rem.id);
+                                setConfirmDeleteId(null);
+                              }}
+                              className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              Sí
                             </button>
-                          )}
-                        </div>
+                            <button
+                              type="button"
+                              onClick={() => setConfirmDeleteId(null)}
+                              className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-700 dark:text-stone-200 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setConfirmDeleteId(rem.id)}
+                            className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                            title="Eliminar este recordatorio"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* ADVERTENCIA LEGAL Y MÉDICA */}
-            <div className="p-5 rounded-3xl bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-800 shadow-3xs space-y-3 no-print mt-6">
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-                  <AlertTriangle className="w-5 h-5" />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-sm">
-                    ⚠️ ADVERTENCIA DE SEGURIDAD LEGAL Y SALUD ANIMAL
-                  </h4>
-                  <p className="text-stone-700 dark:text-stone-300 text-xs leading-relaxed">
-                    Este módulo es un <strong>registro personal de seguimiento informativo</strong>. Bajo ninguna circunstancia debes medicar, desparasitar o vacunar a tu mascota por cuenta propia sin previa receta y diagnóstico de un veterinario matriculado. 
-                  </p>
-                </div>
+                    </div>
+                  );
+                })}
               </div>
-              <p className="text-[11px] text-red-800 dark:text-red-300 bg-white/70 dark:bg-stone-900/60 p-2.5 rounded-xl border border-red-100 dark:border-red-900 font-bold leading-normal">
-                ❌ El uso incorrecto de medicamentos humanos o dosis inadecuadas de desparasitantes pueden provocar intoxicaciones severas, fallas orgánicas irreversibles o la muerte de tu animal de compañía. Consulta siempre a un veterinario antes de dar cualquier fármaco.
-              </p>
+            )}
             </div>
           </div>
         )}
       </div>
 
-      {/* MODAL VACIAR TODOS LOS RECORDATORIOS */}
+      <div className="p-5 rounded-3xl bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-900/50 shadow-3xs space-y-3 animate-fade-in no-print mt-6">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-sm">
+              ⚠️ ADVERTENCIA DE SEGURIDAD LEGAL Y SALUD ANIMAL
+            </h4>
+            <p className="text-stone-700 dark:text-stone-300 text-xs leading-relaxed">
+              Este módulo es un <strong>registro personal de seguimiento informativo</strong>. Bajo ninguna circunstancia debes medicar, desparasitar o vacunar a tu mascota por cuenta propia sin previa receta y diagnóstico de un veterinario matriculado.
+            </p>
+          </div>
+        </div>
+        <p className="text-[11px] text-red-800 dark:text-red-300 bg-white/70 dark:bg-stone-900/60 p-2.5 rounded-xl border border-red-100 dark:border-red-900 font-bold leading-normal">
+          ❌ El uso incorrecto de medicamentos humanos (como el paracetamol o ibuprofeno) o dosis inadecuadas de desparasitantes pueden provocar intoxicaciones severas, fallas orgánicas irreversibles o la muerte de tu animal de compañía. Consulta siempre a un veterinario antes de dar cualquier fármaco.
+        </p>
+      </div>
+
       {showClearAllModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-sm w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-stone-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
+          <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-sm w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a231d]">
               <div className="flex items-center gap-3 text-red-600">
-                <div className="w-9 h-9 rounded-2xl bg-red-50 dark:bg-red-950 flex items-center justify-center shrink-0">
+                <div className="w-9 h-9 rounded-2xl bg-red-50 dark:bg-red-950/60 flex items-center justify-center shrink-0">
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
@@ -1343,16 +1326,16 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
             </div>
 
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs sm:text-sm flex-1">
-              <p className="text-xs text-stone-600 dark:text-stone-400 bg-stone-50 dark:bg-stone-850 p-3 rounded-xl border border-stone-100 dark:border-stone-800 leading-relaxed">
+              <p className="text-xs text-stone-600 dark:text-stone-300 bg-stone-50 dark:bg-stone-900/40 p-3 rounded-xl border border-stone-100 dark:border-stone-800 leading-relaxed">
                 Esta acción borrará las vacunas y fechas registradas de tu mascota para que puedas comenzar con una lista en blanco.
               </p>
             </div>
 
-            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-850/90 flex items-center justify-end gap-2.5 shrink-0">
+            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-900/90 flex items-center justify-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowClearAllModal(false)}
-                className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-200"
+                className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-300"
               >
                 Cancelar
               </button>
@@ -1371,11 +1354,10 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
         </div>
       )}
 
-      {/* MODAL CONFIRMACIÓN PLANTILLA RÁPIDA - EDITABLE FECHA */}
       {confirmQuickTemplate && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-stone-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
+          <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a231d]">
               <h3 className="font-heading font-extrabold text-base text-stone-900 dark:text-stone-100">
                 Confirmar Recordatorio
               </h3>
@@ -1405,7 +1387,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                     ...confirmQuickTemplate,
                     editableDate: e.target.value
                   })}
-                  className="w-full px-3 py-2.5 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 text-sm font-bold"
+                  className="w-full px-3 py-2.5 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden text-sm font-bold"
                 />
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">
                   Recomendado: {confirmQuickTemplate.calculatedDate} ({confirmQuickTemplate.days} días desde hoy)
@@ -1415,23 +1397,23 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               {confirmQuickTemplate.dosage && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800">
                   <p className="text-xs text-stone-600 dark:text-stone-400 mb-1">💊 Dosis sugerida:</p>
-                  <p className="font-bold text-amber-900 dark:text-amber-200 text-sm">{confirmQuickTemplate.dosage}</p>
+                  <p className="font-bold text-amber-900 dark:text-amber-300 text-sm">{confirmQuickTemplate.dosage}</p>
                 </div>
               )}
 
-              <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-800">
-                <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
-                  ⚠️ Esta fecha es una recomendación basada en guías generales. 
+              <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-xl border border-stone-200 dark:border-stone-800">
+                <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+                  ⚠️ Esta fecha es una recomendación basada en guías generales.
                   Siempre consulta con tu veterinario para el esquema ideal para {activePet.name}.
                 </p>
               </div>
             </div>
 
-            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-850/90 flex items-center justify-end gap-2.5 shrink-0">
+            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-900/90 flex items-center justify-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setConfirmQuickTemplate(null)}
-                className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-200"
+                className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-300"
               >
                 Cancelar
               </button>
@@ -1447,11 +1429,10 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
         </div>
       )}
 
-      {/* MODAL CREAR RECORDATORIO MANUAL */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-stone-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
+          <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a231d]">
               <h3 className="font-heading font-extrabold text-base text-stone-900 dark:text-stone-100">
                 Nuevo Recordatorio
               </h3>
@@ -1472,7 +1453,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                     <select
                       value={form.type}
                       onChange={e => setForm({ ...form, type: e.target.value as Reminder['type'] })}
-                      className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 font-bold"
+                      className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden font-bold"
                     >
                       <option value="vaccine">💉 Vacuna</option>
                       <option value="deworming">🧴 Antiparasitario</option>
@@ -1488,7 +1469,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                       required
                       value={form.dueDate}
                       onChange={e => setForm({ ...form, dueDate: e.target.value })}
-                      className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 font-bold"
+                      className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden font-bold"
                     />
                   </div>
                 </div>
@@ -1498,10 +1479,10 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   <input
                     type="text"
                     required
-                    placeholder="Escribe el nombre del tratamiento, vacuna o antiparasitario"
+                    placeholder="Escribe el nombre del tratamiento"
                     value={form.name}
                     onChange={e => setForm({ ...form, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100"
+                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 </div>
 
@@ -1509,10 +1490,10 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Dosis / Frecuencia</label>
                   <input
                     type="text"
-                    placeholder="Cantidad a suministrar y horario de administración"
+                    placeholder="Cantidad a suministrar"
                     value={form.dosage}
                     onChange={e => setForm({ ...form, dosage: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100"
+                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 </div>
 
@@ -1520,19 +1501,19 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Notas adicionales (opcional)</label>
                   <input
                     type="text"
-                    placeholder="Indicaciones especiales de suministro o compra"
+                    placeholder="Indicaciones especiales"
                     value={form.notes}
                     onChange={e => setForm({ ...form, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100"
+                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
                   />
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-850/90 flex items-center justify-end gap-2.5 shrink-0">
+              <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-900/90 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-200"
+                  className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-300"
                 >
                   Cancelar
                 </button>
@@ -1548,13 +1529,12 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
         </div>
       )}
 
-      {/* MODAL REGISTRAR BAÑO */}
       {showBathModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-stone-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
+          <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a231d]">
               <div className="flex items-center gap-2">
-                <span className="p-2 bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 rounded-xl">
+                <span className="p-2 bg-teal-100 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 rounded-xl">
                   <Droplets className="w-5 h-5" />
                 </span>
                 <h3 className="font-heading font-extrabold text-base text-stone-900 dark:text-stone-100">
@@ -1580,7 +1560,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                       required
                       value={bathForm.date}
                       onChange={e => setBathForm({ ...bathForm, date: e.target.value })}
-                      className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-teal-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 font-bold"
+                      className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-teal-500 font-bold"
                     />
                   </div>
 
@@ -1589,7 +1569,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                     <select
                       value={bathForm.type}
                       onChange={e => setBathForm({ ...bathForm, type: e.target.value as BathLog['type'] })}
-                      className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-teal-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 font-bold"
+                      className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-teal-500 font-bold"
                     >
                       <option value="routine">🧼 Rutinario (Agua + Shampoo)</option>
                       <option value="medicated">🧴 Medicado / Dermatológico</option>
@@ -1603,10 +1583,10 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Shampoo / Producto Usado</label>
                   <input
                     type="text"
-                    placeholder="Ej. Hipoalergénico Avena, Clorexidina 2%, Antipulgas"
+                    placeholder="Ej. Hipoalergénico Avena, Clorexidina"
                     value={bathForm.shampooUsed}
                     onChange={e => setBathForm({ ...bathForm, shampooUsed: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-teal-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 font-bold"
+                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-teal-500 font-bold"
                   />
                 </div>
 
@@ -1615,12 +1595,12 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   <select
                     value={bathForm.nextBathDays}
                     onChange={e => setBathForm({ ...bathForm, nextBathDays: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-teal-500 font-bold text-teal-800 dark:text-teal-300 bg-teal-50/50 dark:bg-stone-850"
+                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-teal-500 font-bold text-teal-800 dark:text-teal-300 bg-teal-50/50 dark:bg-teal-950/40"
                   >
                     <option value={7}>En 7 días (Recomendado Baño Medicado)</option>
-                    <option value={15}>En 15 días (Recomendado Pelo Largo / Muy Activo)</option>
+                    <option value={15}>En 15 días (Recomendado Pelo Largo)</option>
                     <option value={21}>En 21 días (Frecuencia Estándar Canina)</option>
-                    <option value={30}>En 30 días (Frecuencia Pelo Corto / Sensible)</option>
+                    <option value={30}>En 30 días (Frecuencia Pelo Corto)</option>
                     <option value={45}>En 45 días (Peluquería & Felinos)</option>
                     <option value={60}>En 60 días (Felinos / Baño Seco)</option>
                   </select>
@@ -1630,23 +1610,23 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Notas o Comportamiento (opcional)</label>
                   <input
                     type="text"
-                    placeholder="Ej. Usó secador tranquilo, corte de uñas realizado, oídos limpios"
+                    placeholder="Ej. Secador tranquilo, oídos limpios"
                     value={bathForm.notes}
                     onChange={e => setBathForm({ ...bathForm, notes: e.target.value })}
-                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-teal-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100"
+                    className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
                 </div>
 
                 <div className="p-3 bg-teal-50 dark:bg-teal-950/40 rounded-2xl border border-teal-200 dark:border-teal-800 text-[11px] text-teal-900 dark:text-teal-200 leading-snug">
-                  💡 Al guardar, se registrará la entrada en el historial y se creará automáticamente un recordatorio de próximo baño para el día correspondiente.
+                  💡 Al guardar, se registrará la entrada en el historial y se creará automáticamente un recordatorio de próximo baño.
                 </div>
               </div>
 
-              <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-850/90 flex items-center justify-end gap-2.5 shrink-0">
+              <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-900/90 flex items-center justify-end gap-2.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowBathModal(false)}
-                  className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-200"
+                  className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-300"
                 >
                   Cancelar
                 </button>
@@ -1662,13 +1642,12 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
         </div>
       )}
 
-      {/* MODAL CONFIRMAR PLANTILLA RÁPIDA DE BAÑO */}
       {confirmQuickBath && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-stone-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
+          <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a231d]">
               <div className="flex items-center gap-2">
-                <span className="p-2 bg-teal-100 dark:bg-teal-950 text-teal-800 dark:text-teal-300 rounded-xl">
+                <span className="p-2 bg-teal-100 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 rounded-xl">
                   <Droplets className="w-5 h-5" />
                 </span>
                 <h3 className="font-heading font-extrabold text-base text-stone-900 dark:text-stone-100">
@@ -1699,7 +1678,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   required
                   value={confirmQuickBath.bathDate}
                   onChange={e => setConfirmQuickBath({ ...confirmQuickBath, bathDate: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-teal-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 font-bold text-sm"
+                  className="w-full px-3 py-2.5 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-teal-500 font-bold text-sm"
                 />
               </div>
 
@@ -1711,23 +1690,23 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                   type="text"
                   value={confirmQuickBath.shampooUsed}
                   onChange={e => setConfirmQuickBath({ ...confirmQuickBath, shampooUsed: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-stone-300 dark:border-stone-700 rounded-xl focus:ring-2 focus:ring-teal-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 font-bold"
+                  className="w-full px-3 py-2.5 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-teal-500 font-bold"
                 />
               </div>
 
-              <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-1">
+              <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 space-y-1">
                 <span className="text-stone-500 dark:text-stone-400 block text-[11px]">⏰ Próximo Recordatorio Automático:</span>
                 <p className="font-bold text-teal-800 dark:text-teal-300">
-                  En {confirmQuickBath.daysToNext} días ({new Date(new Date(confirmQuickBath.bathDate + 'T00:00:00').getTime() + confirmQuickBath.daysToNext * 24 * 60 * 60 * 1000).toISOString().split('T')[0]})
+                  En {confirmQuickBath.daysToNext} días ({addDaysToDate(confirmQuickBath.bathDate, confirmQuickBath.daysToNext)})
                 </p>
               </div>
             </div>
 
-            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-850/90 flex items-center justify-end gap-2.5 shrink-0">
+            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-900/90 flex items-center justify-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setConfirmQuickBath(null)}
-                className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-200"
+                className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-300"
               >
                 Cancelar
               </button>
@@ -1743,18 +1722,17 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
         </div>
       )}
 
-      {/* MODAL INTELIGENTE DE COMPLETAR RECORDATORIO Y RE-PROGRAMAR */}
       {completingReminderState && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
-          <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-lg w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
-            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-stone-900">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
+          <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-lg w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
+            <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a231d]">
               <div className="flex items-center gap-2.5">
                 <div className={`p-2.5 rounded-2xl ${
                   completingReminderState.reminder.dueDate < todayStr
-                    ? 'bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300'
+                    ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300'
                     : completingReminderState.reminder.dueDate > todayStr
-                    ? 'bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300'
-                    : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300'
+                    ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300'
+                    : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
                 }`}>
                   {completingReminderState.reminder.dueDate < todayStr ? (
                     <AlertTriangle className="w-5 h-5" />
@@ -1789,8 +1767,8 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs sm:text-sm flex-1">
               {completingReminderState.reminder.dueDate < todayStr && (
-                <div className="p-3.5 bg-red-50 dark:bg-red-950/40 rounded-2xl border border-red-200 dark:border-red-800 text-xs text-red-900 dark:text-red-300 space-y-1">
-                  <strong className="font-bold block text-red-950 dark:text-red-200">⚠️ Estaba programado para el {completingReminderState.reminder.dueDate}:</strong>
+                <div className="p-3.5 bg-red-50 dark:bg-red-950/40 rounded-2xl border border-red-200 dark:border-red-800 text-xs text-red-900 dark:text-red-200 space-y-1">
+                  <strong className="font-bold block text-red-950 dark:text-red-100">⚠️ Estaba programado para el {completingReminderState.reminder.dueDate}:</strong>
                   <p>
                     Puedes marcarlo como completado <strong>hoy mismo</strong> o seleccionar la <strong>fecha real en que se realizó</strong> para mantener la periodicidad médica correcta.
                   </p>
@@ -1798,8 +1776,8 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               )}
 
               {completingReminderState.reminder.dueDate > todayStr && (
-                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-300 space-y-1">
-                  <strong className="font-bold block text-amber-950 dark:text-amber-200">⏰ Está programado para el {completingReminderState.reminder.dueDate}:</strong>
+                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">
+                  <strong className="font-bold block text-amber-950 dark:text-amber-100">⏰ Está programado para el {completingReminderState.reminder.dueDate}:</strong>
                   <p>
                     Estás completando esta tarea antes de tiempo. Selecciona abajo la fecha real de aplicación para calcular el siguiente ciclo de salud.
                   </p>
@@ -1819,7 +1797,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                     ...completingReminderState,
                     completionDate: e.target.value
                   })}
-                  className="w-full px-3.5 py-2.5 border border-stone-300 dark:border-stone-700 rounded-xl font-bold text-sm text-stone-900 dark:text-stone-100 bg-stone-50 dark:bg-stone-850 focus:ring-2 focus:ring-emerald-500"
+                  className="w-full px-3.5 py-2.5 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl font-bold text-sm focus:ring-2 focus:ring-emerald-500"
                 />
 
                 <div className="flex gap-2 flex-wrap pt-1">
@@ -1857,7 +1835,7 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                 </div>
               </div>
 
-              <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/60 space-y-3">
+              <div className="p-4 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200/80 dark:border-emerald-900/40 space-y-3">
                 <label className="flex items-center gap-2 cursor-pointer font-bold text-emerald-950 dark:text-emerald-200">
                   <input
                     type="checkbox"
@@ -1884,27 +1862,20 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                           ...completingReminderState,
                           recurringDays: Math.max(1, parseInt(e.target.value) || 1)
                         })}
-                        className="w-20 px-2.5 py-1.5 bg-white dark:bg-stone-850 border border-emerald-300 dark:border-emerald-700 rounded-lg text-center font-extrabold text-stone-900 dark:text-stone-100"
+                        className="w-20 px-2.5 py-1.5 bg-white dark:bg-stone-900 border border-emerald-300 dark:border-emerald-700 rounded-lg text-center font-extrabold text-stone-900 dark:text-stone-100"
                       />
                       <span className="text-stone-700 dark:text-stone-300 font-medium">días</span>
                     </div>
 
-                    {(() => {
-                      const baseDate = new Date(completingReminderState.completionDate + 'T00:00:00');
-                      const nextDate = new Date(baseDate.getTime() + completingReminderState.recurringDays * 24 * 60 * 60 * 1000);
-                      const nextStr = nextDate.toISOString().split('T')[0];
-                      return (
-                        <div className="p-2.5 bg-white/90 dark:bg-stone-850 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-300 font-bold">
-                          🗓️ Próxima fecha calculada: <span className="text-emerald-700 dark:text-emerald-400 font-black">{nextStr}</span> (sumando {completingReminderState.recurringDays} días a la fecha de realización).
-                        </div>
-                      );
-                    })()}
+                    <div className="p-2.5 bg-white/90 dark:bg-stone-900 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-300 font-bold">
+                      🗓️ Próxima fecha calculada: <span className="text-emerald-700 dark:text-emerald-400 font-black">{addDaysToDate(completingReminderState.completionDate, completingReminderState.recurringDays)}</span> (sumando {completingReminderState.recurringDays} días).
+                    </div>
                   </div>
                 )}
               </div>
 
               {completingReminderState.reminder.type === 'bath' && (
-                <div className="p-4 bg-teal-50/70 dark:bg-teal-950/30 rounded-2xl border border-teal-200/80 dark:border-teal-800/60 space-y-3">
+                <div className="p-4 bg-teal-50/70 dark:bg-teal-950/30 rounded-2xl border border-teal-200/80 dark:border-teal-900/40 space-y-3">
                   <label className="flex items-center gap-2 cursor-pointer font-bold text-teal-950 dark:text-teal-200">
                     <input
                       type="checkbox"
@@ -1920,18 +1891,18 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
 
                   {completingReminderState.logBathHistory && (
                     <div className="pl-6 pt-1 space-y-1">
-                      <label className="block text-[11px] font-bold text-teal-900 dark:text-teal-200">
+                      <label className="block text-[11px] font-bold text-teal-900 dark:text-teal-300">
                         Shampoo / Producto Usado:
                       </label>
                       <input
                         type="text"
-                        placeholder="Ej. Shampoo hipoalergénico, jabón de avena..."
+                        placeholder="Ej. Shampoo hipoalergénico..."
                         value={completingReminderState.shampooUsed}
                         onChange={e => setCompletingReminderState({
                           ...completingReminderState,
                           shampooUsed: e.target.value
                         })}
-                        className="w-full px-3 py-1.5 bg-white dark:bg-stone-850 border border-teal-300 dark:border-teal-700 rounded-xl font-medium text-stone-900 dark:text-stone-100"
+                        className="w-full px-3 py-1.5 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 border border-teal-300 dark:border-teal-700 rounded-xl font-medium"
                       />
                     </div>
                   )}
@@ -1939,11 +1910,11 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
               )}
             </div>
 
-            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-850/90 flex items-center justify-end gap-2.5 shrink-0">
+            <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-900/90 flex items-center justify-end gap-2.5 shrink-0">
               <button
                 type="button"
                 onClick={() => setCompletingReminderState(null)}
-                className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-200"
+                className="px-4 py-2.5 rounded-xl border border-stone-300 dark:border-stone-700 hover:bg-stone-50 dark:hover:bg-stone-800 font-bold text-xs cursor-pointer text-stone-700 dark:text-stone-300"
               >
                 Cancelar
               </button>
@@ -1955,11 +1926,9 @@ export const RemindersModule: React.FC<Props> = ({ onOpenSubscriptionModal = () 
                 Confirmar y Completar
               </button>
             </div>
-
           </div>
         </div>
       )}
-
     </div>
   );
 };

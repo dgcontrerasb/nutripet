@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { usePets } from '../context/PetContext';
-import { Plus, X, LogIn, LogOut, Check, ShieldCheck, Sparkles, Crown, ChevronDown, Trash2, AlertTriangle, Loader2, User as UserIcon } from 'lucide-react';
+import { Plus, X, LogIn, LogOut, Check, ShieldCheck, Sparkles, Crown, ChevronDown, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { PetProfile, PetType } from '../types';
 import { POPULAR_BREEDS } from '../data';
 
@@ -33,15 +33,13 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
 
   const isPro = subscription.tier !== 'free' && subscription.status === 'active';
   const isAdminUser = user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
-  const hasReachedPetLimit = pets.length >= 8;
 
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState<boolean>(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
 
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
   const [showAuthModal, setShowAuthModal] = useState<boolean>(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState<boolean>(false);
 
   const [newPetName, setNewPetName] = useState<string>('');
   const [newPetType, setNewPetType] = useState<PetType>('dog');
@@ -59,17 +57,14 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsDropdownOpen(false);
       }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setIsUserMenuOpen(false);
-      }
     };
-    if (isDropdownOpen || isUserMenuOpen) {
+    if (isDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isDropdownOpen, isUserMenuOpen]);
+  }, [isDropdownOpen]);
 
   // Bloquear scroll del body cuando hay modales abiertos
   useEffect(() => {
@@ -121,31 +116,28 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
     }
   };
 
-  const handleDeleteUserAccount = async () => {
-    const confirmDelete = window.confirm(
-      '⚠️ ¿Estás completamente seguro de que deseas eliminar tu cuenta permanentemente?\n\nEsta acción borrará de forma irreversible todas tus mascotas, fichas clínicas, recordatorios y datos de nuestra base de datos.'
+  const handleDeleteAccount = async () => {
+    const confirmed = window.confirm(
+      '¿Deseas eliminar permanentemente tu cuenta y los datos asociados? Esta acción no se puede deshacer.'
     );
-    if (!confirmDelete) return;
+    if (!confirmed) return;
 
-    const secondConfirm = window.prompt(
-      'Para confirmar, escribe "ELIMINAR" en mayúsculas:'
-    );
-    if (secondConfirm !== 'ELIMINAR') {
-      alert('Operación cancelada. El texto ingresado no coincide.');
+    const confirmationText = window.prompt('Para confirmar, escribe ELIMINAR:');
+    if (confirmationText !== 'ELIMINAR') {
+      window.alert('Eliminación cancelada.');
       return;
     }
 
     try {
+      setIsDeletingAccount(true);
       await deleteUserAccount();
-      alert('Tu cuenta y todos tus datos personales han sido eliminados correctamente de NutriPet.');
+      window.alert('Tu cuenta y los datos asociados se eliminaron. El periodo de prueba no se reiniciará si vuelves a registrarte con el mismo correo.');
       window.location.reload();
-    } catch (err: any) {
-      console.error('Error al eliminar cuenta:', err);
-      alert(
-        err?.code === 'auth/requires-recent-login'
-          ? 'Por motivos de seguridad de Google, debes cerrar sesión, volver a iniciar sesión e intentarlo de nuevo inmediatamente.'
-          : 'Ocurrió un error al procesar la solicitud. Si el problema persiste, escríbenos a nutripet.v2@gmail.com.'
-      );
+    } catch (error) {
+      console.error('Error al eliminar la cuenta:', error);
+      window.alert(error instanceof Error ? error.message : 'No se pudo eliminar la cuenta. Inténtalo de nuevo.');
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -341,12 +333,10 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                   )}
                 </div>
 
-                <div className="pt-2 border-t border-stone-100 dark:border-stone-800">
+                <div className="pt-2 border-t border-stone-100 dark:border-stone-800 space-y-1.5">
                   <button
                     type="button"
-                    disabled={hasReachedPetLimit}
                     onClick={() => {
-                      if (hasReachedPetLimit) return;
                       setIsDropdownOpen(false);
                       if (!isPro && pets.length >= 1) {
                         if (onOpenSubscriptionModal) onOpenSubscriptionModal();
@@ -354,20 +344,26 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                         setShowAddModal(true);
                       }
                     }}
-                    className={`w-full py-2 px-3 rounded-xl border text-xs font-bold flex items-center justify-center gap-2 transition-all shadow-2xs ${
-                      hasReachedPetLimit
-                        ? 'border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-800 text-stone-400 dark:text-stone-500 cursor-not-allowed'
-                        : 'border-dashed border-emerald-300 dark:border-emerald-700/70 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 cursor-pointer active:scale-98'
-                    }`}
-                    title={hasReachedPetLimit ? 'Límite máximo alcanzado (8/8 mascotas)' : 'Registrar nueva mascota'}
+                    className="w-full py-2 px-3 rounded-xl border border-dashed border-emerald-300 dark:border-emerald-700/70 bg-emerald-50/50 dark:bg-emerald-950/30 hover:bg-emerald-100/60 dark:hover:bg-emerald-900/40 text-emerald-800 dark:text-emerald-300 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-98"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>
-                      {hasReachedPetLimit 
-                        ? 'Límite alcanzado (8/8 mascotas)' 
-                        : `Agregar Nueva Mascota (${pets.length}/8)${!isPro && pets.length >= 1 ? ' 👑' : ''}`}
-                    </span>
+                    <span>Agregar Nueva Mascota {!isPro && pets.length >= 1 && '👑'}</span>
                   </button>
+
+                  {/* Opción de Panel Administrador en el menú desplegable */}
+                  {isAdminUser && onOpenAdminModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDropdownOpen(false);
+                        onOpenAdminModal();
+                      }}
+                      className="w-full py-2 px-3 rounded-xl bg-purple-50 dark:bg-purple-950/40 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800 text-purple-900 dark:text-purple-200 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-98"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                      <span>Panel Administrador</span>
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -375,6 +371,19 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
 
           {/* Estado de Suscripción, Sincronización y Cuenta Google */}
           <div className="flex items-center justify-end gap-2 shrink-0">
+            {/* Acceso rápido a Panel Administrador visible en versión web */}
+            {isAdminUser && onOpenAdminModal && (
+              <button
+                type="button"
+                onClick={onOpenAdminModal}
+                title="Abrir Panel Administrador"
+                className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-purple-50 dark:bg-purple-950/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-95"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                <span>Panel Admin</span>
+              </button>
+            )}
+
             {user && (
               <button
                 type="button"
@@ -412,61 +421,35 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
             )}
 
             {user ? (
-              <div className="relative shrink-0" ref={userMenuRef}>
+              <div className="flex items-center gap-1 bg-emerald-50/90 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/80 p-1 sm:px-2 sm:py-1 rounded-2xl shadow-2xs shrink-0">
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center text-[10px] font-bold text-emerald-800 dark:text-emerald-200 shrink-0 ring-1 ring-emerald-400">
+                  {user.photoURL ? (
+                    <img src={user.photoURL} alt={user.displayName || 'Google Account'} className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{(user.email || 'G').charAt(0).toUpperCase()}</span>
+                  )}
+                </div>
                 <button
                   type="button"
-                  onClick={() => setIsUserMenuOpen(prev => !prev)}
-                  className="flex items-center gap-1.5 bg-emerald-50/90 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700/80 p-1 sm:px-2 sm:py-1 rounded-2xl shadow-2xs hover:bg-emerald-100/70 dark:hover:bg-emerald-900/60 transition-colors cursor-pointer"
-                  title="Opciones de cuenta"
+                  onClick={logout}
+                  title="Cerrar sesión"
+                  aria-label="Cerrar sesión"
+                  className="text-stone-500 hover:text-red-600 dark:text-stone-400 dark:hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer shrink-0"
                 >
-                  <div className="w-6 h-6 rounded-full overflow-hidden bg-emerald-200 dark:bg-emerald-800 flex items-center justify-center text-[10px] font-bold text-emerald-800 dark:text-emerald-200 shrink-0 ring-1 ring-emerald-400">
-                    {user.photoURL ? (
-                      <img src={user.photoURL} alt={user.displayName || 'Google Account'} className="w-full h-full object-cover" />
-                    ) : (
-                      <span>{(user.email || 'G').charAt(0).toUpperCase()}</span>
-                    )}
-                  </div>
-                  <ChevronDown className={`w-3.5 h-3.5 text-emerald-700 dark:text-emerald-300 transition-transform ${isUserMenuOpen ? 'rotate-180' : ''}`} />
+                  <LogOut className="w-3.5 h-3.5" />
                 </button>
-
-                {/* Menú Desplegable de Usuario (Sesión y Privacidad Legal) */}
-                {isUserMenuOpen && (
-                  <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 shadow-2xl z-50 p-2 space-y-1 animate-fade-in ring-1 ring-black/5 dark:ring-white/10">
-                    <div className="px-3 py-2 border-b border-stone-100 dark:border-stone-800">
-                      <p className="text-xs font-black text-stone-900 dark:text-stone-100 truncate">
-                        {user.displayName || 'Usuario NutriPet'}
-                      </p>
-                      <p className="text-[11px] text-stone-500 dark:text-stone-400 truncate">
-                        {user.email}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        logout();
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-xl transition-colors cursor-pointer flex items-center gap-2"
-                    >
-                      <LogOut className="w-3.5 h-3.5 text-stone-500" />
-                      <span>Cerrar Sesión</span>
-                    </button>
-
-                    {/* Botón de Eliminación Definitiva de Cuenta (Cumplimiento Legal y Privacidad) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsUserMenuOpen(false);
-                        handleDeleteUserAccount();
-                      }}
-                      className="w-full text-left px-3 py-2 text-xs font-bold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl transition-colors cursor-pointer flex items-center gap-2 border-t border-stone-100 dark:border-stone-800 pt-2"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 shrink-0" />
-                      <span>Eliminar cuenta y datos</span>
-                    </button>
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount}
+                  title="Eliminar permanentemente la cuenta y sus datos"
+                  aria-label="Eliminar cuenta y datos"
+                  className="text-stone-500 hover:text-red-600 dark:text-stone-400 dark:hover:text-red-400 p-1 rounded-lg transition-colors cursor-pointer shrink-0 disabled:opacity-50 disabled:cursor-wait"
+                >
+                  {isDeletingAccount
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <Trash2 className="w-3.5 h-3.5" />}
+                </button>
               </div>
             ) : (
               <button
@@ -485,7 +468,6 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                 <span className="sm:hidden font-bold">Ingresar</span>
               </button>
             )}
-
           </div>
 
         </div>
@@ -771,7 +753,7 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
               </p>
             </div>
 
-            <div className="space-y-2.5 bg-stone-50 dark:bg-stone-850 p-3.5 rounded-2xl border border-stone-200/60 dark:border-stone-750 text-xs">
+            <div className="space-y-2.5 bg-stone-50 dark:bg-stone-850 p-3.5 rounded-2xl border border-stone-200/60 dark:border-stone-755 text-xs">
               <div className="flex items-center gap-2 text-stone-700 dark:text-stone-300 font-semibold">
                 <span>☁️</span> <span>Sincronización automática multi-dispositivo</span>
               </div>

@@ -131,45 +131,48 @@ export const TipsAndGuidesModule: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header Banner */}
-      <div className="bg-gradient-to-br from-stone-900 via-stone-800 to-emerald-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden text-center flex flex-col items-center">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="bg-[#143826] border border-[#234d38] rounded-2xl p-6 sm:p-8 text-[#faf8f5] shadow-bento relative overflow-hidden text-center flex flex-col items-center">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[#2d5a42]/30 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 space-y-4 max-w-3xl flex flex-col items-center">
           <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="text-[11px] font-extrabold uppercase tracking-widest bg-emerald-500/20 text-emerald-300 px-3 py-1 rounded-full border border-emerald-500/30 flex items-center gap-1.5">
+            <span className="text-xs font-mono uppercase tracking-widest text-[#c89b53] flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5" />
-              Manual de Cuidados & Primeros Auxilios
+              Manual Clínico & Primeros Auxilios
             </span>
             {activePet && (
-              <span className="text-xs bg-white/10 px-2.5 py-0.5 rounded-full text-stone-300">
-                Sugerencias para: <strong className="text-white">{activePet.name} ({activePet.type === 'cat' ? 'Gato' : 'Perro'})</strong>
-              </span>
+              <>
+                <span aria-hidden="true" className="text-white/30">·</span>
+                <span className="text-xs text-[#d6cebe]">
+                  Paciente: <strong className="text-white font-medium">{activePet.name} ({activePet.type === 'cat' ? 'Felino' : 'Canino'})</strong>
+                </span>
+              </>
             )}
           </div>
 
-          <h2 className="text-2xl sm:text-4xl font-extrabold font-heading tracking-tight text-white text-center">
+          <h2 className="text-2xl sm:text-4xl font-editorial font-medium tracking-tight text-white text-center">
             Guías Clínicas y Consejos para Perros & Gatos
           </h2>
-          <p className="text-stone-300 text-xs sm:text-sm leading-relaxed max-w-2xl text-center">
+          <p className="text-[#d6cebe] text-xs sm:text-sm leading-relaxed max-w-2xl text-center">
             Protocolos paso a paso sobre higiene dental, frecuencia y productos de baño, cuidado del pelaje, control de pulgas y actuación inmediata ante golpes de calor e intoxicaciones.
           </p>
 
           {/* Quick Stats Highlights */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-2 w-full">
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 text-center">
-              <span className="text-[11px] text-stone-400 block font-bold">🦷 Cepillado Dental</span>
-              <span className="text-sm font-extrabold text-white">2-3 veces/semana</span>
+            <div className="bg-[#1c4732]/70 backdrop-blur-xs p-3 rounded-xl border border-[#2a5940] text-center">
+              <span className="text-[11px] text-[#d6cebe] block font-mono">🦷 Cepillado Dental</span>
+              <span className="text-sm font-semibold text-white font-tabular">2-3 veces/semana</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 text-center">
-              <span className="text-[11px] text-stone-400 block font-bold">🛁 Frecuencia Baño</span>
-              <span className="text-sm font-extrabold text-white">Perros: 3-6 semanas</span>
+            <div className="bg-[#1c4732]/70 backdrop-blur-xs p-3 rounded-xl border border-[#2a5940] text-center">
+              <span className="text-[11px] text-[#d6cebe] block font-mono">🛁 Frecuencia Baño</span>
+              <span className="text-sm font-semibold text-white font-tabular">3 a 6 semanas</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 text-center">
-              <span className="text-[11px] text-stone-400 block font-bold">🧴 Antiparasitarios</span>
-              <span className="text-sm font-extrabold text-white">Cada 1 a 3 meses</span>
+            <div className="bg-[#1c4732]/70 backdrop-blur-xs p-3 rounded-xl border border-[#2a5940] text-center">
+              <span className="text-[11px] text-[#d6cebe] block font-mono">🧴 Antiparasitarios</span>
+              <span className="text-sm font-semibold text-white font-tabular">Cada 1 a 3 meses</span>
             </div>
-            <div className="bg-white/10 backdrop-blur-xs p-3 rounded-2xl border border-white/10 text-center">
-              <span className="text-[11px] text-stone-400 block font-bold">☀️ Golpe de Calor</span>
-              <span className="text-sm font-extrabold text-amber-300">Agua FRESCA (No hielo)</span>
+            <div className="bg-[#1c4732]/70 backdrop-blur-xs p-3 rounded-xl border border-[#2a5940] text-center">
+              <span className="text-[11px] text-[#d6cebe] block font-mono">☀️ Golpe de Calor</span>
+              <span className="text-sm font-semibold text-[#c89b53]">Agua FRESCA (No hielo)</span>
             </div>
           </div>
         </div>

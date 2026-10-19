@@ -15,75 +15,86 @@ html.dark {
   body {
     font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #1c1917;
+    background-color: #faf8f5;
     transition: background-color 0.25s ease, color 0.25s ease;
   }
   
   html.dark body {
     color: #f5f5f4;
-    background-color: #18181b; /* zinc-900 más suave para mejor contraste */
+    background-color: #121714; /* Verde bosque nocturno profundo */
   }
 
   h1, h2, h3, h4, h5, h6, .font-heading {
     font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, sans-serif;
     letter-spacing: -0.02em;
   }
+
+  .font-editorial {
+    font-family: 'Fraunces', serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  .font-tabular {
+    font-family: 'JetBrains Mono', 'Plus Jakarta Sans', monospace;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
-/* Sombras refinadas estilo Bento Grid */
+/* Sombras refinadas estilo Editorial & Bento Cálido */
 .shadow-bento {
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 4px 16px -2px rgba(5, 150, 105, 0.07);
+  box-shadow: 0 1px 3px 0 rgba(28, 25, 23, 0.03), 0 8px 24px -4px rgba(20, 56, 38, 0.06);
 }
 
 .shadow-bento-hover {
-  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.06), 0 12px 28px -4px rgba(5, 150, 105, 0.12);
+  box-shadow: 0 4px 12px 0 rgba(28, 25, 23, 0.05), 0 16px 36px -4px rgba(20, 56, 38, 0.1);
+}
+
+.shadow-glow-forest {
+  box-shadow: 0 0 25px -3px rgba(20, 56, 38, 0.22);
 }
 
 .shadow-glow-emerald {
-  box-shadow: 0 0 25px -3px rgba(16, 185, 129, 0.25);
+  box-shadow: 0 0 25px -3px rgba(63, 110, 88, 0.25);
 }
 
 .shadow-glow-amber {
-  box-shadow: 0 0 25px -3px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 0 25px -3px rgba(180, 131, 62, 0.25);
 }
 
-/* Efecto de cristal translúcido esmerilado equilibrado (ni totalmente transparente ni muy opaco) */
+/* Tarjetas y Paneles estilo Papel Alabastro Editorial */
 .glass-panel {
-  background-color: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
+  background-color: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(28, 25, 23, 0.07);
 }
 
 .dark .glass-panel {
-  background-color: rgba(39, 39, 42, 0.9); /* zinc-800 con más opacidad */
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: rgba(26, 35, 29, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   color: #f5f5f4;
 }
 
 .glass-card {
-  background-color: rgba(255, 255, 255, 0.82);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  box-shadow: 0 8px 32px 0 rgba(5, 150, 105, 0.04), 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+  background-color: #ffffff;
+  border: 1px solid rgba(28, 25, 23, 0.08);
+  box-shadow: 0 1px 3px 0 rgba(28, 25, 23, 0.03), 0 8px 24px -4px rgba(20, 56, 38, 0.05);
 }
 
 .dark .glass-card {
-  background-color: rgba(39, 39, 42, 0.9); /* zinc-800 más suave */
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background-color: #1a231d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.35), 0 1px 3px 0 rgba(0, 0, 0, 0.15);
   color: #f5f5f4;
 }
 
 .glass-card-dark {
-  background-color: rgba(15, 23, 42, 0.84);
+  background-color: rgba(18, 23, 20, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 /* Patrones de fondo seleccionables y bien marcados para pantalla grande y celular */

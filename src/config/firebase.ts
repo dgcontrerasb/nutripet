@@ -1,11 +1,6 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
-import { 
-  initializeFirestore, 
-  Firestore, 
-  persistentLocalCache, 
-  persistentMultipleTabManager 
-} from 'firebase/firestore';
+import { getFirestore, Firestore } from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // Función defensiva para normalizar y corregir errores tipográficos en el authDomain
@@ -39,13 +34,7 @@ export const auth: Auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-// Inicialización de Firestore con Persistencia Avanzada (Multi-pestaña)
-// Esto reduce drásticamente las lecturas al usar el caché local persistentemente.
-export const db: Firestore = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
-  })
-});
+export const db: Firestore = getFirestore(app);
 
 // Preparación de Firebase App Check (sin romper el entorno de desarrollo)
 if (typeof window !== 'undefined') {

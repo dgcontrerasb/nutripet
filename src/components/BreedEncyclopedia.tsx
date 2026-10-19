@@ -49,16 +49,16 @@ export const BreedEncyclopedia: React.FC<BreedEncyclopediaProps> = ({
   return (
     <div className="space-y-4 sm:space-y-6 animate-fade-in">
       {/* Cabecera, Buscador y Filtros */}
-      <div className="glass-card rounded-3xl p-4 sm:p-8 space-y-4 shadow-xs">
+      <div className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-5 sm:p-8 space-y-4 shadow-bento">
         <div className="max-w-2xl space-y-2">
-          <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-100/80 dark:bg-emerald-950/80 px-3 py-1 rounded-full uppercase tracking-wider border border-emerald-200 dark:border-emerald-800">
-            Enciclopedia de Razas y Nutrición
+          <span className="text-xs font-mono uppercase tracking-widest text-[#143826] dark:text-[#52796f] block">
+            Enciclopedia Morfológica & Nutrición
           </span>
-          <h2 className="text-xl sm:text-3xl font-extrabold text-stone-900 dark:text-stone-100 font-heading">
-            Alimentos y Marcas Ideales según la Raza y Contextura
+          <h2 className="text-xl sm:text-3xl font-editorial font-medium text-stone-900 dark:text-stone-100 leading-tight">
+            Alimentos y Marcas Ideales según Raza y Contextura
           </h2>
           <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-300 leading-relaxed">
-            No todos los perros o gatos procesan los alimentos igual. Un Labrador requiere protección articular y control estricto de saciedad; un Bulldog necesita croquetas ergonómicas antiahogo; y los gatos necesitan control de pH urinario.
+            No todos los perros o gatos procesan los alimentos igual. Un Labrador requiere protección articular y control de saciedad; un Bulldog necesita croquetas ergonómicas antiahogo; y los gatos requieren control de pH urinario.
           </p>
         </div>
 

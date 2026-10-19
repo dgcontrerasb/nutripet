@@ -6,6 +6,7 @@ import activateHandler from './api/subscription/activate.ts';
 import wompiCheckoutHandler from './api/wompi/create-checkout.ts';
 import paypalCreateOrderHandler from './api/paypal/create-order.ts';
 import paypalCaptureOrderHandler from './api/paypal/capture-order.ts';
+import deleteAccountHandler from './api/account/delete.ts';
 
 dotenv.config();
 
@@ -36,6 +37,10 @@ async function startServer() {
 
   app.all('/api/paypal/capture-order', (req: Request, res: Response) => {
     return (paypalCaptureOrderHandler as any)(req, res);
+  });
+
+  app.all('/api/account/delete', (req: Request, res: Response) => {
+    return (deleteAccountHandler as any)(req, res);
   });
 
   const isProduction = process.env.NODE_ENV === 'production';

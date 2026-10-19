@@ -91,20 +91,20 @@ export const WeightCurveChart: React.FC<Props> = ({ onOpenSubscriptionModal }) =
   };
 
   return (
-    <div className="bg-white border border-stone-200/90 rounded-3xl p-4 sm:p-7 shadow-xs space-y-6">
+    <div className="bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-4 sm:p-7 shadow-bento space-y-6">
       
       {/* Header with Title and Action Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 dark:border-stone-800 pb-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-2 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200/70">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-[#143826]/10 dark:bg-[#143826]/30 text-[#143826] dark:text-emerald-400">
               <Scale className="w-5 h-5" />
             </span>
             <div>
-              <h3 className="font-heading font-extrabold text-lg sm:text-xl text-stone-900">
-                Curva de Peso y Condición Corporal
+              <h3 className="font-editorial text-lg sm:text-xl font-medium text-stone-900 dark:text-stone-100">
+                Curva de Peso & Condición Corporal
               </h3>
-              <p className="text-xs text-stone-500">
+              <p className="text-xs text-stone-500 dark:text-stone-400">
                 Historial evolutivo y comparación contra el peso ideal objetivo de {activePet.name}
               </p>
             </div>
@@ -115,7 +115,7 @@ export const WeightCurveChart: React.FC<Props> = ({ onOpenSubscriptionModal }) =
           <button
             type="button"
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#143826] hover:bg-[#1c4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white text-xs font-medium shadow-2xs transition-all cursor-pointer active:scale-95"
           >
             <Plus className="w-4 h-4" />
             <span>Registrar Nuevo Peso</span>
@@ -123,40 +123,40 @@ export const WeightCurveChart: React.FC<Props> = ({ onOpenSubscriptionModal }) =
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards & Radial Progress */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 space-y-1">
-          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+        <div className="p-3.5 rounded-xl bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200/90 dark:border-stone-800 space-y-1">
+          <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 uppercase tracking-wider block">
             Peso Actual
           </span>
           <div className="flex items-baseline gap-1.5">
-            <span className="font-heading font-black text-2xl text-stone-900">
+            <span className="text-2xl font-bold text-stone-900 dark:text-stone-100 font-tabular">
               {currentWeight}
             </span>
-            <span className="text-xs font-bold text-stone-500">kg</span>
+            <span className="text-xs font-normal text-stone-500">kg</span>
           </div>
-          <span className="text-[10px] text-stone-400 block truncate">
+          <span className="text-[10px] text-stone-400 dark:text-stone-500 block truncate font-mono">
             Último: {logs[logs.length - 1].date}
           </span>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 space-y-1">
-          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
-            Peso Ideal Objetivo
+        <div className="p-3.5 rounded-xl bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200/90 dark:border-stone-800 space-y-1">
+          <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 uppercase tracking-wider block">
+            Peso Objetivo
           </span>
           <div className="flex items-baseline gap-1.5">
-            <span className="font-heading font-black text-2xl text-emerald-700">
+            <span className="text-2xl font-bold text-[#143826] dark:text-emerald-300 font-tabular">
               {idealWeight}
             </span>
-            <span className="text-xs font-bold text-emerald-600">kg</span>
+            <span className="text-xs font-normal text-stone-500">kg</span>
           </div>
-          <span className="text-[10px] text-stone-400 block truncate">
-            {diffFromIdeal === 0 ? '¡Alcanzado!' : diffFromIdeal > 0 ? `${diffFromIdeal} kg sobre la meta` : `${Math.abs(diffFromIdeal)} kg para la meta`}
+          <span className="text-[10px] text-stone-500 dark:text-stone-400 block truncate font-mono">
+            {diffFromIdeal === 0 ? 'Meta alcanzada' : diffFromIdeal > 0 ? `+${diffFromIdeal} kg sobre meta` : `${Math.abs(diffFromIdeal)} kg para meta`}
           </span>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 space-y-1">
-          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+        <div className="p-3.5 rounded-xl bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200/90 dark:border-stone-800 space-y-1">
+          <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 uppercase tracking-wider block">
             Variación Acumulada
           </span>
           <div className="flex items-center gap-1.5">
@@ -165,25 +165,25 @@ export const WeightCurveChart: React.FC<Props> = ({ onOpenSubscriptionModal }) =
             ) : diffKg < 0 ? (
               <TrendingDown className="w-4 h-4 text-blue-600" />
             ) : (
-              <Minus className="w-4 h-4 text-emerald-600" />
+              <Minus className="w-4 h-4 text-[#143826] dark:text-emerald-400" />
             )}
-            <span className={`font-heading font-black text-xl ${diffKg > 0 ? 'text-amber-700' : diffKg < 0 ? 'text-blue-700' : 'text-emerald-700'}`}>
+            <span className={`text-xl font-bold font-tabular ${diffKg > 0 ? 'text-amber-800 dark:text-amber-300' : diffKg < 0 ? 'text-blue-800 dark:text-blue-300' : 'text-[#143826] dark:text-emerald-300'}`}>
               {diffKg > 0 ? `+${diffKg}` : diffKg} kg
             </span>
           </div>
-          <span className="text-[10px] text-stone-500 block">
+          <span className="text-[10px] text-stone-500 dark:text-stone-400 block font-mono">
             ({diffPct > 0 ? `+${diffPct}` : diffPct}% desde inicio)
           </span>
         </div>
 
-        <div className="p-3.5 rounded-2xl bg-stone-50 border border-stone-200/70 space-y-1">
-          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+        <div className="p-3.5 rounded-xl bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200/90 dark:border-stone-800 space-y-1">
+          <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 uppercase tracking-wider block">
             Diagnóstico Corporal
           </span>
-          <span className={`inline-block px-2.5 py-1 rounded-xl text-xs font-bold border ${status.color}`}>
+          <span className={`inline-block px-2.5 py-0.5 rounded-lg text-xs font-semibold border ${status.color}`}>
             {status.label}
           </span>
-          <span className="text-[10px] text-stone-400 block truncate">
+          <span className="text-[10px] text-stone-400 dark:text-stone-500 block truncate font-mono">
             {logs.length} controles registrados
           </span>
         </div>

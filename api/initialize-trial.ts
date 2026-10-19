@@ -16,8 +16,8 @@ type ApiRequest = IncomingMessage & {
 
 type ApiResponse = ServerResponse & {
   status: (code: number) => {
-    json: (data: any) => void;
-    end: () => void;
+    json: (data: any) => any;
+    end: () => any;
   };
 };
 
@@ -55,7 +55,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   try {
     initializeFirebaseAdmin();
-    const { uid } = await getAuth().verifyIdToken(idToken);
+    const decodedToken = await getAuth().verifyIdToken(idToken);
+    const { uid } = decodedToken;
+    const verifiedEmail = decodedToken.email_verified && typeof decodedToken.email === 'string'
+      ? decodedToken.email
+      : null;
     const firestore = getFirestore();
     const userRef = firestore.collection('users').doc(uid);
     const userSnap = await userRef.get();
@@ -69,7 +73,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       : null;
     const preferredTrialStart = trustedTrialStartedAt ??
       toTimestamp(storedSubscription.activatedAt);
-    const trialStartedAt = await getOrCreateTrialStart(uid, preferredTrialStart);
+    const trialStartedAt = await getOrCreateTrialStart(uid, verifiedEmail, preferredTrialStart);
     const needsProfileTrialSync = trustedTrialStartedAt !== trialStartedAt;
     const paidUntil = Date.parse(storedSubscription.validUntil || '');
     const isPaidSubscription = (storedTier === 'pro_monthly' || storedTier === 'pro_annual') &&
@@ -177,4 +181,6 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     console.error('Error al consultar el trial:', error);
     return res.status(500).json({ error: 'No se pudo consultar el estado de la suscripción.' });
   }
+
+  return res.status(405).json({ error: 'Method Not Allowed' });
 }

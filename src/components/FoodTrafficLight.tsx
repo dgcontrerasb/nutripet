@@ -67,18 +67,18 @@ export const FoodTrafficLight: React.FC = () => {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Cabecera Principal y Controles */}
-      <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-5 sm:p-7 shadow-xs space-y-5">
+      <div className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-5 sm:p-7 shadow-bento space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="max-w-2xl space-y-1.5">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-100/80 dark:bg-amber-950/60 px-3 py-1 rounded-full uppercase tracking-wider border border-amber-200 dark:border-amber-800">
+          <div className="max-w-2xl space-y-2">
+            <div className="flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-[#b4833e] dark:text-[#c89b53]">
               <ShieldAlert className="w-3.5 h-3.5" />
-              Seguridad y Toxicidad
-            </span>
-            <h2 className="text-xl sm:text-3xl font-extrabold text-stone-900 dark:text-stone-100 font-heading">
-              Semáforo de Alimentos: Qué puede y qué NUNCA debe comer
+              <span>Seguridad & Toxicología Veterinaria</span>
+            </div>
+            <h2 className="text-xl sm:text-3xl font-editorial font-medium text-stone-900 dark:text-stone-100 leading-tight">
+              Semáforo Toxicológico de Alimentos
             </h2>
             <p className="text-xs sm:text-sm text-stone-600 dark:text-stone-400 leading-relaxed">
-              ¿Vas a compartirle comida de tu plato? Revisa primero esta enciclopedia interactiva para prevenir urgencias veterinarias e intoxicaciones.
+              ¿Vas a compartirle comida de tu plato? Consulta esta enciclopedia interactiva para prevenir urgencias veterinarias e intoxicaciones.
             </p>
           </div>
 

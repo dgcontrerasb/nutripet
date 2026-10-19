@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { getFirestore } from 'firebase-admin/firestore';
 
 function toTimestamp(value: unknown): number | null {
@@ -18,14 +19,41 @@ function toTimestamp(value: unknown): number | null {
   return null;
 }
 
-export async function getOrCreateTrialStart(uid: string, preferredStart: number | null): Promise<number> {
+function getTrialRecordId(uid: string, email: string | null): string {
+  const normalizedEmail = email?.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return uid;
+  }
+
+  const emailHash = createHash('sha256').update(normalizedEmail).digest('hex');
+  return `email_${emailHash}`;
+}
+
+export async function getOrCreateTrialStart(
+  uid: string,
+  email: string | null,
+  preferredStart: number | null
+): Promise<number> {
   const firestore = getFirestore();
-  const trialRef = firestore.collection('trial_records').doc(uid);
+  const trialCollection = firestore.collection('trial_records');
+  const trialRef = trialCollection.doc(getTrialRecordId(uid, email));
+  const legacyUidRef = trialCollection.doc(uid);
 
   return firestore.runTransaction(async (transaction) => {
-    const trialSnap = await transaction.get(trialRef);
-    const existingStart = toTimestamp(trialSnap.data()?.trialStartedAt);
-    if (trialSnap.exists && existingStart !== null) {
+    const [trialSnap, legacyUidSnap] = await Promise.all([
+      transaction.get(trialRef),
+      trialRef.path === legacyUidRef.path ? Promise.resolve(null) : transaction.get(legacyUidRef)
+    ]);
+    const existingStart = toTimestamp(trialSnap.data()?.trialStartedAt) ??
+      (legacyUidSnap ? toTimestamp(legacyUidSnap.data()?.trialStartedAt) : null);
+    if (existingStart !== null) {
+      if (!trialSnap.exists) {
+        transaction.set(trialRef, {
+          userId: uid,
+          trialStartedAt: existingStart,
+          updatedAt: Date.now()
+        }, { merge: true });
+      }
       return existingStart;
     }
 
@@ -36,6 +64,7 @@ export async function getOrCreateTrialStart(uid: string, preferredStart: number 
 
     transaction.set(trialRef, {
       userId: uid,
+      ...(email?.trim() ? { emailHash: trialRef.id.slice('email_'.length) } : {}),
       trialStartedAt,
       updatedAt: now
     }, { merge: true });
