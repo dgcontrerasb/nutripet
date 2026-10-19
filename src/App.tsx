@@ -200,8 +200,7 @@ export default function App() {
     }
 
     const paypalToken = urlParams.get('token');
-    const payerId = urlParams.get('PayerID');
-    if (paypalToken && payerId) {
+    if (paypalToken) {
       const currentUser = auth.currentUser;
       if (currentUser) {
         window.history.replaceState({}, document.title, window.location.pathname);

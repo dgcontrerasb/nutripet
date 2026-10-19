@@ -1,7 +1,28 @@
 const PAYPAL_PRODUCTION_URL = 'https://api-m.paypal.com';
-const PAYPAL_SANDBOX_URL = 'https://api-m.sandbox.paypal.com';
 const WOMPI_PRODUCTION_URL = 'https://production.wompi.co/v1';
-const WOMPI_SANDBOX_URL = 'https://sandbox.wompi.co/v1';
+
+function getProductionApiUrl(configuredUrl: string | undefined, productionUrl: string, provider: string): string {
+  const apiUrl = (configuredUrl || productionUrl).replace(/\/+$/, '');
+  let parsedUrl: URL;
+  try {
+    parsedUrl = new URL(apiUrl);
+  } catch {
+    throw new Error(`${provider} API URL is invalid.`);
+  }
+
+  const expectedUrl = new URL(productionUrl);
+  if (
+    parsedUrl.protocol !== 'https:' ||
+    parsedUrl.origin !== expectedUrl.origin ||
+    parsedUrl.pathname.replace(/\/+$/, '') !== expectedUrl.pathname.replace(/\/+$/, '') ||
+    parsedUrl.search ||
+    parsedUrl.hash
+  ) {
+    throw new Error(`${provider} API must use its production URL.`);
+  }
+
+  return apiUrl;
+}
 
 export function getAppUrl(): URL {
   const configuredUrl = process.env.APP_URL ||
@@ -22,6 +43,14 @@ export function getAppUrl(): URL {
   return appUrl;
 }
 
+export function getPaypalApiBaseUrl(): string {
+  return getProductionApiUrl(
+    process.env.PAYPAL_API_BASE_URL,
+    PAYPAL_PRODUCTION_URL,
+    'PayPal'
+  );
+}
+
 export async function getPaypalAccessToken(): Promise<{ token: string; baseUrl: string }> {
   const clientId = process.env.PAYPAL_CLIENT_ID;
   const clientSecret = process.env.PAYPAL_CLIENT_SECRET;
@@ -29,17 +58,7 @@ export async function getPaypalAccessToken(): Promise<{ token: string; baseUrl: 
     throw new Error('PayPal credentials are not configured.');
   }
 
-  const paypalMode = process.env.PAYPAL_MODE?.trim().toLowerCase();
-  const modeUrl = paypalMode === 'sandbox'
-    ? PAYPAL_SANDBOX_URL
-    : paypalMode === 'live' || paypalMode === 'production'
-      ? PAYPAL_PRODUCTION_URL
-      : undefined;
-  if (paypalMode && !modeUrl) {
-    throw new Error('PAYPAL_MODE must be sandbox, live, or production.');
-  }
-
-  const baseUrl = (process.env.PAYPAL_API_BASE_URL || modeUrl || PAYPAL_PRODUCTION_URL).replace(/\/+$/, '');
+  const baseUrl = getPaypalApiBaseUrl();
   const response = await fetch(`${baseUrl}/v1/oauth2/token`, {
     method: 'POST',
     headers: {
@@ -62,18 +81,9 @@ export async function getPaypalAccessToken(): Promise<{ token: string; baseUrl: 
 }
 
 export function getWompiApiBaseUrl(): string {
-  const configuredMode = process.env.WOMPI_MODE?.trim().toLowerCase();
-  const wompiKey = process.env.WOMPI_PRIVATE_KEY || process.env.WOMPI_PUBLIC_KEY || '';
-  const inferredMode = /^(?:prv|pub)_test_/i.test(wompiKey) ? 'sandbox' : undefined;
-  const wompiMode = configuredMode || inferredMode;
-  const modeUrl = wompiMode === 'sandbox'
-    ? WOMPI_SANDBOX_URL
-    : wompiMode === 'live' || wompiMode === 'production'
-      ? WOMPI_PRODUCTION_URL
-      : undefined;
-  if (wompiMode && !modeUrl) {
-    throw new Error('WOMPI_MODE must be sandbox, live, or production.');
-  }
-
-  return (process.env.WOMPI_API_BASE_URL || modeUrl || WOMPI_PRODUCTION_URL).replace(/\/+$/, '');
+  return getProductionApiUrl(
+    process.env.WOMPI_API_BASE_URL,
+    WOMPI_PRODUCTION_URL,
+    'Wompi'
+  );
 }
