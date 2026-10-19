@@ -14,13 +14,15 @@ export function initializeFirebaseAdmin(): void {
     return;
   }
 
+  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.VITE_FIREBASE_PROJECT_ID;
+  const appOptions = projectId ? { projectId } : {};
   const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (serviceAccountKey) {
-    initializeApp({ credential: cert(JSON.parse(serviceAccountKey)) });
+    initializeApp({ ...appOptions, credential: cert(JSON.parse(serviceAccountKey)) });
     return;
   }
 
-  initializeApp({ credential: applicationDefault() });
+  initializeApp({ ...appOptions, credential: applicationDefault() });
 }
 
 export function getBearerToken(req: ApiRequest): string | null {
