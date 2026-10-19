@@ -45,16 +45,16 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const publicKey = process.env.WOMPI_PUBLIC_KEY;
     const integritySecret = process.env.WOMPI_INTEGRITY_SECRET;
-    if (!publicKey || !integritySecret || !process.env.APP_URL) {
+    if (!publicKey || !integritySecret) {
       return res.status(503).json({ error: 'El pago con Wompi no está configurado.' });
     }
 
+    const redirectUrl = getAppUrl();
     const amountInCents = planId === 'pro_annual' ? 6_990_000 : 990_000;
     const reference = `NUTRIPET_${user.uid}_${planId}_${randomUUID()}`;
     const signature = createHash('sha256')
       .update(`${reference}${amountInCents}COP${integritySecret}`)
       .digest('hex');
-    const redirectUrl = getAppUrl();
     redirectUrl.search = new URLSearchParams({ plan: planId }).toString();
 
     return res.status(200).json({
