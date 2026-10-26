@@ -335,15 +335,37 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
           docEmail = docSnap.id.replace('manual_', '').replace(/_/g, '.').replace(/\.com$/, '@gmail.com');
         }
         if (docEmail) {
+          const isThisAdmin = docEmail.toLowerCase().trim() === ADMIN_EMAIL;
+          
           rawUsers.push({
             uid: docSnap.id,
             email: docEmail,
-            displayName: data.displayName || 'Cliente Activado Manual',
+            displayName: isThisAdmin ? (data.displayName || 'Geovanny Contreras (Propietario)') : (data.displayName || 'Cliente Activado Manual'),
             photoURL: data.photoURL,
-            trialStartDate: data.trialStartDate,
-            subscription: data.subscription,
+            trialStartDate: isThisAdmin ? undefined : data.trialStartDate,
+            subscription: isThisAdmin ? {
+              tier: 'pro_annual',
+              status: 'active',
+              planName: 'NutriPet Pro Anual (Propietario)',
+              validUntil: '2030-12-31'
+            } : data.subscription,
             updatedAt: data.updatedAt,
           });
+
+          // Si el admin en Firestore tiene datos de prueba, corregir la base de datos automáticamente
+          if (isThisAdmin && (!data.subscription || data.subscription.tier !== 'pro_annual' || data.subscription.validUntil !== '2030-12-31')) {
+            setDoc(doc(db, 'users', docSnap.id), {
+              subscription: {
+                tier: 'pro_annual',
+                status: 'active',
+                planName: 'NutriPet Pro Anual (Propietario)',
+                validUntil: '2030-12-31'
+              },
+              trialStartDate: null,
+              trialEndsAt: null,
+              updatedAt: new Date().toISOString()
+            }, { merge: true }).catch(err => console.error('Error auto-reparando suscripción admin:', err));
+          }
         }
       });
 

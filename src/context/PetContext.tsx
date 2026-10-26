@@ -159,6 +159,19 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   const syncTrialFromBackend = useCallback(async (currentUser: User) => {
+    // 👑 Blindaje vitalicio para el Administrador / Propietario (Cero llamadas al endpoint de prueba)
+    if (currentUser.email?.toLowerCase().trim() === 'dgcontrerasb@gmail.com') {
+      setSubscription({
+        tier: 'pro_annual',
+        status: 'active',
+        planName: 'NutriPet Pro Anual (Propietario)',
+        validUntil: '2030-12-31'
+      });
+      setTrialDaysRemaining(365);
+      setIsProState(true);
+      return;
+    }
+
     try {
       const idToken = await currentUser.getIdToken();
       const response = await fetch('/api/initialize-trial', {
