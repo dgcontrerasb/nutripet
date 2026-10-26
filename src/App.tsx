@@ -67,6 +67,7 @@ import { Sidebar } from './components/Sidebar';
 import { BackToTopButton } from './components/BackToTopButton';
 import { ThemeToggleButton } from './components/ThemeToggleButton';
 import { LogoutTransitionModal } from './components/LogoutTransitionModal';
+import { FeedbackModal } from './components/FeedbackModal';
 import { usePets } from './context/PetContext';
 import { useBgPreferences } from './hooks/useBgPreferences';
 
@@ -321,6 +322,7 @@ export default function App() {
   const [showShareModal, setShowShareModal] = React.useState<boolean>(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = React.useState<boolean>(false);
   const [showAdminModal, setShowAdminModal] = React.useState<boolean>(false);
+  const [showFeedbackModal, setShowFeedbackModal] = React.useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
@@ -480,7 +482,7 @@ export default function App() {
       />
 
       {/* Cabecera Superior Fija Permanente */}
-      <header className="fixed top-0 right-0 left-0 lg:left-64 z-40 no-print shadow-xs bg-white dark:bg-stone-900 transition-all duration-300">
+      <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
         <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium">
           <span className="inline-flex items-center gap-1.5 text-emerald-400">
             <Sparkles className="w-3.5 h-3.5" /> Referencias generales de alimentación y bienestar para mascotas
@@ -498,8 +500,8 @@ export default function App() {
         />
       </header>
 
-      {/* Contenedor Principal: con margen izquierdo en escritorio para dar espacio al sidebar fijo */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full lg:pl-64 items-start pt-[104px] sm:pt-[112px]">
+      {/* Contenedor Principal */}
+      <div className="flex-grow flex flex-col lg:flex-row w-full items-start pt-[84px] sm:pt-[90px]">
 
         <div className="w-full lg:w-auto shrink-0">
           <Sidebar
@@ -510,6 +512,7 @@ export default function App() {
             onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
             onOpenBgModal={() => setShowBgModal(true)}
             onOpenAdminModal={isAdminUser ? () => setShowAdminModal(true) : undefined}
+            onOpenFeedbackModal={() => setShowFeedbackModal(true)}
             petName={profile.name}
             petType={profile.type}
             petPhotoUrl={profile.photoUrl}
@@ -1864,9 +1867,13 @@ export default function App() {
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
       />
-      <AdminDashboardModal
+     <AdminDashboardModal
         isOpen={showAdminModal}
         onClose={() => setShowAdminModal(false)}
+      />
+      <FeedbackModal
+        isOpen={showFeedbackModal}
+        onClose={() => setShowFeedbackModal(false)}
       />
       <RegistrationLockModal />
       <LogoutTransitionModal isOpen={isLoggingOut} />

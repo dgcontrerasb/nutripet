@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import type { IncomingMessage, ServerResponse } from 'http';
 import { applicationDefault, cert, getApps, initializeApp } from 'firebase-admin/app';
 
@@ -46,7 +47,7 @@ export function isFirebaseAuthError(error: unknown): boolean {
 export function applyApiCors(req: ApiRequest, res: ApiResponse): void {
   const configuredOrigins = (process.env.ALLOWED_ORIGIN || '')
     .split(',')
-    .map((origin) => origin.trim())
+    .map((origin: string) => origin.trim())
     .filter(Boolean);
   const requestOrigin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
 
