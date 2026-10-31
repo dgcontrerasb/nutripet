@@ -16,7 +16,8 @@ import {
   Heart,
   Scale,
   Info,
-  Droplets
+  Droplets,
+  Sparkles
 } from 'lucide-react';
 
 interface Props {
@@ -161,6 +162,13 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }
   const availableRecipes = PRESET_RECIPES.filter(r => r.petType === 'both' || r.petType === activePet.type);
 
   const handleCopyRecipe = () => {
+    if (aiRecipeResult) {
+      navigator.clipboard.writeText(aiRecipeResult);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+      return;
+    }
+
     let text = `🥩 *RECETA CASERA BALANCEDA PARA ${activePet.name.toUpperCase()}*\n`;
     text += `📌 *Platillo:* ${currentRecipe.name}\n`;
     text += `🥣 *Ración Diaria Total:* ${estimatedDailyGrams} g/día\n`;
@@ -180,6 +188,11 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }
   };
 
   const handleShareWhatsApp = () => {
+    if (aiRecipeResult) {
+      window.open(`https://wa.me/?text=${encodeURIComponent(aiRecipeResult)}`, '_blank');
+      return;
+    }
+
     let text = `🥩 *RECETA NUTRIPET PARA ${activePet.name.toUpperCase()}*\n`;
     text += `📌 *Platillo:* ${currentRecipe.name}\n`;
     text += `🥣 *Ración Diaria:* ${estimatedDailyGrams} g/día\n\n`;
@@ -220,52 +233,50 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
     }, 200);
   };
 
+  // Desglose estructurado para la tarjeta Bento de receta personalizada
+  const parsedCustomList = customIngredients
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+  const customPrimaryProtein = parsedCustomList[0] || 'Carne magra / Pechuga';
+  const customVeggies =
+    parsedCustomList.length > 1
+      ? parsedCustomList.slice(1).join(', ')
+      : 'Vegetales y fibra apta (Auyama, Zanahoria o Calabacín)';
+  const customProteinGrams = Math.round(estimatedDailyGrams * 0.65);
+  const customVeggieGrams = Math.round(estimatedDailyGrams * 0.25);
+  const customFatsGrams = Math.round(estimatedDailyGrams * 0.10);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 animate-fade-in">
 
-      {/* Banner de Título */}
-      <div className="bg-[#143826] border border-[#234d38] rounded-2xl p-6 sm:p-8 text-[#faf8f5] shadow-bento relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-[#2d5a42]/30 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-mono text-[#c89b53]">
-              <Crown className="w-3.5 h-3.5" />
-              <span>Formulación Natural Especializada</span>
-            </div>
-            <h2 className="font-editorial text-2xl sm:text-3xl text-white font-medium">
-              Generador BARF & Recetas Caseras
-            </h2>
-            <p className="text-xs sm:text-sm text-[#d6cebe] max-w-xl leading-relaxed">
-              Formulaciones balanceadas de comida natural cocida, dieta BARF o toppers húmedos calculadas gramo a gramo para <strong>{activePet.name}</strong> ({activePet.weightKg} kg).
-            </p>
+      {/* 1. HERO VERDE INSTITUCIONAL SIMÉTRICO */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#143826] via-[#1a4a32] to-[#123020] text-[#faf8f5] px-4 py-3 sm:px-6 sm:py-3.5 border border-[#2a5940] shadow-xs text-center flex flex-col items-center justify-center no-print">
+        <div className="relative z-10 space-y-1 max-w-lg mx-auto">
+          <div className="inline-flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10px] font-mono uppercase tracking-widest text-emerald-200/90 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+            <Crown className="w-3 h-3 text-amber-400 shrink-0" />
+            <span>Formulación Natural Especializada</span>
           </div>
-
-          <div className="bg-[#1c4732]/70 backdrop-blur-md p-4 rounded-xl border border-[#2a5940] text-center shrink-0 min-w-[160px]">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-[#c89b53] block">
-              Ración Diaria Sugerida
-            </span>
-            <span className="font-tabular font-bold text-2xl text-white block mt-0.5">
-              ~{estimatedDailyGrams} g
-            </span>
-            <span className="text-[10px] text-[#d6cebe] block font-mono">
-              para {activePet.weightKg} kg de peso
-            </span>
-          </div>
+          <h1 className="text-sm sm:text-base font-editorial font-semibold tracking-tight text-white leading-tight">
+            Dietas BARF & <span className="font-editorial italic font-normal text-amber-300">Recetas Caseras</span>
+          </h1>
+          <p className="text-[10px] sm:text-xs text-emerald-100/80 leading-relaxed font-normal">
+            Formulaciones balanceadas calculadas gramo a gramo para {activePet.name} ({activePet.weightKg} kg).
+          </p>
         </div>
       </div>
 
-      {/* Nota Explicativa: Humedad y Gramos en Comida Fresca vs Croquetas */}
-      <div className="p-4 rounded-2xl bg-teal-50/80 dark:bg-teal-950/40 border border-teal-200/80 dark:border-teal-800/60 flex items-start gap-3 text-xs text-teal-900 dark:text-teal-200 shadow-2xs">
-        <Droplets className="w-5 h-5 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <p className="font-extrabold text-stone-900 dark:text-white text-xs flex items-center gap-1.5">
-            💡 ¿Por qué la ración en comida fresca o BARF (~{estimatedDailyGrams}g) es mayor que en croquetas secas?
+      {/* 2. MICRO-CÁPSULA DE HUMEDAD (Ración BARF vs Croquetas) */}
+      <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-850 border border-emerald-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 shadow-2xs">
+        <div className="flex items-start sm:items-center gap-2.5 text-[11px] sm:text-xs text-stone-600 dark:text-stone-300 leading-snug">
+          <Droplets className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
+          <p>
+            <strong className="text-stone-900 dark:text-stone-100 font-bold">Humedad Biológica (~{estimatedDailyGrams} g/día):</strong> La croqueta seca concentra calorías con solo <strong>8-10% de humedad</strong>, mientras la comida fresca/BARF aporta un <strong>70-75% de agua natural</strong>, dando mayor volumen y gramos con el mismo aporte calórico para {activePet.name}.
           </p>
-          <p className="text-[11.5px] leading-relaxed text-stone-600 dark:text-stone-300">
-            <strong>Croquetas secas:</strong> Tienen solo entre <strong>8% y 10% de humedad</strong> (las calorías están ultra deshidratadas e hiperconcentradas en menos gramos).<br />
-            <strong>Comida Fresca / BARF:</strong> Contiene un <strong>70% a 75% de agua biológica natural</strong> propia de la carne y vegetales. Para aportar exactamente las mismas calorías que requiere {activePet.name}, el plato fresco tiene mayor volumen y gramos biológicos.
-          </p>
+        </div>
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono font-bold text-emerald-800 dark:text-emerald-300 shrink-0 self-start sm:self-center">
+          <Scale className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+          <span>Ración: ~{estimatedDailyGrams} g/día</span>
         </div>
       </div>
 
@@ -282,242 +293,397 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
         />
       ) : (
         /* Grid Principal para Usuarios Pro */
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 items-start">
 
-        {/* Selector de Recetas del Catálogo Gratuito */}
-        <div className="lg:col-span-5 space-y-3">
-          <h3 className="text-xs font-black uppercase tracking-wider text-stone-500 flex items-center gap-1.5 px-1">
-            <ChefHat className="w-4 h-4 text-emerald-600" />
-            Catálogo de Recetas Balanceadas ({availableRecipes.length}):
-          </h3>
+          {/* Selector de Recetas del Catálogo */}
+          <div className="lg:col-span-5 space-y-3">
+            <h3 className="text-stone-800 dark:text-stone-200 text-xs font-black tracking-wide uppercase flex items-center gap-1.5 px-1">
+              <ChefHat className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Catálogo de Recetas Balanceadas ({availableRecipes.length}):</span>
+            </h3>
 
-          <div className="space-y-2.5">
-            {availableRecipes.map(recipe => {
-              const isSelected = selectedRecipeId === recipe.id;
-              return (
-                <div
-                  key={recipe.id}
-                  onClick={() => {
-                    setSelectedRecipeId(recipe.id);
-                    setAiRecipeResult(null);
-                  }}
-                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                    isSelected
-                      ? 'border-emerald-600 bg-emerald-50/60 ring-2 ring-emerald-600/20 shadow-sm'
-                      : 'border-stone-200 bg-white hover:border-stone-300'
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-md border ${
-                      recipe.category === 'BARF'
-                        ? 'bg-rose-100 text-rose-800 border-rose-200'
-                        : recipe.category === 'Cocida'
-                        ? 'bg-amber-100 text-amber-800 border-amber-200'
-                        : 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                    }`}>
-                      {recipe.category}
-                    </span>
-                    <span className="text-[10px] font-bold text-stone-400">
-                      {recipe.petType === 'both' ? '🐶 Canino & 🐱 Felino' : recipe.petType === 'dog' ? '🐶 Solo Caninos' : '🐱 Solo Felinos'}
-                    </span>
+            <div className="space-y-2.5">
+              {availableRecipes.map(recipe => {
+                const isSelected = selectedRecipeId === recipe.id && !aiRecipeResult;
+                return (
+                  <div
+                    key={recipe.id}
+                    onClick={() => {
+                      setSelectedRecipeId(recipe.id);
+                      setAiRecipeResult(null);
+                    }}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer ${
+                      isSelected
+                        ? 'border-emerald-600 bg-emerald-50/70 dark:bg-emerald-950/30 ring-1 ring-emerald-600/20 shadow-2xs'
+                        : 'border-stone-200/90 dark:border-stone-800 bg-white dark:bg-[#1a231d] hover:border-stone-300 dark:hover:border-stone-700'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <span className={`text-[9.5px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md border ${
+                        recipe.category === 'BARF'
+                          ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60'
+                          : recipe.category === 'Cocida'
+                          ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
+                          : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
+                      }`}>
+                        {recipe.category}
+                      </span>
+                      <span className="text-[10px] font-bold text-stone-500 dark:text-stone-400">
+                        {recipe.petType === 'both' ? '🐶 Canino & 🐱 Felino' : recipe.petType === 'dog' ? '🐶 Solo Caninos' : '🐱 Solo Felinos'}
+                      </span>
+                    </div>
+
+                    <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs sm:text-sm leading-snug">
+                      {recipe.name}
+                    </h4>
+                    <p className="text-[11px] text-stone-600 dark:text-stone-400 mt-1 line-clamp-2 leading-relaxed">
+                      {recipe.description}
+                    </p>
                   </div>
-
-                  <h4 className="font-heading font-extrabold text-stone-900 text-sm">
-                    {recipe.name}
-                  </h4>
-                  <p className="text-xs text-stone-500 mt-1 line-clamp-2">
-                    {recipe.description}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Formulario Generador con tus Ingredientes */}
-          <div className="bg-white border border-stone-200 rounded-2xl p-4 space-y-3 shadow-2xs">
-            <div className="flex items-center gap-2">
-              <ChefHat className="w-4 h-4 text-emerald-600" />
-              <h4 className="font-heading font-extrabold text-stone-900 text-xs uppercase tracking-wider">
-                Personalizar con tus Ingredientes
-              </h4>
+                );
+              })}
             </div>
-            <p className="text-[11px] text-stone-500 leading-tight">
-              Escribe qué alimentos tienes en casa y calcularemos la proporción balanceada para {activePet.name}:
-            </p>
-            <form onSubmit={handleGenerateCustomRecipe} className="space-y-2">
-              <input
-                type="text"
-                value={customIngredients}
-                onChange={(e) => setCustomIngredients(e.target.value)}
-                placeholder="Ej: Tengo pechuga, zanahoria y camote..."
-                className="w-full px-3 py-2 text-xs border border-stone-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-stone-50"
-              />
-              <button
-                type="submit"
-                disabled={aiGenerating || !customIngredients.trim()}
-                className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
-              >
-                {aiGenerating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Utensils className="w-3.5 h-3.5" />}
-                <span>{aiGenerating ? 'Calculando ración...' : 'Formular con mis Ingredientes'}</span>
-              </button>
-            </form>
-          </div>
-        </div>
 
-        {/* Detalle de la Receta Seleccionada o Resultado */}
-        <div className="lg:col-span-7 space-y-4">
-
-          {aiRecipeResult ? (
-            /* Vista de Receta Personalizada */
-            <div className="bg-white border-2 border-emerald-500/80 rounded-3xl p-6 space-y-4 shadow-md">
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <div className="flex items-center gap-2">
-                  <ChefHat className="w-5 h-5 text-emerald-600" />
-                  <h3 className="font-heading font-black text-base text-stone-900">
-                    Receta Personalizada Balanceada
-                  </h3>
-                </div>
+            {/* Formulario Generador con tus Ingredientes */}
+            <div className="bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-3.5 sm:p-4 space-y-2.5 shadow-2xs">
+              <div className="flex items-center gap-2">
+                <ChefHat className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider">
+                  Personalizar con tus Ingredientes
+                </h4>
+              </div>
+              <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-snug">
+                Escribe qué alimentos tienes en casa y calcularemos la proporción balanceada para {activePet.name}:
+              </p>
+              <form onSubmit={handleGenerateCustomRecipe} className="space-y-2">
+                <input
+                  type="text"
+                  value={customIngredients}
+                  onChange={(e) => setCustomIngredients(e.target.value)}
+                  placeholder="Ej: Tengo pechuga, zanahoria y camote..."
+                  className="w-full px-3 py-2 text-xs border border-stone-200 dark:border-stone-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-stone-50 dark:bg-stone-850 text-stone-900 dark:text-stone-100 placeholder:text-stone-400"
+                />
                 <button
-                  type="button"
-                  onClick={() => setAiRecipeResult(null)}
-                  className="text-xs text-emerald-700 font-bold hover:underline cursor-pointer"
+                  type="submit"
+                  disabled={aiGenerating || !customIngredients.trim()}
+                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50 shadow-2xs"
                 >
-                  Volver al Catálogo
+                  {aiGenerating ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Utensils className="w-3.5 h-3.5" />}
+                  <span>{aiGenerating ? 'Calculando ración...' : 'Formular con mis Ingredientes'}</span>
                 </button>
-              </div>
-
-              <div className="text-xs text-stone-800 space-y-2 font-mono whitespace-pre-wrap bg-amber-50/50 p-4 rounded-2xl border border-amber-200/60 leading-relaxed">
-                {aiRecipeResult}
-              </div>
+              </form>
             </div>
-          ) : (
-            /* Vista de Receta del Catálogo Estático */
-            <div className="bg-white border border-stone-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+          </div>
 
-              {/* Header de la Receta */}
-              <div className="space-y-2 border-b border-stone-100 pb-4">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <span className="text-xs font-bold text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200">
-                    {currentRecipe.category} • {currentRecipe.cookingMethod}
-                  </span>
+          {/* Detalle de la Receta Seleccionada o Resultado */}
+          <div className="lg:col-span-7 space-y-4">
 
-                  <div className="flex items-center gap-2">
+            {aiRecipeResult ? (
+              /* Vista de Receta Personalizada en Estilo Bento Premium */
+              <div className="bg-white dark:bg-[#1a231d] border border-emerald-500/40 dark:border-emerald-700/50 rounded-2xl p-4 sm:p-6 space-y-4 shadow-xs animate-fade-in">
+                
+                {/* Barra Superior de Navegación y Acciones Rápidas */}
+                <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-stone-100 dark:border-stone-800">
+                  <button
+                    type="button"
+                    onClick={() => setAiRecipeResult(null)}
+                    className="px-3 py-1.5 rounded-full border border-emerald-600/30 text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 font-bold text-xs transition-all cursor-pointer shrink-0"
+                  >
+                    ← Volver al Catálogo
+                  </button>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
                     <button
                       type="button"
                       onClick={handleCopyRecipe}
-                      className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
-                      title="Copiar texto de la receta"
+                      className="shrink-0 px-3 py-1.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 border border-stone-200/70 dark:border-stone-700"
+                      title="Copiar receta personalizada"
                     >
-                      <Copy className="w-3.5 h-3.5" />
+                      <Copy className="w-3.5 h-3.5 shrink-0" />
                       <span>{copied ? '¡Copiado!' : 'Copiar'}</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleShareWhatsApp}
-                      className="px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                      className="shrink-0 px-3 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
                       title="Enviar por WhatsApp"
                     >
-                      <Share2 className="w-3.5 h-3.5" />
+                      <Share2 className="w-3.5 h-3.5 shrink-0" />
                       <span>WhatsApp</span>
                     </button>
                   </div>
                 </div>
 
-                <h3 className="font-heading font-black text-xl sm:text-2xl text-stone-900">
-                  {currentRecipe.name}
-                </h3>
-                <p className="text-xs text-stone-600 leading-relaxed">
-                  {currentRecipe.description}
-                </p>
-              </div>
+                {/* Encabezado Bento con Degradado Alabastro/Esmeralda Suave */}
+                <div className="rounded-2xl bg-gradient-to-br from-[#faf8f5] via-emerald-50/70 to-emerald-100/50 dark:from-stone-850 dark:via-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200/80 dark:border-emerald-800/50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1.5 flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white dark:bg-stone-800 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black text-emerald-900 dark:text-emerald-200 shadow-3xs">
+                        <span>{activePet.type === 'dog' ? '🐶' : '🐱'}</span>
+                        <span>{activePet.name} • {activePet.weightKg} kg</span>
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100/90 dark:bg-amber-950/70 border border-amber-300/70 dark:border-amber-800 text-[9.5px] font-mono font-black uppercase tracking-wider text-amber-900 dark:text-amber-300">
+                        <ShieldCheck className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
+                        <span>FEDIAF & NRC</span>
+                      </span>
+                    </div>
 
-              {/* Porciones exactas por peso de la mascota */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h4 className="font-heading font-extrabold text-stone-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Scale className="w-4 h-4 text-emerald-600" />
-                    Ingredientes Exactos para {activePet.name} ({estimatedDailyGrams}g totales / día):
-                  </h4>
+                    <h3 className="font-heading font-black text-base sm:text-lg text-stone-900 dark:text-stone-100 leading-snug">
+                      Fórmula Casera Personalizada Balanceada
+                    </h3>
+                    <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-snug">
+                      Ingredientes base seleccionados: <strong className="text-stone-800 dark:text-stone-200">{customIngredients}</strong>
+                    </p>
+                  </div>
+
+                  <div className="bg-white/95 dark:bg-stone-900/90 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl px-3.5 py-2.5 text-left sm:text-right shrink-0 shadow-3xs">
+                    <span className="text-[9.5px] font-mono uppercase tracking-wider text-stone-500 dark:text-stone-400 block font-bold">
+                      Ración Total
+                    </span>
+                    <span className="font-heading font-black text-base sm:text-lg text-emerald-800 dark:text-emerald-300 block leading-tight">
+                      ~{estimatedDailyGrams} g / día
+                    </span>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  {currentRecipe.ingredientBreakdown.map((ing, idx) => {
-                    const exactGrams = Math.round((estimatedDailyGrams * ing.percentage) / 100);
-                    return (
-                      <div
-                        key={idx}
-                        className="p-3.5 bg-stone-50 rounded-2xl border border-stone-200 flex items-center justify-between"
-                      >
-                        <div>
-                          <span className="font-extrabold text-stone-900 text-xs block">
-                            {ing.name}
-                          </span>
-                          {ing.note && (
-                            <span className="text-[10px] text-stone-500 block mt-0.5">
-                              {ing.note}
-                            </span>
-                          )}
+                {/* 3 Micro-Tarjetas Bento para los Ingredientes */}
+                <div className="space-y-2.5">
+                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span>Desglose Nutricional Exacto por Día:</span>
+                  </h4>
+
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {/* 1. Tarjeta Proteína Base */}
+                    <div className="p-3.5 rounded-xl bg-stone-50 dark:bg-stone-850/60 border border-stone-200/80 dark:border-stone-800 flex items-center justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0 pr-2">
+                        <div className="w-8 h-8 rounded-xl bg-rose-100/80 dark:bg-rose-950/60 border border-rose-200/70 dark:border-rose-800/50 flex items-center justify-center shrink-0 mt-0.5">
+                          <Flame className="w-4 h-4 text-rose-600 dark:text-rose-400" />
                         </div>
-                        <div className="text-right shrink-0 pl-2">
-                          <span className="font-heading font-black text-emerald-800 text-sm block">
-                            {exactGrams} g
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[11.5px] sm:text-xs font-extrabold text-stone-900 dark:text-stone-100 leading-tight block">
+                            Proteína Magra Principal: {customPrimaryProtein}
                           </span>
-                          <span className="text-[10px] font-bold text-stone-400">
-                            {ing.percentage}%
+                          <span className="text-[10px] sm:text-[10.5px] text-stone-500 dark:text-stone-400 leading-snug block mt-0.5">
+                            Cocción suave al vapor o en agua hirviendo sin sal ni condimentos.
                           </span>
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="shrink-0 text-right">
+                        <span className="text-emerald-800 dark:text-emerald-400 font-black text-base block leading-none">
+                          {customProteinGrams} g
+                        </span>
+                        <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500 block mt-0.5">
+                          65%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 2. Tarjeta Vegetales y Fibra */}
+                    <div className="p-3.5 rounded-xl bg-stone-50 dark:bg-stone-850/60 border border-stone-200/80 dark:border-stone-800 flex items-center justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0 pr-2">
+                        <div className="w-8 h-8 rounded-xl bg-amber-100/80 dark:bg-amber-950/60 border border-amber-200/70 dark:border-amber-800/50 flex items-center justify-center shrink-0 mt-0.5">
+                          <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[11.5px] sm:text-xs font-extrabold text-stone-900 dark:text-stone-100 leading-tight block">
+                            Vegetales y Fibra Digestiva: {customVeggies}
+                          </span>
+                          <span className="text-[10px] sm:text-[10.5px] text-stone-500 dark:text-stone-400 leading-snug block mt-0.5">
+                            Hervir al vapor y triturar en puré fino para máxima absorción intestinal.
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="text-emerald-800 dark:text-emerald-400 font-black text-base block leading-none">
+                          {customVeggieGrams} g
+                        </span>
+                        <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500 block mt-0.5">
+                          25%
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 3. Tarjeta Ácidos Grasos y Salud */}
+                    <div className="p-3.5 rounded-xl bg-stone-50 dark:bg-stone-850/60 border border-stone-200/80 dark:border-stone-800 flex items-center justify-between gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0 pr-2">
+                        <div className="w-8 h-8 rounded-xl bg-emerald-100/80 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800/50 flex items-center justify-center shrink-0 mt-0.5">
+                          <Droplets className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="text-[11.5px] sm:text-xs font-extrabold text-stone-900 dark:text-stone-100 leading-tight block">
+                            Ácidos Grasos y Salud (Aceite de Oliva Virgen o Salmón)
+                          </span>
+                          <span className="text-[10px] sm:text-[10.5px] text-stone-500 dark:text-stone-400 leading-snug block mt-0.5">
+                            Añadir siempre en crudo y a temperatura ambiente justo antes de servir.
+                          </span>
+                        </div>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <span className="text-emerald-800 dark:text-emerald-400 font-black text-base block leading-none">
+                          {customFatsGrams} g
+                        </span>
+                        <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500 block mt-0.5">
+                          10%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </div>
 
-              {/* Beneficios Nutricionales */}
-              <div className="bg-emerald-50/60 p-4 rounded-2xl border border-emerald-100 space-y-1.5">
-                <span className="text-[10px] font-black uppercase text-emerald-900 block">
-                  ✨ Beneficios Clínicos del Menú:
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {currentRecipe.benefits.map((b, i) => (
-                    <span key={i} className="text-xs text-emerald-800 font-medium bg-white px-2.5 py-1 rounded-lg border border-emerald-200/80 shadow-3xs">
-                      ✓ {b}
-                    </span>
-                  ))}
+                {/* Tarjeta de Seguridad Nutricional */}
+                <div className="p-3.5 rounded-xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 text-[11px] text-amber-950 dark:text-amber-200 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1 leading-snug">
+                    <p>
+                      <strong>Seguridad Clínica y Toxicológica:</strong> Retira siempre semillas y <strong>prohibido dar huesos cocidos</strong> (riesgo de astillamiento). Nunca agregues sal, cebolla, ajo, uvas ni condimentos.
+                    </p>
+                    <p className="text-[10.5px] text-amber-900/90 dark:text-amber-300/90">
+                      Estas pautas FEDIAF/NRC son orientativas y no reemplazan la formulación de un médico veterinario nutricionista.
+                    </p>
+                  </div>
                 </div>
+
               </div>
+            ) : (
+              /* Vista de Receta del Catálogo Estático */
+              <div className="bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-4 sm:p-6 space-y-5 shadow-2xs">
 
-              {/* Paso a Paso de Preparación */}
-              <div className="space-y-3">
-                <h4 className="font-heading font-extrabold text-stone-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                  <ChefHat className="w-4 h-4 text-amber-600" />
-                  Instrucciones Paso a Paso:
-                </h4>
-
-                <ol className="space-y-2 text-xs text-stone-700">
-                  {currentRecipe.instructions.map((step, idx) => (
-                    <li key={idx} className="flex items-start gap-3 bg-stone-50/80 p-3 rounded-xl border border-stone-200/60">
-                      <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
-                        {idx + 1}
+                {/* Header de la Receta */}
+                <div className="space-y-2.5 border-b border-stone-100 dark:border-stone-800 pb-4">
+                  <div className="flex items-start justify-between flex-wrap gap-2">
+                    <div className="flex items-center flex-wrap gap-2 flex-1 min-w-0">
+                      <span className={`text-[10.5px] font-black px-2.5 py-0.5 rounded-full border shrink-0 ${
+                        currentRecipe.category === 'BARF'
+                          ? 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60'
+                          : currentRecipe.category === 'Cocida'
+                          ? 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800/60'
+                          : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60'
+                      }`}>
+                        {currentRecipe.category}
                       </span>
-                      <span className="leading-relaxed">{step}</span>
-                    </li>
-                  ))}
-                </ol>
+                      <span className="text-[11px] text-stone-500 dark:text-stone-400 font-medium leading-snug">
+                        {currentRecipe.cookingMethod}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleCopyRecipe}
+                        className="shrink-0 px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 border border-stone-200/70 dark:border-stone-700"
+                        title="Copiar texto de la receta"
+                      >
+                        <Copy className="w-3.5 h-3.5 shrink-0" />
+                        <span>{copied ? '¡Copiado!' : 'Copiar'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleShareWhatsApp}
+                        className="shrink-0 px-2.5 py-1.5 bg-[#25D366] hover:bg-[#20ba59] text-white rounded-xl text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
+                        title="Enviar por WhatsApp"
+                      >
+                        <Share2 className="w-3.5 h-3.5 shrink-0" />
+                        <span>WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <h3 className="font-heading font-black text-base sm:text-lg text-stone-900 dark:text-stone-100 leading-snug">
+                    {currentRecipe.name}
+                  </h3>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                    {currentRecipe.description}
+                  </p>
+                </div>
+
+                {/* Porciones exactas por peso de la mascota */}
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>Ingredientes Exactos para {activePet.name} ({estimatedDailyGrams}g totales / día):</span>
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {currentRecipe.ingredientBreakdown.map((ing, idx) => {
+                      const exactGrams = Math.round((estimatedDailyGrams * ing.percentage) / 100);
+                      return (
+                        <div
+                          key={idx}
+                          className="p-3 rounded-xl bg-stone-50 dark:bg-stone-850/60 border border-stone-200/70 dark:border-stone-800 flex items-center justify-between gap-2"
+                        >
+                          <div className="flex-1 min-w-0 pr-2">
+                            <span className="text-[11.5px] sm:text-xs font-extrabold text-stone-900 dark:text-stone-100 leading-tight block">
+                              {ing.name}
+                            </span>
+                            {ing.note && (
+                              <span className="text-[10px] sm:text-[10.5px] text-stone-500 dark:text-stone-400 leading-snug block mt-0.5">
+                                {ing.note}
+                              </span>
+                            )}
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <span className="text-sm sm:text-base font-black text-emerald-700 dark:text-emerald-400 block leading-none">
+                              {exactGrams} g
+                            </span>
+                            <span className="text-[10px] font-medium text-stone-400 dark:text-stone-500 block mt-0.5">
+                              {ing.percentage}%
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Beneficios Nutricionales */}
+                <div className="bg-emerald-50/50 dark:bg-emerald-950/20 p-3.5 rounded-xl border border-emerald-200/60 dark:border-emerald-900/40 space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-900 dark:text-emerald-300 block">
+                    ✨ Beneficios Clínicos del Menú:
+                  </span>
+                  <div className="flex flex-wrap gap-1.5">
+                    {currentRecipe.benefits.map((b, i) => (
+                      <span key={i} className="text-[11px] text-emerald-800 dark:text-emerald-200 font-semibold bg-white dark:bg-stone-850 px-2.5 py-1 rounded-lg border border-emerald-200/70 dark:border-emerald-800/60 shadow-3xs">
+                        ✓ {b}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Paso a Paso de Preparación */}
+                <div className="space-y-2.5">
+                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                    <ChefHat className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>Instrucciones Paso a Paso:</span>
+                  </h4>
+
+                  <ol className="space-y-2 text-xs text-stone-700 dark:text-stone-300">
+                    {currentRecipe.instructions.map((step, idx) => (
+                      <li key={idx} className="flex items-start gap-2.5 bg-stone-50/80 dark:bg-stone-850/50 p-3 rounded-xl border border-stone-200/60 dark:border-stone-800">
+                        <span className="w-5 h-5 rounded-full bg-emerald-600 text-white font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">
+                          {idx + 1}
+                        </span>
+                        <span className="leading-relaxed">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+
+                {/* Disclaimer Nutricional en Cápsula Compacta Ámbar */}
+                <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-xl text-[11px] text-amber-950 dark:text-amber-200 flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                  <p className="leading-snug">
+                    <strong>Aviso de Salud NutriPet:</strong> Estas recetas son guías caseras complementarias orientativas. Si vas a alimentar a {activePet.name} 100% con comida casera a largo plazo, consulta con un nutricionista veterinario para adicionar suplementación de calcio, taurina o multivitamínico.
+                  </p>
+                </div>
+
               </div>
+            )}
 
-              {/* Disclaimer Nutricional */}
-              <div className="p-3.5 bg-amber-50/80 border border-amber-200 rounded-2xl text-[11px] text-amber-950 flex items-start gap-2.5">
-                <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                <p className="leading-snug">
-                  <strong>Aviso de Salud NutriPet:</strong> Estas recetas son guías caseras complementarias orientativas. Si vas a alimentar a {activePet.name} 100% con comida casera a largo plazo, consulta con un nutricionista veterinario para adicionar suplementación de calcio, taurina o multivitamínico.
-                </p>
-              </div>
-
-            </div>
-          )}
-
+          </div>
         </div>
-      </div>
       )}
 
     </div>
