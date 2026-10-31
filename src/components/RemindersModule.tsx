@@ -1,12 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { usePets } from '../context/PetContext';
 import {
-  Bell,
   Plus,
   Trash2,
   CheckCircle2,
   Circle,
-  ShieldAlert,
   Calendar,
   Pill,
   Sparkles,
@@ -17,8 +15,12 @@ import {
   LayoutList,
   CalendarDays,
   Droplets,
-  Scissors,
-  Info
+  Info,
+  ShieldCheck,
+  Syringe,
+  ChevronLeft,
+  ChevronRight,
+  MessageCircle
 } from 'lucide-react';
 import { Reminder, BathLog } from '../types';
 import { RemindersCalendar } from './RemindersCalendar';
@@ -38,6 +40,14 @@ const addDaysToDate = (baseDateStr: string, days: number): string => {
   const date = new Date(y, m - 1, d);
   date.setDate(date.getDate() + days);
   return getLocalDateString(date);
+};
+
+const getDiffDaysFromToday = (todayStr: string, targetDateStr: string): number => {
+  const [ty, tm, td] = todayStr.split('-').map(Number);
+  const [dy, dm, dd] = targetDateStr.split('-').map(Number);
+  const tTime = new Date(ty, tm - 1, td).getTime();
+  const dTime = new Date(dy, dm - 1, dd).getTime();
+  return Math.round((dTime - tTime) / (1000 * 60 * 60 * 24));
 };
 
 export const RemindersModule: React.FC = () => {
@@ -61,6 +71,64 @@ export const RemindersModule: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'pending' | 'completed'>('all');
 
   const todayStr = useMemo(() => getLocalDateString(), []);
+
+  // Referencias y estados de navegación para el carrusel de Blindaje Biológico en móvil
+  const shieldScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollShieldLeft, setCanScrollShieldLeft] = useState(false);
+  const [canScrollShieldRight, setCanScrollShieldRight] = useState(true);
+  const [activeShieldIndex, setActiveShieldIndex] = useState(0);
+
+  const checkShieldScroll = useCallback(() => {
+    const el = shieldScrollRef.current;
+    if (el) {
+      const overflow = el.scrollWidth > el.clientWidth + 4;
+      setCanScrollShieldLeft(overflow && el.scrollLeft > 10);
+      setCanScrollShieldRight(overflow && el.scrollLeft + el.clientWidth < el.scrollWidth - 10);
+
+      // Calcular tarjeta activa basada en scrollLeft y el ancho de tarjeta
+      const cardWidth = el.clientWidth > 0 ? el.clientWidth * 0.8 : 280;
+      const index = Math.round(el.scrollLeft / cardWidth);
+      setActiveShieldIndex(Math.min(2, Math.max(0, index)));
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(checkShieldScroll, 80);
+    window.addEventListener('resize', checkShieldScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkShieldScroll);
+    };
+  }, [checkShieldScroll]);
+
+  const scrollShield = (direction: 'left' | 'right') => {
+    const el = shieldScrollRef.current;
+    if (el) {
+      const scrollAmount = Math.max(260, Math.floor(el.clientWidth * 0.82));
+      el.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+      setTimeout(checkShieldScroll, 320);
+    }
+  };
+
+  const scrollToShieldIndex = (index: number) => {
+    const el = shieldScrollRef.current;
+    if (el) {
+      const scrollAmount = Math.max(260, Math.floor(el.clientWidth * 0.82));
+      el.scrollTo({
+        left: index * scrollAmount,
+        behavior: 'smooth'
+      });
+      setActiveShieldIndex(index);
+      setTimeout(checkShieldScroll, 320);
+    }
+  };
+
+  // Estado para el Mini-Calendario integrado en la columna derecha
+  const [miniCalDate, setMiniCalDate] = useState<Date>(new Date());
+  const [selectedMiniDateStr, setSelectedMiniDateStr] = useState<string>(() => getLocalDateString());
 
   const [completingReminderState, setCompletingReminderState] = useState<{
     reminder: Reminder;
@@ -185,6 +253,52 @@ export const RemindersModule: React.FC = () => {
     return reminders.filter(r => !r.completed && r.dueDate < todayStr).length;
   }, [reminders, todayStr]);
 
+  // Datos dinámicos para los 3 Pilares del Radar de Blindaje Biológico 360°
+  const shieldPillars = useMemo(() => {
+    const pendingAll = reminders
+      .filter(r => !r.completed)
+      .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
+
+    // Pilar 1: Vacunas
+    const nextVaccine = pendingAll.find(
+      r => r.type === 'vaccine' || r.name.toLowerCase().includes('vacuna') || r.name.toLowerCase().includes('antirrábica') || r.name.toLowerCase().includes('triple')
+    );
+    const vaccineDays = nextVaccine ? getDiffDaysFromToday(todayStr, nextVaccine.dueDate) : null;
+
+    // Pilar 2: Antipulgas & Garrapatas
+    const nextFlea = pendingAll.find(r => {
+      const n = r.name.toLowerCase();
+      return n.includes('pulga') || n.includes('pipeta') || n.includes('garrapata') || n.includes('ectopar');
+    });
+    const fleaDays = nextFlea ? getDiffDaysFromToday(todayStr, nextFlea.dueDate) : null;
+
+    // Pilar 3: Desparasitación Interna
+    const nextDeworm = pendingAll.find(r => {
+      const n = r.name.toLowerCase();
+      return (r.type === 'deworming' && !n.includes('pulga') && !n.includes('pipeta')) || n.includes('desparasit') || n.includes('interno') || n.includes('trimestral');
+    });
+    const dewormDays = nextDeworm ? getDiffDaysFromToday(todayStr, nextDeworm.dueDate) : null;
+
+    return {
+      nextVaccine,
+      vaccineDays,
+      nextFlea,
+      fleaDays,
+      nextDeworm,
+      dewormDays
+    };
+  }, [reminders, todayStr]);
+
+  // Agrupación por fecha para el Mini-Calendario
+  const remindersByDate = useMemo(() => {
+    return reminders.reduce((acc, rem) => {
+      const d = rem.dueDate;
+      if (!acc[d]) acc[d] = [];
+      acc[d].push(rem);
+      return acc;
+    }, {} as Record<string, Reminder[]>);
+  }, [reminders]);
+
   if (!activePet) return null;
 
   const getPetAgeInfo = () => {
@@ -207,17 +321,36 @@ export const RemindersModule: React.FC = () => {
     setShowAddModal(true);
   };
 
-  const shareViaWhatsApp = (rem: Reminder) => {
-    const text = `🐾 *Recordatorio NutriPet para ${activePet.name}*\n📌 *Evento:* ${rem.name}\n📅 *Fecha:* ${rem.dueDate}${rem.dosage ? `\n💊 *Dosis:* ${rem.dosage}` : ''}${rem.notes ? `\n📝 *Notas:* ${rem.notes}` : ''}`;
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer');
+  /**
+   * CORRECCIÓN MANDATORIA DEL MENSAJE DE WHATSAPP (CERO CUADROS NEGROS )
+   * Encapsulado 100% en encodeURIComponent con endpoint directo api.whatsapp.com/send
+   */
+  const handleSendWhatsAppReminder = (reminder: Reminder) => {
+    const message =
+`🐾 *NUTRIPET CLINICAL CARE • RECORDATORIO DE SALUD*
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🩺 *Paciente:* ${activePet.name} (${activePet.type === 'dog' ? 'Canino' : 'Felino'})
+💉 *Tratamiento:* ${reminder.name}
+🗓️ *Fecha Programada:* ${reminder.dueDate}
+⚖️ *Dosis / Pauta:* ${reminder.dosage || reminder.notes || '1 aplicación de refuerzo'}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🛡️ *Pautas de Cuidado:*
+• Mantén a ${activePet.name} en reposo y evita ejercicio intenso durante el día.
+• En caso de vacunas, evitar baños las siguientes 48 horas.
+
+📲 _Gestionado desde el Expediente Digital NutriPet_`;
+
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
+
+  const shareViaWhatsApp = handleSendWhatsAppReminder;
 
   const exportToCalendar = (rem: Reminder) => {
     const title = `[NutriPet] ${rem.name} - ${activePet.name}`;
     const details = `Recordatorio para ${activePet.name}. Dosis: ${rem.dosage || 'N/A'}. ${rem.notes || ''}`;
     const dateFormatted = rem.dueDate.replace(/-/g, '');
 
-    // Tarea de día completo en calendario para evitar desfasaje de horas
     const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//NutriPet//ES\nBEGIN:VEVENT\nSUMMARY:${title}\nDESCRIPTION:${details}\nDTSTART;VALUE=DATE:${dateFormatted}\nDTEND;VALUE=DATE:${dateFormatted}\nEND:VEVENT\nEND:VCALENDAR`;
 
     const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
@@ -225,6 +358,29 @@ export const RemindersModule: React.FC = () => {
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `nutripet_${rem.name.toLowerCase().replace(/\s+/g, '_')}.ics`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const exportAllToCalendar = () => {
+    const pendingReminders = reminders.filter(r => !r.completed);
+    if (pendingReminders.length === 0) return;
+
+    const events = pendingReminders.map(rem => {
+      const title = `[NutriPet] ${rem.name} - ${activePet.name}`;
+      const details = `Recordatorio de salud para ${activePet.name}. Dosis: ${rem.dosage || 'N/A'}. ${rem.notes || ''}`;
+      const dateFormatted = rem.dueDate.replace(/-/g, '');
+      return `BEGIN:VEVENT\nSUMMARY:${title}\nDESCRIPTION:${details}\nDTSTART;VALUE=DATE:${dateFormatted}\nDTEND;VALUE=DATE:${dateFormatted}\nEND:VEVENT`;
+    }).join('\n');
+
+    const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//NutriPet//ES\n${events}\nEND:VCALENDAR`;
+    const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `nutripet_calendario_${activePet.name.toLowerCase().replace(/\s+/g, '_')}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -353,24 +509,64 @@ export const RemindersModule: React.FC = () => {
   };
 
   const getUrgency = (dueDate: string, completed: boolean) => {
-    if (completed) return { label: 'Completado', color: 'text-stone-400 bg-stone-100 border-stone-200' };
+    if (completed) return { label: 'Completado', color: 'text-stone-400 bg-stone-100 border-stone-200 dark:bg-stone-800 dark:text-stone-400 dark:border-stone-700' };
     if (dueDate < todayStr) {
-      const [ty, tm, td] = todayStr.split('-').map(Number);
-      const [dy, dm, dd] = dueDate.split('-').map(Number);
-      const diffDays = Math.ceil((new Date(ty, tm - 1, td).getTime() - new Date(dy, dm - 1, dd).getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.abs(getDiffDaysFromToday(todayStr, dueDate));
       return {
-        label: `⚠️ Vencido (hace ${diffDays} día${diffDays > 1 ? 's' : ''})`,
-        color: 'text-red-700 bg-red-100 border-red-300 font-extrabold shadow-2xs'
+        label: `⚠️ Vencido (${diffDays}d)`,
+        color: 'text-red-700 bg-red-100 border-red-300 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800 font-extrabold shadow-2xs'
       };
     }
-    if (dueDate === todayStr) return { label: '¡Toca Hoy!', color: 'text-amber-800 bg-amber-100 border-amber-300 font-extrabold' };
+    if (dueDate === todayStr) return { label: '¡Toca Hoy!', color: 'text-amber-800 bg-amber-100 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800 font-extrabold' };
 
-    const [ty, tm, td] = todayStr.split('-').map(Number);
-    const [dy, dm, dd] = dueDate.split('-').map(Number);
-    const diffDays = Math.ceil((new Date(dy, dm - 1, dd).getTime() - new Date(ty, tm - 1, td).getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays <= 7) return { label: `En ${diffDays} días`, color: 'text-amber-700 bg-amber-50 border-amber-200' };
+    const diffDays = getDiffDaysFromToday(todayStr, dueDate);
+    if (diffDays <= 7) return { label: `Faltan ${diffDays} días`, color: 'text-amber-700 bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800' };
 
-    return { label: `El ${dueDate}`, color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+    return { label: `En ${diffDays} días`, color: 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' };
+  };
+
+  const getReminderThemeBadge = (rem: Reminder) => {
+    const nameLower = rem.name.toLowerCase();
+    if (rem.type === 'vaccine' || nameLower.includes('vacuna') || nameLower.includes('antirrábica') || nameLower.includes('triple') || nameLower.includes('polivalente')) {
+      return {
+        label: '💉 Vacuna',
+        cls: 'bg-purple-50 text-purple-800 border-purple-200/90 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800',
+        dot: 'bg-purple-500'
+      };
+    }
+    if (nameLower.includes('pulga') || nameLower.includes('pipeta') || nameLower.includes('garrapata') || nameLower.includes('ectopar')) {
+      return {
+        label: '🛡️ Antipulgas',
+        cls: 'bg-amber-50 text-amber-800 border-amber-200/90 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800',
+        dot: 'bg-amber-500'
+      };
+    }
+    if (rem.type === 'deworming' || nameLower.includes('desparasit')) {
+      return {
+        label: '💊 Desparasitación',
+        cls: 'bg-emerald-50 text-emerald-800 border-emerald-200/90 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800',
+        dot: 'bg-emerald-500'
+      };
+    }
+    if (rem.type === 'bath' || nameLower.includes('baño') || nameLower.includes('grooming')) {
+      return {
+        label: '🛁 Baño',
+        cls: 'bg-blue-50 text-blue-800 border-blue-200/90 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800',
+        dot: 'bg-blue-500'
+      };
+    }
+    if (rem.type === 'checkup') {
+      return {
+        label: '🩺 Control',
+        cls: 'bg-teal-50 text-teal-800 border-teal-200/90 dark:bg-teal-950/60 dark:text-teal-300 dark:border-teal-800',
+        dot: 'bg-teal-500'
+      };
+    }
+    return {
+      label: '💊 Medicación',
+      cls: 'bg-rose-50 text-rose-800 border-rose-200/90 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800',
+      dot: 'bg-rose-500'
+    };
   };
 
   const addQuickTemplate = (name: string, type: Reminder['type'], defaultDays: number, dosage?: string) => {
@@ -471,94 +667,325 @@ export const RemindersModule: React.FC = () => {
     });
   };
 
+  // Variables del Mini-Calendario integrado
+  const calYear = miniCalDate.getFullYear();
+  const calMonth = miniCalDate.getMonth();
+  const monthNames = [
+    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+  ];
+  const daysOfWeekShort = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+  const daysInCalMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  let firstDayOfCalMonth = new Date(calYear, calMonth, 1).getDay();
+  firstDayOfCalMonth = firstDayOfCalMonth === 0 ? 6 : firstDayOfCalMonth - 1;
+  const selectedMiniDateEvents = remindersByDate[selectedMiniDateStr] || [];
+
   return (
-    <div className="space-y-6">
-      <div className="glass-card rounded-3xl p-5 sm:p-7 shadow-xs flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-heading font-extrabold text-xl text-stone-900 dark:text-stone-100">
-              Vacunas y Notificaciones de {activePet.name}
-            </h3>
-            <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-              {healthReminders.filter(r => !r.completed).length} pendientes
-            </span>
+    <div className="space-y-5 pb-28 sm:pb-8">
+      {/* BARRA BENTO COMPACTA DE CABECERA (UNA SOLA FILA EN DESKTOP, CERO ESPACIO DESPERDICIADO) */}
+      <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+        {/* Izquierda: Icono institucional esmeralda, título "Vacunas & Notificaciones" con badge de mascota y micro-pill */}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/70 dark:border-emerald-800 flex items-center justify-center shrink-0 text-emerald-700 dark:text-emerald-400">
+            <ShieldCheck className="w-5 h-5" />
           </div>
-          <p className="text-xs text-stone-500 dark:text-stone-400 mt-1">
-            Nunca olvides una dosis, pastilla antipulgas o refuerzo vacunal. Sincronizado en tiempo real.
-          </p>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-heading font-extrabold text-base sm:text-lg text-stone-900 dark:text-stone-100 truncate">
+                Vacunas & Notificaciones
+              </h3>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
+                {activePet.name}
+              </span>
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
+                {healthReminders.filter(r => !r.completed).length} pendiente{healthReminders.filter(r => !r.completed).length === 1 ? '' : 's'}
+              </span>
+            </div>
+            <p className="text-[11px] text-stone-600 dark:text-stone-300 font-medium">
+              Calendario preventivo de salud, higiene y desparasitación al día.
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <div className="flex flex-wrap bg-stone-100 dark:bg-stone-800 p-1 rounded-xl gap-1">
-            <button
-              type="button"
-              onClick={() => setActiveTab('vaccines')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'vaccines'
-                  ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs'
-                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
-              }`}
-            >
-              <LayoutList className="w-3.5 h-3.5" />
-              <span>💉 Vacunas & Salud</span>
-            </button>
+        {/* Centro: Selector de subpestañas integrado */}
+        <div className="order-last w-full grid grid-cols-3 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('vaccines')}
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer min-w-0 ${
+              activeTab === 'vaccines'
+                ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs'
+                : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
+            }`}
+          >
+            <LayoutList className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">
+              <span className="sm:hidden">Vacunas</span>
+              <span className="hidden sm:inline">Vacunas & Salud</span>
+            </span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('bath')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'bath'
-                  ? 'bg-white dark:bg-stone-900 text-teal-900 dark:text-teal-300 shadow-2xs'
-                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
-              }`}
-            >
-              <Droplets className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
-              <span>Control de Baño & Grooming</span>
-            </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('bath')}
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer min-w-0 ${
+              activeTab === 'bath'
+                ? 'bg-white dark:bg-stone-900 text-teal-900 dark:text-teal-300 shadow-2xs'
+                : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
+            }`}
+          >
+            <Droplets className="w-3.5 h-3.5 shrink-0 text-teal-600 dark:text-teal-400" />
+            <span className="truncate">
+              <span className="sm:hidden">Higiene</span>
+              <span className="hidden sm:inline">Baño & Grooming</span>
+            </span>
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('calendar')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                activeTab === 'calendar'
-                  ? 'bg-white dark:bg-stone-900 text-blue-900 dark:text-blue-300 shadow-2xs'
-                  : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
-              }`}
-            >
-              <CalendarDays className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Calendario Mensual</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab('calendar')}
+            className={`flex items-center justify-center gap-1 sm:gap-1.5 px-1.5 sm:px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer min-w-0 ${
+              activeTab === 'calendar'
+                ? 'bg-white dark:bg-stone-900 text-blue-900 dark:text-blue-300 shadow-2xs'
+                : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'
+            }`}
+          >
+            <CalendarDays className="w-3.5 h-3.5 shrink-0 text-blue-600 dark:text-blue-400" />
+            <span className="truncate">Calendario</span>
+          </button>
+        </div>
+
+        {/* Derecha: Botón unificado 'Crear Recordatorio' y 'Sincronizar Calendario' */}
+        <div className="grid grid-cols-2 gap-2 w-full sm:w-auto sm:flex sm:items-center shrink-0">
+          <button
+            type="button"
+            onClick={exportAllToCalendar}
+            className="w-full sm:w-auto justify-center bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 text-xs font-semibold px-2.5 sm:px-3 py-2 rounded-xl border border-stone-200 dark:border-stone-700 flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 min-w-0"
+            title="Añadir a mi Calendario (Google / Apple)"
+          >
+            <Calendar className="w-3.5 h-3.5 text-stone-600 dark:text-stone-400 shrink-0" />
+            <span className="truncate">
+              <span className="sm:hidden">Sincronizar</span>
+              <span className="hidden sm:inline">Sincronizar Calendario</span>
+            </span>
+          </button>
 
           <button
             type="button"
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1b4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-medium text-xs flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
+            className="w-full sm:w-auto justify-center bg-[#143826] hover:bg-[#1a4a32] text-white px-2.5 sm:px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-95 cursor-pointer min-w-0"
           >
-            <Plus className="w-4 h-4" /> Crear Recordatorio
+            <Plus className="w-4 h-4 shrink-0" />
+            <span className="truncate">
+              <span className="sm:hidden">+ Recordatorio</span>
+              <span className="hidden sm:inline">Crear Recordatorio</span>
+            </span>
           </button>
         </div>
       </div>
 
+      {/* RADAR DE SALUD Y PROTECCIÓN PREVENTIVA (CARRUSEL MÓVIL CON FLECHAS E INDICADORES LATERALES) */}
+      {activeTab === 'vaccines' && (
+        <div className="space-y-2 mb-5">
+          {/* Cabecera de controles e indicadores laterales para móvil */}
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-mono font-bold tracking-wider text-stone-800 dark:text-stone-100 uppercase flex items-center gap-1.5 drop-shadow-2xs">
+                <ShieldCheck className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
+                PROTECCIÓN PREVENTIVA INTEGRAL
+              </span>
+              <span className="sm:hidden text-[10px] font-mono font-extrabold px-1.5 py-0.5 rounded-md bg-white dark:bg-stone-800 text-stone-800 dark:text-stone-200 border border-stone-200 dark:border-stone-700 shadow-2xs">
+                {activeShieldIndex + 1}/3
+              </span>
+            </div>
+
+            {/* Controles de deslizamiento lateral en móvil */}
+            <div className="sm:hidden flex items-center gap-1.5">
+              {/* Indicadores de posición (Dots interactivos) */}
+              <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-stone-100 dark:bg-stone-800">
+                {[0, 1, 2].map((idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => scrollToShieldIndex(idx)}
+                    className={`transition-all rounded-full cursor-pointer ${
+                      activeShieldIndex === idx
+                        ? 'w-4 h-1.5 bg-[#143826] dark:bg-emerald-400'
+                        : 'w-1.5 h-1.5 bg-stone-300 dark:bg-stone-600 hover:bg-stone-400'
+                    }`}
+                    aria-label={`Ver pilar ${idx + 1}`}
+                  />
+                ))}
+              </div>
+
+              {/* Botón Flecha Izquierda */}
+              <button
+                type="button"
+                onClick={() => scrollShield('left')}
+                disabled={!canScrollShieldLeft}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  canScrollShieldLeft
+                    ? 'bg-white dark:bg-stone-900 border-stone-200 dark:border-stone-700 text-stone-700 dark:text-stone-200 shadow-2xs hover:border-[#143826] active:scale-90 cursor-pointer'
+                    : 'bg-stone-100/60 dark:bg-stone-800/40 border-stone-200/40 text-stone-300 dark:text-stone-700 cursor-not-allowed opacity-40'
+                }`}
+                aria-label="Pilar anterior"
+                title="Deslizar al pilar anterior"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Botón Flecha Derecha */}
+              <button
+                type="button"
+                onClick={() => scrollShield('right')}
+                disabled={!canScrollShieldRight}
+                className={`w-7 h-7 rounded-full border flex items-center justify-center transition-all ${
+                  canScrollShieldRight
+                    ? 'bg-white dark:bg-stone-900 border-emerald-400/80 dark:border-emerald-700 text-[#143826] dark:text-emerald-300 shadow-2xs hover:border-[#143826] active:scale-90 cursor-pointer ring-2 ring-emerald-500/10'
+                    : 'bg-stone-100/60 dark:bg-stone-800/40 border-stone-200/40 text-stone-300 dark:text-stone-700 cursor-not-allowed opacity-40'
+                }`}
+                aria-label="Pilar siguiente"
+                title="Deslizar al siguiente pilar"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Carrusel Deslizable */}
+          <div className="relative">
+            <div
+              ref={shieldScrollRef}
+              onScroll={checkShieldScroll}
+              className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory flex-nowrap sm:grid sm:grid-cols-3 sm:gap-3.5 scroll-smooth"
+            >
+              {/* Pilar 1: Vacunas Esenciales */}
+              <div className="min-w-[270px] max-w-[290px] sm:min-w-0 sm:max-w-none shrink-0 snap-center p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-2xs flex flex-col justify-between gap-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800">
+                    <Syringe className="w-4 h-4" />
+                  </div>
+                  <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border ${
+                    shieldPillars.vaccineDays !== null && shieldPillars.vaccineDays < 0
+                      ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/60 dark:text-red-300 dark:border-red-800'
+                      : 'bg-emerald-50 text-emerald-800 border-emerald-200/80 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                  }`}>
+                    {shieldPillars.vaccineDays !== null && shieldPillars.vaccineDays < 0
+                      ? 'Refuerzo Vencido'
+                      : 'Vigente / Protegido'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-mono font-bold tracking-wider text-stone-500 dark:text-stone-400 uppercase block">
+                    VACUNAS ESENCIALES
+                  </span>
+                  <p className="font-heading font-black text-stone-900 dark:text-stone-100 text-xs sm:text-sm mt-0.5 truncate">
+                    {shieldPillars.nextVaccine
+                      ? shieldPillars.nextVaccine.name
+                      : `${petAgeInfo.label}: Esquema al día`}
+                  </p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
+                    {shieldPillars.nextVaccine
+                      ? shieldPillars.vaccineDays === 0
+                        ? '¡Aplicación programada hoy!'
+                        : shieldPillars.vaccineDays! > 0
+                        ? `Próxima en ${shieldPillars.vaccineDays} días (${shieldPillars.nextVaccine.dueDate})`
+                        : `Vencida hace ${Math.abs(shieldPillars.vaccineDays!)} días`
+                      : 'Cobertura anual activa'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Pilar 2: Protección Antipulgas & Garrapatas */}
+              <div className="min-w-[270px] max-w-[290px] sm:min-w-0 sm:max-w-none shrink-0 snap-center p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-2xs flex flex-col justify-between gap-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800">
+                    <ShieldCheck className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800">
+                    {shieldPillars.fleaDays !== null
+                      ? shieldPillars.fleaDays < 0
+                        ? `Vencido (${Math.abs(shieldPillars.fleaDays)}d)`
+                        : shieldPillars.fleaDays === 0
+                        ? '¡Toca Hoy!'
+                        : `Faltan ${shieldPillars.fleaDays} días`
+                      : 'Al día'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-mono font-bold tracking-wider text-stone-500 dark:text-stone-400 uppercase block">
+                    PROTECCIÓN CONTRA PULGAS Y GARRAPATAS
+                  </span>
+                  <p className="font-heading font-black text-stone-900 dark:text-stone-100 text-xs sm:text-sm mt-0.5 truncate">
+                    {shieldPillars.nextFlea
+                      ? shieldPillars.nextFlea.name
+                      : 'Barrera Ectoparasitaria'}
+                  </p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
+                    {shieldPillars.nextFlea
+                      ? `Fecha: ${shieldPillars.nextFlea.dueDate}`
+                      : 'Ciclo preventivo cada 30 días'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Pilar 3: Desparasitación Interna */}
+              <div className="min-w-[270px] max-w-[290px] sm:min-w-0 sm:max-w-none shrink-0 snap-center p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 shadow-2xs flex flex-col justify-between gap-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800">
+                    <Pill className="w-4 h-4" />
+                  </div>
+                  <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800">
+                    {shieldPillars.dewormDays !== null
+                      ? shieldPillars.dewormDays < 0
+                        ? `Vencido (${Math.abs(shieldPillars.dewormDays)}d)`
+                        : `Faltan ${shieldPillars.dewormDays} días`
+                      : 'Ciclo Trimestral'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] font-mono font-bold tracking-wider text-stone-500 dark:text-stone-400 uppercase block">
+                    DESPARASITACIÓN INTERNA
+                  </span>
+                  <p className="font-heading font-black text-stone-900 dark:text-stone-100 text-xs sm:text-sm mt-0.5 truncate">
+                    {shieldPillars.nextDeworm
+                      ? shieldPillars.nextDeworm.name
+                      : 'Control Gastrointestinal'}
+                  </p>
+                  <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
+                    {shieldPillars.nextDeworm
+                      ? `Programado: ${shieldPillars.nextDeworm.dueDate}`
+                      : 'Pauta oral cada 90 días'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {totalOverdue > 0 && (
-        <div className="bg-red-50 dark:bg-red-950/30 border-2 border-red-300 dark:border-red-900/50 rounded-3xl p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs animate-in fade-in">
+        <div className="bg-white dark:bg-stone-900 border-2 border-red-300 dark:border-red-900/60 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-red-600 text-white rounded-2xl shrink-0 shadow-xs">
-              <AlertTriangle className="w-6 h-6 animate-pulse" />
+            <div className="p-2.5 bg-red-600 text-white rounded-xl shrink-0 shadow-2xs">
+              <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-sm sm:text-base">
+              <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-xs sm:text-sm">
                 ⚠️ Tienes {totalOverdue} recordatorio(s) vencido(s)
               </h4>
-              <p className="text-xs text-stone-700 dark:text-stone-300 mt-0.5 leading-relaxed">
-                Los recordatorios vencidos <strong>permanecen visibles</strong> para cuidar la salud de {activePet.name}. Haz clic en el ícono (⭕) para completarlos y re-programar el siguiente ciclo automáticamente.
+              <p className="text-xs text-stone-600 dark:text-stone-300 mt-0.5">
+                Haz clic en el círculo (⭕) para completarlos y reprogramar el siguiente ciclo automáticamente.
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={() => setFilter('pending')}
-            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0 shadow-xs"
+            className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shrink-0 shadow-2xs"
           >
             Ver Pendientes ({totalOverdue})
           </button>
@@ -566,44 +993,48 @@ export const RemindersModule: React.FC = () => {
       )}
 
       <div id="reminders-printable-container" className="space-y-6">
+        {/* PESTAÑA CALENDARIO MENSUAL */}
         {activeTab === 'calendar' && (
           <RemindersCalendar
             onOpenAddModalWithDate={handleOpenAddModalWithDate}
             onToggleReminder={handleAttemptToggle}
+            onSendWhatsApp={handleSendWhatsAppReminder}
+            onDeleteReminder={deleteReminder}
+            onQuickTemplate={addQuickTemplate}
           />
         )}
 
+        {/* PESTAÑA BAÑO & GROOMING */}
         {activeTab === 'bath' && (
-          <div className="space-y-6">
-            <div className="bg-gradient-to-r from-teal-600 via-emerald-600 to-teal-700 rounded-3xl p-6 text-white shadow-md relative overflow-hidden">
-              <div className="absolute -right-6 -bottom-6 w-32 h-32 bg-white/10 rounded-full blur-xl pointer-events-none" />
+          <div className="space-y-5">
+            <div className="bg-gradient-to-r from-[#143826] via-[#1a4a32] to-[#123020] rounded-3xl p-5 sm:p-6 text-white shadow-xs border border-[#2a5940] relative overflow-hidden">
               <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2.5">
-                    <span className="p-2.5 bg-white/20 backdrop-blur-xs rounded-2xl">
-                      <Droplets className="w-6 h-6 text-white" />
+                    <span className="p-2.5 bg-emerald-950/60 border border-emerald-500/30 rounded-2xl">
+                      <Droplets className="w-5 h-5 text-emerald-300" />
                     </span>
                     <div>
-                      <h4 className="font-heading font-extrabold text-lg text-white">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-300/90 block">
+                        DERMATOLOGÍA & MANTO
+                      </span>
+                      <h4 className="font-heading font-extrabold text-base sm:text-lg text-white">
                         Control de Baño e Higiene de {activePet.name}
                       </h4>
-                      <p className="text-xs text-teal-100">
-                        {activePet.type === 'dog' ? 'Canino' : 'Felino'} • Registro de baños, shampoos y cuidados dermatológicos
-                      </p>
                     </div>
                   </div>
 
-                  <div className="flex flex-wrap gap-3 pt-1">
-                    <div className="bg-white/15 backdrop-blur-md rounded-2xl px-3.5 py-2 border border-white/20 text-xs">
-                      <span className="text-teal-200 block text-[10px] uppercase font-bold">Último Baño Registrado</span>
-                      <strong className="text-white font-extrabold text-sm">
-                        {lastBath ? `${lastBath.date} (${daysSinceLastBath === 0 ? 'Hoy' : `hace ${daysSinceLastBath} días`})` : 'Sin registros aún'}
+                  <div className="flex flex-wrap gap-2.5 pt-1">
+                    <div className="bg-emerald-950/50 rounded-xl px-3 py-1.5 border border-emerald-500/20 text-xs">
+                      <span className="text-emerald-200/80 block text-[10px] font-mono uppercase font-bold">Último Baño</span>
+                      <strong className="text-white font-extrabold text-xs">
+                        {lastBath ? `${lastBath.date} (${daysSinceLastBath === 0 ? 'Hoy' : `hace ${daysSinceLastBath}d`})` : 'Sin registros'}
                       </strong>
                     </div>
 
-                    <div className="bg-white/15 backdrop-blur-md rounded-2xl px-3.5 py-2 border border-white/20 text-xs">
-                      <span className="text-teal-200 block text-[10px] uppercase font-bold">Próximo Baño Programado</span>
-                      <strong className="text-white font-extrabold text-sm">
+                    <div className="bg-emerald-950/50 rounded-xl px-3 py-1.5 border border-emerald-500/20 text-xs">
+                      <span className="text-emerald-200/80 block text-[10px] font-mono uppercase font-bold">Próximo Baño</span>
+                      <strong className="text-amber-300 font-extrabold text-xs">
                         {nextBathReminder ? nextBathReminder.dueDate : 'Por programar'}
                       </strong>
                     </div>
@@ -613,692 +1044,779 @@ export const RemindersModule: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowBathModal(true)}
-                  className="px-5 py-3 bg-white text-teal-900 hover:bg-teal-50 font-extrabold text-xs rounded-2xl shadow-lg transition-all cursor-pointer flex items-center gap-2 shrink-0 border border-white/40"
+                  className="px-4 py-2.5 bg-white text-[#143826] hover:bg-emerald-50 font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2 shrink-0"
                 >
-                  <Droplets className="w-4 h-4 text-teal-600" />
+                  <Droplets className="w-4 h-4 text-emerald-700" />
                   <span>Registrar Baño Realizado Hoy</span>
                 </button>
               </div>
             </div>
 
-            <div className="p-5 bg-teal-50/70 dark:bg-teal-950/20 rounded-3xl border border-teal-200/80 dark:border-teal-900/40 shadow-3xs space-y-3">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-teal-700 dark:text-teal-400 animate-pulse" />
-                <h5 className="text-xs font-extrabold uppercase tracking-wider text-teal-950 dark:text-teal-200">
+            <div className="p-4 sm:p-5 bg-white dark:bg-stone-900 rounded-2xl border border-stone-200/90 dark:border-stone-800 shadow-2xs space-y-3">
+              <div>
+                <span className="text-[10px] font-mono font-bold tracking-wider text-stone-400 uppercase block">
+                  AGENDA RÁPIDA DE PELUQUERÍA
+                </span>
+                <h5 className="text-xs font-extrabold text-stone-900 dark:text-stone-100 mt-0.5">
                   Plantillas Rápidas de Higiene & Grooming
                 </h5>
               </div>
-              <p className="text-xs text-stone-600 dark:text-stone-400">
-                Selecciona la tarea realizada. Podrás confirmar la fecha del baño y se programará el siguiente recordatorio automáticamente.
-              </p>
-              <div className="flex flex-wrap gap-2 pt-1">
+              <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Baño Rutinario con Agua y Shampoo', 'routine', 21, 'Shampoo neutro canino')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3 py-1.5 bg-stone-50 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-800 dark:text-stone-200 transition-all cursor-pointer"
                 >
-                  🧼 + Baño Rutinario (21 días)
+                  🧼 + Baño Rutinario (21d)
                 </button>
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Baño Medicado / Dermatológico', 'medicated', 7, 'Shampoo clorhexidina o hipoalergénico')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3 py-1.5 bg-stone-50 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-800 dark:text-stone-200 transition-all cursor-pointer"
                 >
-                  🧴 + Baño Medicado (7 días)
+                  🧴 + Baño Medicado (7d)
                 </button>
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Peluquería y Corte de Pelo', 'grooming', 45, 'Servicio completo de peluquería')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3 py-1.5 bg-stone-50 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-800 dark:text-stone-200 transition-all cursor-pointer"
                 >
-                  ✂️ + Peluquería & Corte (45 días)
+                  ✂️ + Peluquería & Corte (45d)
                 </button>
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Corte de Uñas e Higiene de Oídos', 'routine', 15, 'Cortaúñas + solución auricular')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3 py-1.5 bg-stone-50 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-800 dark:text-stone-200 transition-all cursor-pointer"
                 >
-                  💅 + Corte Uñas & Oídos (15 días)
+                  💅 + Uñas & Oídos (15d)
                 </button>
                 <button
                   type="button"
                   onClick={() => addQuickBathTemplate('Cepillado Profundo de Pelaje', 'dry_wash', 3, 'Peine o cepillo deslanador')}
-                  className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-teal-100 dark:hover:bg-teal-900/40 border border-teal-200 dark:border-teal-800 rounded-xl text-xs font-bold text-teal-950 dark:text-teal-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
+                  className="px-3 py-1.5 bg-stone-50 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold text-stone-800 dark:text-stone-200 transition-all cursor-pointer"
                 >
-                  🪮 + Cepillado Profundo (3 días)
+                  🪮 + Cepillado (3d)
                 </button>
               </div>
             </div>
 
-            <div className="bg-white dark:bg-[#1a231d] rounded-3xl border border-stone-200 dark:border-stone-800 p-5 space-y-4 shadow-2xs">
-              <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">🛁</span>
-                  <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm sm:text-base">
-                    Historial de Baños Realizados de {activePet.name}
-                  </h5>
-                </div>
-                <span className="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-800">
-                  {sortedBathLogs.length} baños registrados
-                </span>
-              </div>
-
-              {sortedBathLogs.length === 0 ? (
-                <div className="text-center py-8 space-y-2">
-                  <Droplets className="w-10 h-10 text-teal-400 mx-auto opacity-60" />
-                  <p className="text-xs font-bold text-stone-700 dark:text-stone-300">Aún no has registrado ningún baño para {activePet.name}.</p>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
-                    Haz clic en "Registrar Baño Realizado Hoy" o usa las plantillas rápidas de higiene para guardar el historial.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {sortedBathLogs.map(log => {
-                    const badgeColor =
-                      log.type === 'routine' ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' :
-                      log.type === 'medicated' ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800' :
-                      log.type === 'dry_wash' ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800' : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800';
-
-                    const typeName =
-                      log.type === 'routine' ? 'Baño Rutinario' :
-                      log.type === 'medicated' ? 'Baño Medicado' :
-                      log.type === 'dry_wash' ? 'Baño en Seco' : 'Peluquería Completa';
-
-                    return (
-                      <div key={log.id} className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-900/40 border border-stone-200 dark:border-stone-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-black px-2 py-0.5 rounded border uppercase ${badgeColor}`}>
-                              {typeName}
-                            </span>
-                            <span className="text-xs font-extrabold text-stone-900 dark:text-stone-100">{log.date}</span>
-                          </div>
-                          {log.shampooUsed && (
-                            <p className="text-xs text-stone-700 dark:text-stone-300 font-medium">
-                              🧴 <strong>Producto/Shampoo:</strong> {log.shampooUsed}
-                            </p>
-                          )}
-                          {log.notes && (
-                            <p className="text-xs text-stone-500 dark:text-stone-400 italic">
-                              📝 {log.notes}
-                            </p>
-                          )}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => deleteBathLog(log.id)}
-                          className="p-1.5 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/40 text-stone-400 hover:text-red-600 dark:hover:text-red-400 transition-colors self-end sm:self-center cursor-pointer"
-                          title="Eliminar del historial"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white dark:bg-[#1a231d] rounded-3xl border border-stone-200 dark:border-stone-800 p-5 space-y-4 shadow-2xs">
-              <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                  <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm sm:text-base">
-                    Recordatorios Programados de Baño
-                  </h5>
-                </div>
-                <span className="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2.5 py-1 rounded-full border border-teal-200 dark:border-teal-800">
-                  {filteredBathReminders.length} programados
-                </span>
-              </div>
-
-              {filteredBathReminders.length === 0 ? (
-                <p className="text-xs text-stone-500 dark:text-stone-400 text-center py-4">
-                  No hay próximos recordatorios de baño programados.
-                </p>
-              ) : (
-                <div className="space-y-2.5">
-                  {filteredBathReminders.map(rem => {
-                    const urgency = getUrgency(rem.dueDate, rem.completed);
-                    const isConfirming = confirmDeleteId === rem.id;
-
-                    return (
-                      <div
-                        key={rem.id}
-                        className={`bg-white dark:bg-stone-900 border rounded-2xl p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                          rem.completed
-                            ? 'border-stone-200 dark:border-stone-800 opacity-60 bg-stone-50/50 dark:bg-stone-900/30'
-                            : rem.dueDate < todayStr
-                            ? 'border-red-300 dark:border-red-900/50 bg-red-50/20 dark:bg-red-950/20 shadow-xs'
-                            : 'border-teal-200 dark:border-teal-900/40 shadow-2xs'
-                        }`}
-                      >
-                        <div className="flex items-start gap-3">
-                          <button
-                            type="button"
-                            onClick={() => handleAttemptToggle(rem)}
-                            className="mt-0.5 text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer transition-colors"
-                            title={rem.completed ? 'Marcar como pendiente' : 'Marcar como completado'}
-                          >
-                            {rem.completed ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                            ) : (
-                              <Circle className="w-5 h-5" />
-                            )}
-                          </button>
-
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border-teal-200 dark:border-teal-800">
-                                🛁 Baño
-                              </span>
-                              <h4 className={`font-heading font-extrabold text-sm ${rem.completed ? 'line-through text-stone-400 dark:text-stone-500' : 'text-stone-900 dark:text-stone-100'}`}>
-                                {rem.name}
-                              </h4>
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
-                              {rem.dosage && (
-                                <span className="flex items-center gap-1 text-stone-700 dark:text-stone-300 font-medium">
-                                  🧴 {rem.dosage}
-                                </span>
-                              )}
-                              {rem.notes && (
-                                <span className="text-stone-500 dark:text-stone-400 italic">
-                                  • {rem.notes}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
-                          <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${urgency.color}`}>
-                            {urgency.label}
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={() => shareViaWhatsApp(rem)}
-                            className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                          >
-                            <span className="text-xs">💬</span>
-                            <span className="hidden md:inline">WhatsApp</span>
-                          </button>
-
-                          {isConfirming ? (
-                            <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/60 px-2 py-1 rounded-xl border border-red-200 dark:border-red-900">
-                              <span className="text-[11px] font-bold text-red-700 dark:text-red-300">¿Eliminar?</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  deleteReminder(rem.id);
-                                  setConfirmDeleteId(null);
-                                }}
-                                className="px-2 py-0.5 bg-red-600 text-white rounded-lg text-xs font-bold cursor-pointer"
-                              >
-                                Sí
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setConfirmDeleteId(null)}
-                                className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-lg text-xs font-bold cursor-pointer"
-                              >
-                                No
-                              </button>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteId(rem.id)}
-                              className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            <div className="p-5 rounded-3xl bg-amber-50/70 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 space-y-3">
-              <div className="flex items-center gap-2">
-                <Info className="w-5 h-5 text-amber-700 dark:text-amber-400" />
-                <h5 className="font-heading font-extrabold text-amber-950 dark:text-amber-200 text-sm">
-                  💡 Sugerencias e Higiene para los Días de Baño ({activePet.type === 'dog' ? 'Caninos' : 'Felinos'})
-                </h5>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-amber-900 dark:text-amber-300 leading-relaxed">
-                <div className="bg-white/80 dark:bg-stone-900 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 space-y-1">
-                  <strong className="font-bold text-amber-950 dark:text-amber-200 block">1. 👂 Oídos Protegidos</strong>
-                  <p>Coloca bolitas de algodón seco en la entrada de sus oídos antes del baño para evitar el ingreso de agua y prevenir otitis.</p>
-                </div>
-
-                <div className="bg-white/80 dark:bg-stone-900 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 space-y-1">
-                  <strong className="font-bold text-amber-950 dark:text-amber-200 block">2. 🌡️ Agua Tibia y Shampoo Veterinario</strong>
-                  <p>El pH de la piel de tu mascota es neutro (~7.5) vs el humano (~5.5). Usa exclusivamente shampoo veterinario y agua tibia a 37°C.</p>
-                </div>
-
-                <div className="bg-white/80 dark:bg-stone-900 p-3.5 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 space-y-1">
-                  <strong className="font-bold text-amber-950 dark:text-amber-200 block">3. 💨 Secado Garantizado</strong>
-                  <p>Seca muy bien con toalla y secador en temperatura tibia a distancia. La humedad atrapada en el manto o pliegues puede generar dermatitis u hongos.</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'vaccines' && (
-          <div className="space-y-6">
-            <div className="p-5 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-3xl border border-emerald-200/65 dark:border-emerald-900/40 shadow-3xs space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-emerald-950 dark:text-emerald-200 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-700 dark:text-emerald-400 animate-pulse" /> Plantillas Rápidas para {activePet.type === 'dog' ? 'Caninos' : 'Felinos'}:
-                </span>
-                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                  {petAgeInfo.label} - {petAgeInfo.advice}
-                </span>
-              </div>
-              <p className="text-xs text-stone-600 dark:text-stone-400 leading-normal">
-                Agrega recordatorios comunes recomendados para tu mascota con un solo clic. <strong className="text-emerald-800 dark:text-emerald-400">Podrás editar la fecha antes de confirmar.</strong>
-              </p>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {activePet.type === 'dog' ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => addQuickTemplate('Vacuna Antirrábica Anual', 'vaccine', 365, '1 dosis')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    >
-                      💉 + Antirrábica Anual
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => addQuickTemplate('Pipeta o Pastilla Antipulgas / Garrapatas', 'deworming', 30, '1 dosis mensual')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    >
-                      🧴 + Antipulgas Mensual
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => addQuickTemplate('Desparasitante Interno Oral', 'deworming', 90, '1 tableta según peso')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    >
-                      💊 + Desparasitación Trimestral
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => addQuickTemplate('Control Veterinario General', 'checkup', 180, 'Chequeo preventivo')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    >
-                      🩺 + Control Semestral
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => addQuickTemplate('Vacuna Triple Felina Anual', 'vaccine', 365, '1 dosis')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    >
-                      💉 + Triple Felina Anual
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => addQuickTemplate('Pipeta Antipulgas Mensual', 'deworming', 30, '1 pipeta en cuello')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    >
-                      🧴 + Antipulgas Felino
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => addQuickTemplate('Malta o Pasta Antibolas de Pelo', 'medication', 7, '2 cm de pasta')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    >
-                      🐾 + Pasta de Malta Semanal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => addQuickTemplate('Control Veterinario General', 'checkup', 180, 'Chequeo de rutina')}
-                      className="px-3.5 py-2 bg-white dark:bg-stone-900 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold text-emerald-950 dark:text-emerald-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-3xs"
-                    >
-                      🩺 + Control Semestral
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="p-5 rounded-3xl bg-white dark:bg-[#1a231d] border border-stone-200 dark:border-stone-800 shadow-2xs space-y-4 no-print">
-              <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-2.5">
-                <HeartPulse className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <div>
-                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm sm:text-base">
-                    Esquema de Vacunación Esencial Sugerido (Guía Internacional WSAVA)
-                  </h4>
-                  <p className="text-[11px] text-stone-500 dark:text-stone-400">
-                    Vacunas obligatorias para proteger a tu {activePet.type === 'dog' ? 'perro' : 'gato'} de enfermedades mortales. Haz clic para programar:
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {activePet.type === 'dog' ? (
-                  <>
-                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
-                      <div>
-                        <span className="text-[10px] font-black text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 px-2 py-0.5 rounded border border-red-200 dark:border-red-900 uppercase">Obligatoria Legal 🛡️</span>
-                        <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Vacuna Antirrábica</h5>
-                        <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Previene la rabia, mortal y transmisible a humanos. Aplicación anual obligatoria.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => addQuickTemplate('Vacuna Antirrábica Anual', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
-                      >
-                        Programar Recordatorio Anual
-                      </button>
-                    </div>
-
-                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
-                      <div>
-                        <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/60 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-900 uppercase">Esencial Crucial 💉</span>
-                        <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Polivalente / Múltiple Canina</h5>
-                        <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Protege contra Parvovirus, Moquillo (Distemper), Adenovirus y Leptospira.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => addQuickTemplate('Vacuna Polivalente Canina (Sextuple)', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
-                      >
-                        Programar Recordatorio Anual
-                      </button>
-                    </div>
-
-                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
-                      <div>
-                        <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900 uppercase">Recomendada 🐕</span>
-                        <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Bordetella / Tos de Perreras</h5>
-                        <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Previene infecciones respiratorias en parques o guarderías caninas.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => addQuickTemplate('Vacuna Contra Tos de Perreras', 'vaccine', 180, '1 dosis semestral')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
-                      >
-                        Programar Recordatorio Semestral
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
-                      <div>
-                        <span className="text-[10px] font-black text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-950/60 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-900 uppercase">Esencial Crucial 💉</span>
-                        <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Triple Felina (RPC)</h5>
-                        <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Protege contra Rinotraqueitis, Calicivirus y Panleucopenia Felina.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => addQuickTemplate('Vacuna Triple Felina RPC', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
-                      >
-                        Programar Recordatorio Anual
-                      </button>
-                    </div>
-
-                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
-                      <div>
-                        <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900 uppercase">Vital Exterior 🐈</span>
-                        <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Leucemia Felina (FeLV)</h5>
-                        <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Vital para gatos que salen al exterior o conviven con otros felinos.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => addQuickTemplate('Vacuna Leucemia Felina', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
-                      >
-                        Programar Recordatorio Anual
-                      </button>
-                    </div>
-
-                    <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-2xl border border-stone-200 dark:border-stone-800 flex flex-col justify-between space-y-3">
-                      <div>
-                        <span className="text-[10px] font-black text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-950/60 px-2 py-0.5 rounded border border-red-200 dark:border-red-900 uppercase">Obligatoria Legal 🛡️</span>
-                        <h5 className="font-heading font-extrabold text-stone-950 dark:text-stone-100 text-xs mt-1.5">Antirrábica Felina</h5>
-                        <p className="text-[10px] text-stone-500 dark:text-stone-400 mt-0.5">Previene la rabia en felinos. Aplicación anual obligatoria por salud pública.</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => addQuickTemplate('Vacuna Antirrábica Felina', 'vaccine', 365, '1 dosis anual')}
-                        className="w-full py-1.5 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-800 text-white rounded-xl text-[10px] font-bold transition-all cursor-pointer shadow-3xs"
-                      >
-                        Programar Recordatorio Anual
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-200 dark:border-stone-800 pb-2 pt-2">
-              <div className="flex items-center gap-2">
-                <span className="text-xl">📋</span>
-                <h4 className="font-heading font-extrabold text-stone-800 dark:text-stone-200 text-sm sm:text-base uppercase tracking-wider">
-                  Vacunas y Medicación de {activePet.name}
-                </h4>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setFilter('all')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'all' ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'}`}
-                  >
-                    Todos ({healthReminders.length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilter('pending')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'pending' ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'}`}
-                  >
-                    Pendientes ({healthReminders.filter(r => !r.completed).length})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setFilter('completed')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${filter === 'completed' ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs' : 'text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200'}`}
-                  >
-                    Completados ({healthReminders.filter(r => r.completed).length})
-                  </button>
-                </div>
-
-                {healthReminders.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setShowClearAllModal(true)}
-                    className="text-xs font-bold text-stone-500 dark:text-stone-400 hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-1.5 self-end sm:self-center px-2.5 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-stone-400 hover:text-red-600" />
-                    <span>Vaciar vacunas y medicación</span>
-                  </button>
-                )}
-              </div>
-
-              {filteredHealthReminders.length === 0 ? (
-                <div className="bg-white dark:bg-[#1a231d] border border-stone-200 dark:border-stone-800 rounded-3xl p-8 text-center space-y-2">
-                  <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-5 h-5" />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+              {/* Recordatorios Programados de Baño */}
+              <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200/90 dark:border-stone-800 p-4 sm:p-5 space-y-3.5 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold tracking-wider text-stone-400 uppercase block">
+                      AGENDA PRÓXIMA
+                    </span>
+                    <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm">
+                      Recordatorios de Baño Programados
+                    </h5>
                   </div>
-                  <h4 className="font-heading font-extrabold text-stone-800 dark:text-stone-200 text-sm">
-                    {filter === 'all'
-                      ? 'No hay vacunas ni medicamentos programados'
-                      : filter === 'pending'
-                      ? '¡No tienes tareas pendientes!'
-                      : 'No hay recordatorios completados todavía.'}
-                  </h4>
-                  <p className="text-xs text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
-                    {filter === 'all'
-                      ? 'Agrega tus propias vacunas y medicamentos con fechas reales usando el botón "+ Crear Recordatorio" o las plantillas rápidas.'
-                      : 'Las tareas finalizadas aparecerán marcadas aquí.'}
-                  </p>
+                  <span className="text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 px-2.5 py-0.5 rounded-full border border-blue-200 dark:border-blue-800">
+                    {filteredBathReminders.length}
+                  </span>
                 </div>
-              ) : (
-                <div className="space-y-2.5">
-                  {filteredHealthReminders.map(rem => {
-                    const urgency = getUrgency(rem.dueDate, rem.completed);
-                    const isConfirming = confirmDeleteId === rem.id;
 
-                    return (
-                      <div
-                        key={rem.id}
-                        className={`bg-white dark:bg-stone-900 border rounded-2xl p-4 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                        rem.completed
-                          ? 'border-stone-200 dark:border-stone-800 opacity-60 bg-stone-50/50 dark:bg-stone-900/30'
-                          : rem.dueDate < todayStr
-                          ? 'border-red-300 dark:border-red-900/50 bg-red-50/20 dark:bg-red-950/20 shadow-xs'
-                          : 'border-stone-200 dark:border-stone-800 shadow-2xs hover:border-emerald-300 dark:hover:border-emerald-700'
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <button
-                          type="button"
-                          onClick={() => handleAttemptToggle(rem)}
-                          className="mt-0.5 text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer transition-colors"
-                          title={rem.completed ? 'Marcar como pendiente' : 'Marcar como completado'}
+                {filteredBathReminders.length === 0 ? (
+                  <p className="text-xs text-stone-500 dark:text-stone-400 text-center py-6">
+                    No hay próximos recordatorios de baño programados.
+                  </p>
+                ) : (
+                  <div className="space-y-2.5">
+                    {filteredBathReminders.map(rem => {
+                      const urgency = getUrgency(rem.dueDate, rem.completed);
+                      const isConfirming = confirmDeleteId === rem.id;
+
+                      return (
+                        <div
+                          key={rem.id}
+                          className="bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 rounded-2xl p-4 shadow-2xs space-y-2.5"
                         >
-                          {rem.completed ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                          ) : (
-                            <Circle className="w-5 h-5" />
-                          )}
-                        </button>
-
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${
-                              rem.type === 'vaccine'
-                                ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800'
-                                : rem.type === 'deworming'
-                                ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                                : 'bg-amber-50 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                            }`}>
-                              {rem.type === 'vaccine' ? '💉 Vacuna' : rem.type === 'deworming' ? '🧴 Antiparasitario' : '💊 Medicación'}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2.5">
+                              <button
+                                type="button"
+                                onClick={() => handleAttemptToggle(rem)}
+                                className="mt-0.5 text-stone-400 hover:text-emerald-600 cursor-pointer"
+                              >
+                                {rem.completed ? (
+                                  <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                                ) : (
+                                  <Circle className="w-5 h-5" />
+                                )}
+                              </button>
+                              <div>
+                                <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border bg-blue-50 text-blue-800 border-blue-200/90">
+                                  🛁 Baño
+                                </span>
+                                <h4 className={`font-heading font-black text-stone-900 dark:text-stone-100 text-sm mt-1 ${rem.completed ? 'line-through text-stone-400' : ''}`}>
+                                  {rem.name}
+                                </h4>
+                              </div>
+                            </div>
+                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border ${urgency.color}`}>
+                              {urgency.label}
                             </span>
-                            <h4 className={`font-heading font-extrabold text-sm ${rem.completed ? 'line-through text-stone-400 dark:text-stone-500' : 'text-stone-900 dark:text-stone-100'}`}>
-                              {rem.name}
-                            </h4>
                           </div>
 
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
-                            {rem.dosage && (
-                              <span className="flex items-center gap-1 text-stone-700 dark:text-stone-300 font-medium">
-                                <Pill className="w-3.5 h-3.5 text-stone-400" /> {rem.dosage}
-                              </span>
-                            )}
-                            {rem.notes && (
-                              <span className="text-stone-500 dark:text-stone-400 italic">
-                                • {rem.notes}
-                              </span>
-                            )}
+                          <div className="flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-800 pl-7">
+                            <span className="text-xs font-mono text-stone-500 flex items-center gap-1">
+                              <Calendar className="w-3.5 h-3.5 text-stone-400" /> {rem.dueDate}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => shareViaWhatsApp(rem)}
+                                className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200/80 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-3xs cursor-pointer active:scale-95"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>WhatsApp</span>
+                              </button>
+
+                              {isConfirming ? (
+                                <div className="flex items-center gap-1 bg-red-50 px-2 py-1 rounded-xl border border-red-200">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      deleteReminder(rem.id);
+                                      setConfirmDeleteId(null);
+                                    }}
+                                    className="px-2 py-0.5 bg-red-600 text-white rounded-md text-[10px] font-bold cursor-pointer"
+                                  >
+                                    Sí
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="px-2 py-0.5 bg-stone-200 text-stone-700 rounded-md text-[10px] font-bold cursor-pointer"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(rem.id)}
+                                  className="text-stone-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
-                      <div className="flex flex-wrap items-center justify-between sm:justify-end gap-2 pl-8 sm:pl-0">
-                        <span className={`text-xs font-bold px-3 py-1 rounded-xl border ${urgency.color}`}>
-                          {urgency.label}
-                        </span>
+              {/* Historial de Baños Realizados */}
+              <div className="bg-white dark:bg-stone-900 rounded-2xl border border-stone-200/90 dark:border-stone-800 p-4 sm:p-5 space-y-3.5 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold tracking-wider text-stone-400 uppercase block">
+                      BITÁCORA DERMATOLÓGICA
+                    </span>
+                    <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm">
+                      Historial de Baños de {activePet.name}
+                    </h5>
+                  </div>
+                  <span className="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800">
+                    {sortedBathLogs.length} realizados
+                  </span>
+                </div>
 
-                        <button
-                          type="button"
-                          onClick={() => shareViaWhatsApp(rem)}
-                          className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                          title="Enviar recordatorio por WhatsApp"
-                        >
-                          <span className="text-xs">💬</span>
-                          <span className="hidden md:inline">WhatsApp</span>
-                        </button>
+                {sortedBathLogs.length === 0 ? (
+                  <div className="text-center py-6 space-y-1.5">
+                    <Droplets className="w-8 h-8 text-teal-400 mx-auto opacity-60" />
+                    <p className="text-xs font-bold text-stone-700 dark:text-stone-300">
+                      Sin baños registrados aún
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                    {sortedBathLogs.map(log => {
+                      const typeName =
+                        log.type === 'routine' ? 'Baño Rutinario' :
+                        log.type === 'medicated' ? 'Baño Medicado' :
+                        log.type === 'dry_wash' ? 'Baño en Seco' : 'Peluquería Completa';
 
-                        <button
-                          type="button"
-                          onClick={() => exportToCalendar(rem)}
-                          className="px-2.5 py-1 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 shadow-2xs"
-                          title="Añadir a Google/Apple Calendar (.ics)"
-                        >
-                          <Calendar className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
-                          <span className="hidden md:inline">Calendar</span>
-                        </button>
-
-{isConfirming ? (
-                          <div className="flex items-center gap-1.5 bg-red-50 dark:bg-red-950/60 px-2 py-1 rounded-xl border border-red-200 dark:border-red-900 animate-in fade-in">
-                            <span className="text-[11px] font-bold text-red-700 dark:text-red-300">¿Eliminar?</span>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                deleteReminder(rem.id);
-                                setConfirmDeleteId(null);
-                              }}
-                              className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                            >
-                              Sí
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setConfirmDeleteId(null)}
-                              className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-700 dark:text-stone-200 rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                            >
-                              No
-                            </button>
+                      return (
+                        <div key={log.id} className="p-3.5 rounded-xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200/80 dark:border-stone-800 flex items-center justify-between gap-3">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-md bg-blue-50 text-blue-800 border border-blue-200/80 uppercase">
+                                {typeName}
+                              </span>
+                              <span className="text-xs font-mono font-bold text-stone-900 dark:text-stone-100">{log.date}</span>
+                            </div>
+                            {log.shampooUsed && (
+                              <p className="text-xs text-stone-600 dark:text-stone-300">
+                                🧴 {log.shampooUsed}
+                              </p>
+                            )}
                           </div>
-                        ) : (
                           <button
                             type="button"
-                            onClick={() => setConfirmDeleteId(rem.id)}
-                            className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            title="Eliminar este recordatorio"
+                            onClick={() => deleteBathLog(log.id)}
+                            className="p-1.5 rounded-lg hover:bg-red-50 text-stone-400 hover:text-red-600 transition-colors cursor-pointer"
+                            title="Eliminar del historial"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
             </div>
+          </div>
+        )}
+
+        {/* PESTAÑA PRINCIPAL: VACUNAS & SALUD (DISEÑO DINÁMICO 2 COLUMNAS EN DESKTOP) */}
+        {activeTab === 'vaccines' && (
+          <div className="space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+            {/* COLUMNA IZQUIERDA (lg:col-span-7): PRÓXIMOS REFUERZOS & HITOS DE SALUD */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 dark:border-stone-800 pb-3">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold tracking-wider text-stone-400 uppercase block">
+                      SEGUIMIENTO CLÍNICO ACTIVO
+                    </span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-base">
+                        Próximos Refuerzos & Hitos de Salud
+                      </h4>
+                      <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
+                        {healthReminders.filter(r => !r.completed).length} activos
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1 bg-stone-100 dark:bg-stone-800 p-1 rounded-xl self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setFilter('all')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        filter === 'all'
+                          ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs'
+                          : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                      }`}
+                    >
+                      Todos ({healthReminders.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilter('pending')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        filter === 'pending'
+                          ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs'
+                          : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                      }`}
+                    >
+                      Pendientes ({healthReminders.filter(r => !r.completed).length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFilter('completed')}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        filter === 'completed'
+                          ? 'bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 shadow-2xs'
+                          : 'text-stone-500 hover:text-stone-800 dark:text-stone-400'
+                      }`}
+                    >
+                      Listos ({healthReminders.filter(r => r.completed).length})
+                    </button>
+                  </div>
+                </div>
+
+                {filteredHealthReminders.length === 0 ? (
+                  <div className="py-8 text-center space-y-2.5">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
+                      <CheckCircle2 className="w-5 h-5" />
+                    </div>
+                    <h4 className="font-heading font-extrabold text-stone-800 dark:text-stone-200 text-sm">
+                      {filter === 'all'
+                        ? 'Sin vacunas ni refuerzos programados'
+                        : filter === 'pending'
+                        ? '¡No tienes refuerzos pendientes!'
+                        : 'Aún no hay registros completados'}
+                    </h4>
+                    <p className="text-xs text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
+                      Usa el botón "+ Recordatorio" o las recomendaciones de salud al pie para agendar en 1 clic.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2.5 max-h-[540px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-stone-200 dark:scrollbar-thumb-stone-800">
+                    {filteredHealthReminders.map(rem => {
+                      const urgency = getUrgency(rem.dueDate, rem.completed);
+                      const themeBadge = getReminderThemeBadge(rem);
+                      const isConfirming = confirmDeleteId === rem.id;
+
+                      return (
+                        <div
+                          key={rem.id}
+                          className={`bg-white dark:bg-stone-900 border rounded-2xl p-4 shadow-2xs transition-all space-y-2.5 ${
+                            rem.completed
+                              ? 'border-stone-200/70 dark:border-stone-800 opacity-60'
+                              : rem.dueDate < todayStr
+                              ? 'border-red-300 dark:border-red-900/60'
+                              : 'border-stone-200/90 dark:border-stone-800 hover:border-emerald-300 dark:hover:border-emerald-700'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => handleAttemptToggle(rem)}
+                                className="mt-0.5 text-stone-400 hover:text-emerald-600 dark:hover:text-emerald-400 cursor-pointer transition-colors shrink-0"
+                                title={rem.completed ? 'Marcar como pendiente' : 'Marcar como completado'}
+                              >
+                                {rem.completed ? (
+                                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                ) : (
+                                  <Circle className="w-5 h-5" />
+                                )}
+                              </button>
+
+                              <div className="space-y-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md border ${themeBadge.cls}`}>
+                                    {themeBadge.label}
+                                  </span>
+                                  <h4 className={`font-heading font-black text-stone-900 dark:text-stone-100 text-sm leading-tight ${rem.completed ? 'line-through text-stone-400 dark:text-stone-500' : ''}`}>
+                                    {rem.name}
+                                  </h4>
+                                </div>
+
+                                {(rem.dosage || rem.notes) && (
+                                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500 dark:text-stone-400">
+                                    {rem.dosage && (
+                                      <span className="flex items-center gap-1 text-stone-700 dark:text-stone-300 font-medium">
+                                        <Pill className="w-3.5 h-3.5 text-stone-400" /> {rem.dosage}
+                                      </span>
+                                    )}
+                                    {rem.notes && (
+                                      <span className="text-stone-500 dark:text-stone-400 italic text-[11px]">
+                                        • {rem.notes}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border shrink-0 ${urgency.color}`}>
+                              {urgency.label}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-stone-100 dark:border-stone-800 pl-8">
+                            <span className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-stone-600 dark:text-stone-400">
+                              <Calendar className="w-3.5 h-3.5 text-stone-400" />
+                              {rem.dueDate}
+                            </span>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => handleSendWhatsAppReminder(rem)}
+                                className="bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-3xs cursor-pointer active:scale-95 transition-all"
+                                title="Enviar recordatorio clínico por WhatsApp"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <span>WhatsApp</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => exportToCalendar(rem)}
+                                className="px-2.5 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5"
+                                title="Añadir a mi Calendario (Google / Apple)"
+                              >
+                                <Calendar className="w-3.5 h-3.5 text-stone-500" />
+                                <span className="hidden sm:inline">Añadir a Calendario</span>
+                              </button>
+
+                              {isConfirming ? (
+                                <div className="flex items-center gap-1 bg-red-50 dark:bg-red-950/60 px-2 py-1 rounded-xl border border-red-200 dark:border-red-900">
+                                  <span className="text-[10px] font-bold text-red-700 dark:text-red-300">¿Borrar?</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      deleteReminder(rem.id);
+                                      setConfirmDeleteId(null);
+                                    }}
+                                    className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded-md text-[10px] font-bold cursor-pointer"
+                                  >
+                                    Sí
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 text-stone-700 dark:text-stone-200 rounded-md text-[10px] font-bold cursor-pointer"
+                                  >
+                                    No
+                                  </button>
+                                </div>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(rem.id)}
+                                  className="text-stone-400 hover:text-red-600 dark:hover:text-red-400 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                                  title="Eliminar este recordatorio"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {healthReminders.length > 0 && (
+                  <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setShowClearAllModal(true)}
+                      className="text-[11px] font-bold text-stone-400 hover:text-red-600 transition-colors flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                      <span>Vaciar lista de recordatorios</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* COLUMNA DERECHA (lg:col-span-5): MINI-CALENDARIO COMPACTO (OCULTO EN MÓVIL PARA EVITAR SCROLL EXCESIVO) */}
+            <div className="hidden lg:block lg:col-span-5 space-y-4">
+              <div className="bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 rounded-2xl p-4 shadow-2xs space-y-3.5">
+                <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-2.5">
+                  <div>
+                    <span className="text-[10px] font-mono font-bold tracking-wider text-stone-400 uppercase block">
+                      RADAR MENSUAL
+                    </span>
+                    <h4 className="font-heading font-extrabold text-sm text-stone-900 dark:text-stone-100">
+                      {monthNames[calMonth]} {calYear}
+                    </h4>
+                  </div>
+
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const now = new Date();
+                        setMiniCalDate(new Date(now.getFullYear(), now.getMonth(), 1));
+                        setSelectedMiniDateStr(todayStr);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-700 dark:text-stone-300 font-bold text-[11px] transition-colors cursor-pointer"
+                    >
+                      Hoy
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMiniCalDate(new Date(calYear, calMonth - 1, 1))}
+                      className="p-1.5 rounded-lg bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 text-stone-600 dark:text-stone-300 border border-stone-200/80 dark:border-stone-700 cursor-pointer"
+                      aria-label="Mes anterior"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMiniCalDate(new Date(calYear, calMonth + 1, 1))}
+                      className="p-1.5 rounded-lg bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 text-stone-600 dark:text-stone-300 border border-stone-200/80 dark:border-stone-700 cursor-pointer"
+                      aria-label="Mes siguiente"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Cuadrícula de Bajo Perfil (36-40px por celda) */}
+                <div className="space-y-1">
+                  <div className="grid grid-cols-7 gap-1 text-center">
+                    {daysOfWeekShort.map(d => (
+                      <div key={d} className="py-1 text-[10px] font-mono font-bold text-stone-400 uppercase">
+                        {d}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: firstDayOfCalMonth }).map((_, i) => (
+                      <div
+                        key={`empty-${i}`}
+                        className="h-9 sm:h-10 rounded-xl bg-stone-50/50 dark:bg-stone-800/20 border border-dashed border-stone-100 dark:border-stone-800/40"
+                      />
+                    ))}
+
+                    {Array.from({ length: daysInCalMonth }).map((_, i) => {
+                      const dayNum = i + 1;
+                      const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(dayNum).padStart(2, '0')}`;
+                      const isToday = dateStr === todayStr;
+                      const isSelected = dateStr === selectedMiniDateStr;
+                      const dayEvents = remindersByDate[dateStr] || [];
+
+                      return (
+                        <button
+                          key={dateStr}
+                          type="button"
+                          onClick={() => setSelectedMiniDateStr(dateStr)}
+                          className={`h-9 sm:h-10 rounded-xl border transition-all cursor-pointer flex flex-col items-center justify-center relative ${
+                            isSelected
+                              ? 'bg-[#143826] text-white border-[#143826] shadow-2xs font-extrabold'
+                              : isToday
+                              ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-900 dark:text-emerald-300 border-emerald-400 font-extrabold'
+                              : dayEvents.length > 0
+                              ? 'bg-stone-50 dark:bg-stone-800/70 text-stone-900 dark:text-stone-100 border-stone-200 dark:border-stone-700 font-bold hover:border-emerald-400'
+                              : 'bg-white dark:bg-stone-900 text-stone-700 dark:text-stone-300 border-stone-100 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-800/50 font-medium'
+                          }`}
+                        >
+                          <span className="text-xs leading-none">{dayNum}</span>
+
+                          {dayEvents.length > 0 && (
+                            <div className="flex items-center gap-0.5 mt-1">
+                              {dayEvents.slice(0, 3).map((ev, idx) => {
+                                const b = getReminderThemeBadge(ev);
+                                return (
+                                  <span
+                                    key={idx}
+                                    className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-amber-300' : b.dot}`}
+                                  />
+                                );
+                              })}
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Resumen del día seleccionado en el Mini-Calendario */}
+                <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-800/40 border border-stone-200/80 dark:border-stone-800 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-mono font-bold text-stone-500 dark:text-stone-400 uppercase">
+                      📅 Día: {selectedMiniDateStr} ({selectedMiniDateEvents.length} evento{selectedMiniDateEvents.length === 1 ? '' : 's'})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleOpenAddModalWithDate(selectedMiniDateStr)}
+                      className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus className="w-3 h-3" /> Agendar aquí
+                    </button>
+                  </div>
+
+                  {selectedMiniDateEvents.length > 0 && (
+                    <div className="space-y-1.5">
+                      {selectedMiniDateEvents.map(ev => (
+                        <div key={`mini-${ev.id}`} className="flex items-center justify-between gap-2 text-xs bg-white dark:bg-stone-900 px-2.5 py-1.5 rounded-lg border border-stone-200/80 dark:border-stone-700">
+                          <span className={`font-bold truncate ${ev.completed ? 'line-through text-stone-400' : 'text-stone-800 dark:text-stone-200'}`}>
+                            {ev.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleSendWhatsAppReminder(ev)}
+                            className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 hover:underline shrink-0 cursor-pointer"
+                          >
+                            WhatsApp
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ESQUEMA PREVENTIVO SUGERIDO (GRID DE 3 COLUMNAS EN TONOS PASTEL/CREMA) */}
+          <div className="bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-3.5 no-print">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 dark:border-stone-800 pb-2.5">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-mono font-bold tracking-wider text-stone-500 dark:text-stone-400 uppercase block">
+                    PLAN PREVENTIVO RECOMENDADO
+                  </span>
+                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs sm:text-sm">
+                    Esquema Preventivo Oficial ({activePet.type === 'dog' ? 'Caninos' : 'Felinos'})
+                  </h4>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 self-start sm:self-auto">
+                Etapa: {petAgeInfo.label}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              {/* Columna 1: Vacunas Esenciales Inmunológicas */}
+              <div className="p-3.5 bg-[#FAF7F2] dark:bg-stone-800/60 rounded-xl border border-[#EDE5D8] dark:border-stone-700/80 flex flex-col justify-between gap-3">
+                <div>
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-purple-50 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800 uppercase">
+                      💉 Inmunización
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-stone-500">Anual</span>
+                  </div>
+                  <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs">
+                    {activePet.type === 'dog' ? 'Antirrábica & Polivalente' : 'Triple Felina & Antirrábica'}
+                  </h5>
+                  <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-snug">
+                    {activePet.type === 'dog'
+                      ? 'Protección contra rabia, parvovirus, moquillo, adenovirus y leptospirosis.'
+                      : 'Protección contra panleucopenia, rinotraqueitis, calicivirus y rabia.'}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  {activePet.type === 'dog' ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => addQuickTemplate('Vacuna Antirrábica Anual', 'vaccine', 365, '1 dosis anual')}
+                        className="w-full py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100/90 text-emerald-900 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                      >
+                        <span>+ Agendar Antirrábica</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => addQuickTemplate('Vacuna Polivalente Canina (Sextuple)', 'vaccine', 365, '1 dosis anual')}
+                        className="w-full py-1.5 px-2 bg-purple-50 hover:bg-purple-100/90 text-purple-900 border border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-200 dark:border-purple-800/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                      >
+                        <span>+ Agendar Polivalente</span>
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => addQuickTemplate('Vacuna Triple Felina RPC', 'vaccine', 365, '1 dosis anual')}
+                        className="w-full py-1.5 px-2 bg-emerald-50 hover:bg-emerald-100/90 text-emerald-900 border border-emerald-200/80 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-800/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                      >
+                        <span>+ Agendar Triple Felina</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => addQuickTemplate('Vacuna Antirrábica Felina', 'vaccine', 365, '1 dosis anual')}
+                        className="w-full py-1.5 px-2 bg-purple-50 hover:bg-purple-100/90 text-purple-900 border border-purple-200/80 dark:bg-purple-950/40 dark:text-purple-200 dark:border-purple-800/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                      >
+                        <span>+ Agendar Antirrábica</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Columna 2: Antiparasitario Dual */}
+              <div className="p-3.5 bg-[#FAF7F2] dark:bg-stone-800/60 rounded-xl border border-[#EDE5D8] dark:border-stone-700/80 flex flex-col justify-between gap-3">
+                <div>
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800 uppercase">
+                      🛡️ Antiparasitario
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-stone-500">30d - 90d</span>
+                  </div>
+                  <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs">
+                    Pipetas, Pastillas & Desparasitante
+                  </h5>
+                  <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-snug">
+                    Control mensual para pulgas/garrapatas y purga gastrointestinal trimestral según peso corporal.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => addQuickTemplate(activePet.type === 'dog' ? 'Pipeta o Pastilla Antipulgas / Garrapatas' : 'Pipeta Antipulgas Felina', 'deworming', 30, activePet.type === 'dog' ? '1 dosis mensual' : '1 pipeta en cuello')}
+                    className="w-full py-1.5 px-2 bg-amber-50 hover:bg-amber-100/90 text-amber-900 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                  >
+                    <span>+ Antipulgas (30 días)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addQuickTemplate(activePet.type === 'dog' ? 'Desparasitante Interno Oral' : 'Desparasitante Interno Felino', 'deworming', 90, '1 dosis según peso')}
+                    className="w-full py-1.5 px-2 bg-stone-100 hover:bg-stone-200/90 text-stone-800 border border-stone-200 dark:bg-stone-700/60 dark:text-stone-200 dark:border-stone-600 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                  >
+                    <span>+ Desparasitación (90 días)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Columna 3: Salud Integral & Controles Clínicos */}
+              <div className="p-3.5 bg-[#FAF7F2] dark:bg-stone-800/60 rounded-xl border border-[#EDE5D8] dark:border-stone-700/80 flex flex-col justify-between gap-3">
+                <div>
+                  <div className="flex items-center justify-between gap-1 mb-1">
+                    <span className="text-[10px] font-extrabold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800 uppercase">
+                      🩺 Controles & Salud
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-stone-500">Semestral</span>
+                  </div>
+                  <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs">
+                    {activePet.type === 'dog' ? 'Tos de Perreras & Chequeo' : 'Leucemia & Chequeo'}
+                  </h5>
+                  <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-snug">
+                    {activePet.type === 'dog'
+                      ? 'Evaluación semestral del bienestar y refuerzo respiratorio.'
+                      : 'Chequeo veterinario preventivo y control de bolas de pelo.'}
+                  </p>
+                </div>
+
+                <div className="space-y-1.5 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => addQuickTemplate('Control Veterinario General', 'checkup', 180, 'Chequeo preventivo')}
+                    className="w-full py-1.5 px-2 bg-blue-50 hover:bg-blue-100/90 text-blue-900 border border-blue-200/80 dark:bg-blue-950/40 dark:text-blue-200 dark:border-blue-800/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                  >
+                    <span>+ Control Veterinario (180d)</span>
+                  </button>
+                  {activePet.type === 'dog' ? (
+                    <button
+                      type="button"
+                      onClick={() => addQuickTemplate('Vacuna Contra Tos de Perreras', 'vaccine', 180, '1 dosis semestral')}
+                      className="w-full py-1.5 px-2 bg-stone-100 hover:bg-stone-200/90 text-stone-800 border border-stone-200 dark:bg-stone-700/60 dark:text-stone-200 dark:border-stone-600 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                    >
+                      <span>+ Tos de Perreras (180d)</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => addQuickTemplate('Vacuna Leucemia Felina', 'vaccine', 365, '1 dosis anual')}
+                      className="w-full py-1.5 px-2 bg-stone-100 hover:bg-stone-200/90 text-stone-800 border border-stone-200 dark:bg-stone-700/60 dark:text-stone-200 dark:border-stone-600 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
+                    >
+                      <span>+ Leucemia FeLV (Anual)</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
           </div>
         )}
       </div>
 
-      <div className="p-5 rounded-3xl bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-900/50 shadow-3xs space-y-3 animate-fade-in no-print mt-6">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-xs">
-            <AlertTriangle className="w-5 h-5" />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-heading font-black text-red-950 dark:text-red-200 text-sm">
-              ⚠️ ADVERTENCIA DE SEGURIDAD LEGAL Y SALUD ANIMAL
-            </h4>
-            <p className="text-stone-700 dark:text-stone-300 text-xs leading-relaxed">
-              Este módulo es un <strong>registro personal de seguimiento informativo</strong>. Bajo ninguna circunstancia debes medicar, desparasitar o vacunar a tu mascota por cuenta propia sin previa receta y diagnóstico de un veterinario matriculado.
-            </p>
-          </div>
+      {/* AVISO COMPACTO DE SEGURIDAD MÉDICA */}
+      <div className="p-4 rounded-2xl bg-white dark:bg-stone-900 border border-red-200/90 dark:border-red-900/50 shadow-2xs flex items-start gap-3 no-print">
+        <div className="p-2 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 shrink-0 mt-0.5">
+          <Info className="w-4 h-4" />
         </div>
-        <p className="text-[11px] text-red-800 dark:text-red-300 bg-white/70 dark:bg-stone-900/60 p-2.5 rounded-xl border border-red-100 dark:border-red-900 font-bold leading-normal">
-          ❌ El uso incorrecto de medicamentos humanos (como el paracetamol o ibuprofeno) o dosis inadecuadas de desparasitantes pueden provocar intoxicaciones severas, fallas orgánicas irreversibles o la muerte de tu animal de compañía. Consulta siempre a un veterinario antes de dar cualquier fármaco.
-        </p>
+        <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
+          <strong className="font-bold text-stone-900 dark:text-stone-100">Nota Clínica Preventiva:</strong> Este cronograma es una guía de acompañamiento. Nunca mediques ni vacunes a {activePet.name} sin prescripción de un médico veterinario colegiado.
+        </div>
       </div>
 
+      {/* MODAL: VACIAR TODOS LOS RECORDATORIOS */}
       {showClearAllModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-sm w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1354,6 +1872,7 @@ export const RemindersModule: React.FC = () => {
         </div>
       )}
 
+      {/* MODAL: CONFIRMAR PLANTILLA RÁPIDA */}
       {confirmQuickTemplate && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1372,13 +1891,13 @@ export const RemindersModule: React.FC = () => {
 
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs sm:text-sm flex-1">
               <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl border border-emerald-200 dark:border-emerald-800">
-                <p className="text-xs text-stone-600 dark:text-stone-400 mb-1">📌 Evento:</p>
+                <p className="text-xs text-stone-600 dark:text-stone-400 mb-1">📌 Tratamiento:</p>
                 <p className="font-bold text-stone-900 dark:text-stone-100 text-sm">{confirmQuickTemplate.name}</p>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  📅 Fecha de aplicación:
+                  📅 Fecha programada:
                 </label>
                 <input
                   type="date"
@@ -1390,23 +1909,16 @@ export const RemindersModule: React.FC = () => {
                   className="w-full px-3 py-2.5 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden text-sm font-bold"
                 />
                 <p className="text-[11px] text-stone-500 dark:text-stone-400 mt-1">
-                  Recomendado: {confirmQuickTemplate.calculatedDate} ({confirmQuickTemplate.days} días desde hoy)
+                  Sugerido: {confirmQuickTemplate.calculatedDate} (+{confirmQuickTemplate.days} días)
                 </p>
               </div>
 
               {confirmQuickTemplate.dosage && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200 dark:border-amber-800">
-                  <p className="text-xs text-stone-600 dark:text-stone-400 mb-1">💊 Dosis sugerida:</p>
+                  <p className="text-xs text-stone-600 dark:text-stone-400 mb-1">💊 Dosis / Pauta:</p>
                   <p className="font-bold text-amber-900 dark:text-amber-300 text-sm">{confirmQuickTemplate.dosage}</p>
                 </div>
               )}
-
-              <div className="p-3 bg-stone-50 dark:bg-stone-900/40 rounded-xl border border-stone-200 dark:border-stone-800">
-                <p className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
-                  ⚠️ Esta fecha es una recomendación basada en guías generales.
-                  Siempre consulta con tu veterinario para el esquema ideal para {activePet.name}.
-                </p>
-              </div>
             </div>
 
             <div className="p-4 sm:p-5 border-t border-stone-100 dark:border-stone-800 bg-stone-50/90 dark:bg-stone-900/90 flex items-center justify-end gap-2.5 shrink-0">
@@ -1420,21 +1932,22 @@ export const RemindersModule: React.FC = () => {
               <button
                 type="button"
                 onClick={confirmQuickTemplateCreate}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
+                className="px-5 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
               >
-                Confirmar y Crear
+                Confirmar y Agendar
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* MODAL: NUEVO RECORDATORIO MANUAL */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
             <div className="p-4 sm:p-5 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between shrink-0 bg-white dark:bg-[#1a231d]">
               <h3 className="font-heading font-extrabold text-base text-stone-900 dark:text-stone-100">
-                Nuevo Recordatorio
+                Nuevo Recordatorio de Salud
               </h3>
               <button
                 type="button"
@@ -1449,21 +1962,21 @@ export const RemindersModule: React.FC = () => {
               <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs flex-1">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Tipo *</label>
+                    <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Categoría *</label>
                     <select
                       value={form.type}
                       onChange={e => setForm({ ...form, type: e.target.value as Reminder['type'] })}
                       className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden font-bold"
                     >
                       <option value="vaccine">💉 Vacuna</option>
-                      <option value="deworming">🧴 Antiparasitario</option>
+                      <option value="deworming">🧴 Antipulgas / Desparasitante</option>
                       <option value="medication">💊 Medicamento</option>
-                      <option value="checkup">🩺 Cita / Control</option>
+                      <option value="checkup">🩺 Control Veterinario</option>
                       <option value="bath">🛁 Baño & Grooming</option>
                     </select>
                   </div>
                   <div>
-                    <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Fecha de Aplicación *</label>
+                    <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Fecha Programada *</label>
                     <input
                       type="date"
                       required
@@ -1475,11 +1988,11 @@ export const RemindersModule: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Nombre de la vacuna o medicamento *</label>
+                  <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Nombre de la vacuna o tratamiento *</label>
                   <input
                     type="text"
                     required
-                    placeholder="Escribe el nombre del tratamiento"
+                    placeholder="Ej. Vacuna Séxtuple, Pipeta Mensual..."
                     value={form.name}
                     onChange={e => setForm({ ...form, name: e.target.value })}
                     className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
@@ -1487,10 +2000,10 @@ export const RemindersModule: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Dosis / Frecuencia</label>
+                  <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Dosis / Pauta</label>
                   <input
                     type="text"
-                    placeholder="Cantidad a suministrar"
+                    placeholder="Ej. 1 tableta masticable, 1 ml..."
                     value={form.dosage}
                     onChange={e => setForm({ ...form, dosage: e.target.value })}
                     className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
@@ -1501,7 +2014,7 @@ export const RemindersModule: React.FC = () => {
                   <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Notas adicionales (opcional)</label>
                   <input
                     type="text"
-                    placeholder="Indicaciones especiales"
+                    placeholder="Indicaciones o clínica veterinaria"
                     value={form.notes}
                     onChange={e => setForm({ ...form, notes: e.target.value })}
                     className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-hidden"
@@ -1519,7 +2032,7 @@ export const RemindersModule: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
+                  className="px-5 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
                 >
                   Guardar Recordatorio
                 </button>
@@ -1529,6 +2042,7 @@ export const RemindersModule: React.FC = () => {
         </div>
       )}
 
+      {/* MODAL: REGISTRAR BAÑO */}
       {showBathModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1583,7 +2097,7 @@ export const RemindersModule: React.FC = () => {
                   <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Shampoo / Producto Usado</label>
                   <input
                     type="text"
-                    placeholder="Ej. Hipoalergénico Avena, Clorexidina"
+                    placeholder="Ej. Hipoalergénico Avena, Clorhexidina"
                     value={bathForm.shampooUsed}
                     onChange={e => setBathForm({ ...bathForm, shampooUsed: e.target.value })}
                     className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-teal-500 font-bold"
@@ -1607,7 +2121,7 @@ export const RemindersModule: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Notas o Comportamiento (opcional)</label>
+                  <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">Notas (opcional)</label>
                   <input
                     type="text"
                     placeholder="Ej. Secador tranquilo, oídos limpios"
@@ -1615,10 +2129,6 @@ export const RemindersModule: React.FC = () => {
                     onChange={e => setBathForm({ ...bathForm, notes: e.target.value })}
                     className="w-full px-3 py-2 border border-stone-300 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 rounded-xl focus:ring-2 focus:ring-teal-500"
                   />
-                </div>
-
-                <div className="p-3 bg-teal-50 dark:bg-teal-950/40 rounded-2xl border border-teal-200 dark:border-teal-800 text-[11px] text-teal-900 dark:text-teal-200 leading-snug">
-                  💡 Al guardar, se registrará la entrada en el historial y se creará automáticamente un recordatorio de próximo baño.
                 </div>
               </div>
 
@@ -1632,9 +2142,9 @@ export const RemindersModule: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
+                  className="px-5 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
                 >
-                  Guardar Baño y Programar Siguiente
+                  Guardar y Programar Siguiente
                 </button>
               </div>
             </form>
@@ -1642,6 +2152,7 @@ export const RemindersModule: React.FC = () => {
         </div>
       )}
 
+      {/* MODAL: CONFIRMAR PLANTILLA RÁPIDA DE BAÑO */}
       {confirmQuickBath && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-md w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1665,13 +2176,13 @@ export const RemindersModule: React.FC = () => {
 
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs sm:text-sm flex-1">
               <div className="p-3 bg-teal-50 dark:bg-teal-950/40 rounded-2xl border border-teal-200 dark:border-teal-800 text-teal-950 dark:text-teal-200 font-bold flex items-center justify-between">
-                <span>Servicio / Tarea:</span>
+                <span>Servicio:</span>
                 <span className="text-teal-700 dark:text-teal-300 font-extrabold">{confirmQuickBath.name}</span>
               </div>
 
               <div>
                 <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  📅 ¿En qué fecha se realizó el baño? *
+                  📅 Fecha realizada *
                 </label>
                 <input
                   type="date"
@@ -1684,7 +2195,7 @@ export const RemindersModule: React.FC = () => {
 
               <div>
                 <label className="block font-bold text-stone-700 dark:text-stone-300 mb-1">
-                  🧴 Shampoo / Producto Usado:
+                  🧴 Shampoo / Producto:
                 </label>
                 <input
                   type="text"
@@ -1713,15 +2224,16 @@ export const RemindersModule: React.FC = () => {
               <button
                 type="button"
                 onClick={confirmQuickBathCreate}
-                className="px-5 py-2.5 rounded-xl bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
+                className="px-5 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white font-bold text-xs cursor-pointer shadow-xs transition-colors"
               >
-                Guardar Baño y Programar Siguiente
+                Guardar y Programar
               </button>
             </div>
           </div>
         </div>
       )}
 
+      {/* MODAL: COMPLETAR RECORDATORIO Y RE-PROGRAMAR CICLO */}
       {completingReminderState && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto animate-in fade-in">
           <div className="bg-white dark:bg-[#1a231d] rounded-3xl max-w-lg w-full shadow-2xl border border-stone-100 dark:border-stone-800 flex flex-col max-h-[90dvh] my-auto overflow-hidden">
@@ -1744,11 +2256,7 @@ export const RemindersModule: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-heading font-extrabold text-base text-stone-900 dark:text-stone-100">
-                    {completingReminderState.reminder.dueDate < todayStr
-                      ? 'Completar Recordatorio Vencido'
-                      : completingReminderState.reminder.dueDate > todayStr
-                      ? 'Completar Recordatorio Anticipado'
-                      : 'Confirmar Realización de Tarea'}
+                    Confirmar Realización de Tratamiento
                   </h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400">
                     {activePet.name} • {completingReminderState.reminder.name}
@@ -1766,27 +2274,9 @@ export const RemindersModule: React.FC = () => {
             </div>
 
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs sm:text-sm flex-1">
-              {completingReminderState.reminder.dueDate < todayStr && (
-                <div className="p-3.5 bg-red-50 dark:bg-red-950/40 rounded-2xl border border-red-200 dark:border-red-800 text-xs text-red-900 dark:text-red-200 space-y-1">
-                  <strong className="font-bold block text-red-950 dark:text-red-100">⚠️ Estaba programado para el {completingReminderState.reminder.dueDate}:</strong>
-                  <p>
-                    Puedes marcarlo como completado <strong>hoy mismo</strong> o seleccionar la <strong>fecha real en que se realizó</strong> para mantener la periodicidad médica correcta.
-                  </p>
-                </div>
-              )}
-
-              {completingReminderState.reminder.dueDate > todayStr && (
-                <div className="p-3.5 bg-amber-50 dark:bg-amber-950/40 rounded-2xl border border-amber-200 dark:border-amber-800 text-xs text-amber-900 dark:text-amber-200 space-y-1">
-                  <strong className="font-bold block text-amber-950 dark:text-amber-100">⏰ Está programado para el {completingReminderState.reminder.dueDate}:</strong>
-                  <p>
-                    Estás completando esta tarea antes de tiempo. Selecciona abajo la fecha real de aplicación para calcular el siguiente ciclo de salud.
-                  </p>
-                </div>
-              )}
-
               <div className="space-y-2">
                 <label className="block font-extrabold text-stone-800 dark:text-stone-200">
-                  📅 ¿En qué fecha se realizó esta actividad? *
+                  📅 ¿En qué fecha se aplicó? *
                 </label>
 
                 <input
@@ -1809,8 +2299,8 @@ export const RemindersModule: React.FC = () => {
                     })}
                     className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                       completingReminderState.completionDate === todayStr
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                        : 'bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:bg-stone-100'
+                        ? 'bg-[#143826] text-white border-[#143826] shadow-2xs'
+                        : 'bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
                     }`}
                   >
                     Realizado HOY ({todayStr})
@@ -1825,11 +2315,11 @@ export const RemindersModule: React.FC = () => {
                       })}
                       className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                         completingReminderState.completionDate === completingReminderState.reminder.dueDate
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-2xs'
-                          : 'bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700 hover:bg-stone-100'
+                          ? 'bg-[#143826] text-white border-[#143826] shadow-2xs'
+                          : 'bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
                       }`}
                     >
-                      En fecha sugerida ({completingReminderState.reminder.dueDate})
+                      En fecha programada ({completingReminderState.reminder.dueDate})
                     </button>
                   )}
                 </div>
@@ -1846,7 +2336,7 @@ export const RemindersModule: React.FC = () => {
                     })}
                     className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 accent-emerald-600 cursor-pointer"
                   />
-                  <span>🔁 Programar automáticamente el próximo recordatorio</span>
+                  <span>🔁 Programar automáticamente el próximo refuerzo</span>
                 </label>
 
                 {completingReminderState.autoReschedule && (
@@ -1867,8 +2357,8 @@ export const RemindersModule: React.FC = () => {
                       <span className="text-stone-700 dark:text-stone-300 font-medium">días</span>
                     </div>
 
-                    <div className="p-2.5 bg-white/90 dark:bg-stone-900 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-300 font-bold">
-                      🗓️ Próxima fecha calculada: <span className="text-emerald-700 dark:text-emerald-400 font-black">{addDaysToDate(completingReminderState.completionDate, completingReminderState.recurringDays)}</span> (sumando {completingReminderState.recurringDays} días).
+                    <div className="p-2.5 bg-white dark:bg-stone-900 rounded-xl border border-emerald-200 dark:border-emerald-800 text-xs text-emerald-900 dark:text-emerald-300 font-bold">
+                      🗓️ Próxima fecha calculada: <span className="text-emerald-700 dark:text-emerald-400 font-black">{addDaysToDate(completingReminderState.completionDate, completingReminderState.recurringDays)}</span>
                     </div>
                   </div>
                 )}
@@ -1886,7 +2376,7 @@ export const RemindersModule: React.FC = () => {
                       })}
                       className="w-4 h-4 rounded text-teal-600 focus:ring-teal-500 accent-teal-600 cursor-pointer"
                     />
-                    <span>🛁 Registrar también en el Historial de Baños Realizados</span>
+                    <span>🛁 Guardar también en Historial de Baños Realizados</span>
                   </label>
 
                   {completingReminderState.logBathHistory && (
@@ -1921,7 +2411,7 @@ export const RemindersModule: React.FC = () => {
               <button
                 type="button"
                 onClick={confirmCompleteReminder}
-                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs cursor-pointer shadow-sm transition-all"
+                className="px-5 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white font-extrabold text-xs cursor-pointer shadow-xs transition-all"
               >
                 Confirmar y Completar
               </button>
