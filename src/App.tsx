@@ -1,47 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
-import { db, auth } from './lib/firebase';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { auth } from './lib/firebase';
 import {
   Calculator,
-  Utensils,
-  AlertTriangle,
-  BookOpen,
-  Printer,
-  Heart,
   Scale,
-  Droplet,
-  CheckCircle2,
-  Info,
   Sparkles,
-  Search,
-  Award,
   Camera,
   Trash2,
-  Tag,
-  ShieldCheck,
-  ChevronRight,
-  HelpCircle,
-  Activity,
-  Flame,
   Palette,
   Image as ImageIcon,
   X,
-  Share2,
-  Package,
-  Clock,
   MessageCircle,
   FileText,
-  Stethoscope,
-  Bell,
-  Crown,
   Lock,
   Loader2,
-  Download,
-  Check,
-  Save
+  Save,
+  CheckCircle2,
+  Award,
+  ChevronRight
 } from 'lucide-react';
 import { PetProfile, CalculationResult, BreedInfo, AppTab } from './types';
-import { calculatePetNutrition, HEALTH_AND_NUTRITION_GUIDES, POPULAR_BREEDS } from './data';
+import { calculatePetNutrition, POPULAR_BREEDS } from './data';
 import { UnifiedFoodCalculator } from './components/UnifiedFoodCalculator';
 import { ShareModal } from './components/ShareModal';
 import { RoutineSchedule } from './components/RoutineSchedule';
@@ -54,18 +32,17 @@ import { CountryFoodAdvisor } from './components/CountryFoodAdvisor';
 import { BreedEncyclopedia } from './components/BreedEncyclopedia';
 import { TipsAndGuidesModule } from './components/TipsAndGuidesModule';
 import { FoodTrafficLight } from './components/FoodTrafficLight';
+import { PetPhotoReelWidget } from './components/PetPhotoReelWidget';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { ProFeatureLock } from './components/ProFeatureLock';
 import { AnimatedCounter } from './components/AnimatedCounter';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { RegistrationLockModal } from './components/RegistrationLockModal';
 import { PetProfileHUD } from './components/PetProfileHUD';
-import { InstallPwaBanner } from './components/InstallPwaBanner';
 import { NutriPetLogo } from './components/NutriPetLogo';
 import { BarfRecipeGenerator } from './components/BarfRecipeGenerator';
 import { Sidebar } from './components/Sidebar';
 import { BackToTopButton } from './components/BackToTopButton';
-import { ThemeToggleButton } from './components/ThemeToggleButton';
 import { LogoutTransitionModal } from './components/LogoutTransitionModal';
 import { FeedbackModal } from './components/FeedbackModal';
 import { usePets } from './context/PetContext';
@@ -141,6 +118,41 @@ const BackgroundLayer = React.memo(function BackgroundLayer({
   );
 });
 
+// Mapeo Bidireccional Oficial de Rutas para Enrutamiento Limpio
+const TAB_TO_PATH: Record<AppTab, string> = {
+  calculator: '/porciones',
+  routine: '/horarios',
+  foods: '/semaforo',
+  recipes: '/recetas',
+  sheet: '/ficha',
+  medical: '/expediente',
+  reminders: '/vacunas',
+  advisor: '/marcas',
+  breeds: '/razas',
+  guides: '/guias',
+};
+
+const PATH_TO_TAB: Record<string, AppTab> = {
+  '/': 'calculator',
+  '/porciones': 'calculator',
+  '/calculadora': 'calculator',
+  '/horarios': 'routine',
+  '/rutina': 'routine',
+  '/semaforo': 'foods',
+  '/recetas': 'recipes',
+  '/barf': 'recipes',
+  '/ficha': 'sheet',
+  '/carnet': 'sheet',
+  '/expediente': 'medical',
+  '/peso': 'medical',
+  '/vacunas': 'reminders',
+  '/alertas': 'reminders',
+  '/marcas': 'advisor',
+  '/razas': 'breeds',
+  '/guias': 'guides',
+  '/tips': 'guides',
+};
+
 export default function App() {
   const { activePet, updatePetLocal, savePet, updateSubscription, isProOrTrial, trialDaysRemaining, user, isSavingPet } = usePets();
   const isAdminUser = user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
@@ -157,12 +169,13 @@ export default function App() {
     return () => window.removeEventListener('sidebar_toggle', handleToggle);
   }, []);
 
-  const [darkMode, setDarkMode] = React.useState<boolean>(() => {
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
     const saved = localStorage.getItem('nutripet_dark_mode');
     if (saved !== null) return saved === 'true';
     return false;
   });
-  React.useEffect(() => {
+
+  useEffect(() => {
     localStorage.setItem('nutripet_dark_mode', String(darkMode));
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -175,7 +188,8 @@ export default function App() {
     setDarkMode(prev => !prev);
   };
 
-  React.useEffect(() => {
+  // 🛡️ BLINDAJE DE SEGURIDAD: Transacciones Wompi y PayPal intactas
+  useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const wompiTxId = urlParams.get('id') || urlParams.get('transaction_id');
     if (wompiTxId) {
@@ -194,7 +208,7 @@ export default function App() {
           if (success) {
             alert(`¡Pago exitoso con Wompi! Tu suscripción ${planName} se ha activado automáticamente.`);
           } else {
-            alert('🔒 activación bloqueada: No se pudo verificar la transacción de Wompi.');
+            alert('🔒 Activación bloqueada: No se pudo verificar la transacción de Wompi.');
           }
         });
       }
@@ -225,7 +239,7 @@ export default function App() {
                 alert(`¡Pago con PayPal Exitoso! Tu suscripción ${planName} se ha activado automáticamente.`);
                 window.location.reload();
               } else {
-                alert(data.error || '🔒 activación bloqueada: No se pudo capturar o verificar la orden de PayPal.');
+                alert(data.error || '🔒 Activación bloqueada: No se pudo capturar o verificar la orden de PayPal.');
               }
             })
             .catch(err => {
@@ -237,12 +251,12 @@ export default function App() {
     }
   }, [updateSubscription]);
 
-  const [localDraftProfile, setLocalDraftProfile] = React.useState<PetProfile>({
+  const [localDraftProfile, setLocalDraftProfile] = useState<PetProfile>({
     id: 'defaultpet',
-    name: '',
+    name: 'Oslo',
     type: 'dog',
-    breedId: 'goldenlabrador',
-    weightKg: 28,
+    breedId: 'pomeranian',
+    weightKg: 15,
     stage: 'adult',
     ageMonths: 36,
     neutered: true,
@@ -275,20 +289,61 @@ export default function App() {
     }
   };
 
-  const [activeTab, setActiveTab] = React.useState<AppTab>('calculator');
-  const [isBiometricsExpanded, setIsBiometricsExpanded] = React.useState<boolean>(() => !activePet);
+  // Inicialización ultra segura basada en la URL actual
+  const [activeTab, setActiveTabRaw] = useState<AppTab>(() => {
+    const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+    return PATH_TO_TAB[currentPath] || 'calculator';
+  });
 
-  React.useEffect(() => {
+  // Reemplazar la entrada inicial en el historial para que nunca quede vacía
+  useEffect(() => {
+    const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+    const initialTab = PATH_TO_TAB[currentPath] || 'calculator';
+    const targetPath = TAB_TO_PATH[initialTab] || '/porciones';
+    window.history.replaceState({ tab: initialTab }, '', window.location.pathname === '/' ? '/' : targetPath);
+  }, []);
+
+  // Función de navegación con pushState enriquecido
+  const setActiveTab = (tab: AppTab) => {
+    const safeTab = tab || 'calculator';
+    setActiveTabRaw(safeTab);
+    const targetPath = TAB_TO_PATH[safeTab] || '/porciones';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ tab: safeTab }, '', targetPath);
+    }
+  };
+
+  const handleSelectTab = setActiveTab;
+
+  // Escuchar botón "Atrás" y "Adelante" con fallback garantizado a 'calculator'
+  useEffect(() => {
+    const handlePopState = (e: PopStateEvent) => {
+      if (e.state && e.state.tab && PATH_TO_TAB[TAB_TO_PATH[e.state.tab as AppTab]]) {
+        setActiveTabRaw(e.state.tab as AppTab);
+        return;
+      }
+      const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+      const matchedTab = PATH_TO_TAB[currentPath] || 'calculator';
+      setActiveTabRaw(matchedTab);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const [isBiometricsExpanded, setIsBiometricsExpanded] = useState<boolean>(() => !activePet);
+
+  useEffect(() => {
     if (activePet) {
       setIsBiometricsExpanded(false);
     }
   }, [activePet?.id]);
-  const [saveSuccessMessage, setSaveSuccessMessage] = React.useState<string | null>(null);
 
-  const [isLoggingOut, setIsLoggingOut] = React.useState(false);
-  const prevUserRef = React.useRef(user);
+  const [saveSuccessMessage, setSaveSuccessMessage] = useState<string | null>(null);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const prevUserRef = useRef(user);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (prevUserRef.current && !user) {
       setIsLoggingOut(true);
       setActiveTab('calculator');
@@ -313,29 +368,29 @@ export default function App() {
     prevUserRef.current = user;
   }, [user]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
   }, [activeTab]);
 
   const { bgTheme, setBgTheme, customBgImage, setCustomBgImage, bgIntensity, setBgIntensity } = useBgPreferences(user);
-  const [showBgModal, setShowBgModal] = React.useState<boolean>(false);
-  const [showShareModal, setShowShareModal] = React.useState<boolean>(false);
-  const [showSubscriptionModal, setShowSubscriptionModal] = React.useState<boolean>(false);
-  const [showAdminModal, setShowAdminModal] = React.useState<boolean>(false);
-  const [showFeedbackModal, setShowFeedbackModal] = React.useState<boolean>(false);
+  const [showBgModal, setShowBgModal] = useState<boolean>(false);
+  const [showShareModal, setShowShareModal] = useState<boolean>(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState<boolean>(false);
+  const [showAdminModal, setShowAdminModal] = useState<boolean>(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState<boolean>(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const bgFileInputRef = useRef<HTMLInputElement>(null);
 
-  const result: CalculationResult = React.useMemo(() => {
+  const result: CalculationResult = useMemo(() => {
     return calculatePetNutrition(profile);
   }, [profile]);
 
-  const selectedBreedInfo: BreedInfo | undefined = React.useMemo(() => {
+  const selectedBreedInfo: BreedInfo | undefined = useMemo(() => {
     return POPULAR_BREEDS.find(b => b.id === profile.breedId);
   }, [profile.breedId]);
 
-  const availableBreeds = React.useMemo(() => {
+  const availableBreeds = useMemo(() => {
     return POPULAR_BREEDS.filter(b => b.type === profile.type);
   }, [profile.type]);
 
@@ -372,7 +427,6 @@ export default function App() {
 
         canvas.width = width;
         canvas.height = height;
-
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, width, height);
@@ -398,7 +452,7 @@ export default function App() {
       ...prev,
       type: newType,
       breedId: defaultBreed ? defaultBreed.id : '',
-      weightKg: newType === 'dog' ? 20 : 4.5
+      weightKg: newType === 'dog' ? 15 : 4.5
     }));
   };
 
@@ -416,7 +470,7 @@ export default function App() {
 
   const handleWeightAdjust = (delta: number) => {
     setProfile(prev => {
-      const current = prev.weightKg || (prev.type === 'dog' ? 20 : 4.5);
+      const current = prev.weightKg || (prev.type === 'dog' ? 15 : 4.5);
       const nextWeight = Math.max(0.2, Number((current + delta).toFixed(1)));
       return { ...prev, weightKg: nextWeight };
     });
@@ -500,13 +554,13 @@ export default function App() {
         />
       </header>
 
-      {/* Contenedor Principal */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full items-start pt-[84px] sm:pt-[90px]">
-
-        <div className="w-full lg:w-auto shrink-0">
+      {/* Contenedor Principal: 108px en móvil para librar los ~98px del header doble y dejar ver el borde superior completo */}
+      <div className="flex-grow flex flex-col lg:flex-row w-full items-start pt-[108px] sm:pt-[84px]">
+        {/* Barra Lateral estilo Workspace con scroll propio */}
+        <div className="w-full lg:w-auto shrink-0 lg:sticky lg:top-[82px] lg:h-[calc(100vh-82px)] overflow-y-auto no-scrollbar">
           <Sidebar
             activeTab={activeTab}
-            onSelectTab={setActiveTab}
+            onSelectTab={handleSelectTab}
             isProOrTrial={isProOrTrial}
             trialDaysRemaining={trialDaysRemaining}
             onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
@@ -563,7 +617,7 @@ export default function App() {
                   className="w-full py-3 px-4 rounded-xl border-2 border-dashed border-emerald-300 dark:border-emerald-700/80 hover:border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/30 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
                 >
                   <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span className="text-center">Subir foto desde tu dispositivo (PC o Móvil)</span>
+                  <span className="text-center">Subir foto desde tu dispositivo</span>
                 </button>
                 {customBgImage && (
                   <div className="flex items-center justify-between px-3 py-2 bg-stone-50 dark:bg-stone-800/80 rounded-xl border border-stone-200 dark:border-stone-700 text-xs">
@@ -584,7 +638,7 @@ export default function App() {
               {/* Temas Listos */}
               <div className="space-y-2">
                 <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                  Temas y Texturas Listas
+                  Temas y Texturas
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   <button
@@ -596,7 +650,7 @@ export default function App() {
                     }`}
                   >
                     <div className="text-lg sm:text-xl mb-0.5">🐾</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Huellas Marcadas</div>
+                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Huellas</div>
                     <div className="text-[10px] text-stone-600 dark:text-stone-400">Patitas visibles</div>
                   </button>
 
@@ -610,33 +664,7 @@ export default function App() {
                   >
                     <div className="text-lg sm:text-xl mb-0.5">☕</div>
                     <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Ámbar Cálido</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Arena tostada</div>
-                  </button>
-
-                  <button
-                    onClick={() => setBgTheme('mint')}
-                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                      bgTheme === 'mint'
-                        ? 'border-emerald-600 bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-950 dark:text-emerald-200 font-bold shadow-xs'
-                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300 text-stone-700 dark:text-stone-300 bg-[#dcfce7] dark:bg-stone-800/60'
-                    }`}
-                  >
-                    <div className="text-lg sm:text-xl mb-0.5">🌿</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Verde Menta Vivo</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Fresco y botánico</div>
-                  </button>
-
-                  <button
-                    onClick={() => setBgTheme('sky')}
-                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                      bgTheme === 'sky'
-                        ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/50 text-sky-950 dark:text-sky-200 font-bold shadow-xs'
-                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300 text-stone-700 dark:text-stone-300 bg-[#e0f2fe] dark:bg-stone-800/60'
-                    }`}
-                  >
-                    <div className="text-lg sm:text-xl mb-0.5">🌤️</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Cielo Claro</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Azul aire libre</div>
+                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Arena suave</div>
                   </button>
 
                   <button
@@ -648,118 +676,8 @@ export default function App() {
                     }`}
                   >
                     <div className="text-lg sm:text-xl mb-0.5">🐕❤️</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Foto Perrito</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Mascota real</div>
-                  </button>
-
-                  <button
-                    onClick={() => setBgTheme('nature')}
-                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                      bgTheme === 'nature'
-                        ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-950 dark:text-emerald-200 font-bold shadow-xs'
-                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300 text-stone-700 dark:text-stone-300 bg-emerald-50/40 dark:bg-stone-800/60'
-                    }`}
-                  >
-                    <div className="text-lg sm:text-xl mb-0.5">🌳🐕</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Parque y Césped</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Paisaje al aire libre</div>
-                  </button>
-
-                  <button
-                    onClick={() => setBgTheme('ocean')}
-                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                      bgTheme === 'ocean'
-                        ? 'border-cyan-600 bg-cyan-50 dark:bg-cyan-950/50 text-cyan-950 dark:text-cyan-200 font-bold shadow-xs'
-                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300 text-stone-700 dark:text-stone-300 bg-[#ecfeff] dark:bg-stone-800/60'
-                    }`}
-                  >
-                    <div className="text-lg sm:text-xl mb-0.5">🌊</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Océano Profundo</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Cyan azul marino</div>
-                  </button>
-
-                  <button
-                    onClick={() => setBgTheme('sunset')}
-                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                      bgTheme === 'sunset'
-                        ? 'border-orange-600 bg-orange-50 dark:bg-orange-950/50 text-orange-950 dark:text-orange-200 font-bold shadow-xs'
-                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300 text-stone-700 dark:text-stone-300 bg-[#fff7ed] dark:bg-stone-800/60'
-                    }`}
-                  >
-                    <div className="text-lg sm:text-xl mb-0.5">🌅</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Atardecer</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Naranja cálido</div>
-                  </button>
-
-                  <button
-                    onClick={() => setBgTheme('forest')}
-                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                      bgTheme === 'forest'
-                        ? 'border-green-700 bg-green-50 dark:bg-green-950/50 text-green-950 dark:text-green-200 font-bold shadow-xs'
-                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300 text-stone-700 dark:text-stone-300 bg-[#f0fdf4] dark:bg-stone-800/60'
-                    }`}
-                  >
-                    <div className="text-lg sm:text-xl mb-0.5">🌲</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Bosque Oscuro</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Verde pino natural</div>
-                  </button>
-
-                  <button
-                    onClick={() => setBgTheme('lavender')}
-                    className={`p-2.5 sm:p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
-                      bgTheme === 'lavender'
-                        ? 'border-purple-600 bg-purple-50 dark:bg-purple-950/50 text-purple-950 dark:text-purple-200 font-bold shadow-xs'
-                        : 'border-stone-200 dark:border-stone-700 hover:border-stone-300 text-stone-700 dark:text-stone-300 bg-[#faf5ff] dark:bg-stone-800/60'
-                    }`}
-                  >
-                    <div className="text-lg sm:text-xl mb-0.5">🌸</div>
-                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Lavanda Suave</div>
-                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Púrpura floral</div>
-                  </button>
-                </div>
-              </div>
-
-              {/* Intensidad */}
-              <div className="space-y-1.5 pt-1 border-t border-stone-100 dark:border-stone-800">
-                <label className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400 flex flex-wrap justify-between gap-1">
-                  <span>Notoriedad del Fondo</span>
-                  <span className="text-emerald-700 dark:text-emerald-400 font-semibold lowercase">
-                    {bgIntensity === 'vivid' ? 'Muy marcado / Alto impacto' : bgIntensity === 'bold' ? 'Marcado nítido' : 'Equilibrado'}
-                  </span>
-                </label>
-                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setBgIntensity('vivid')}
-                    className={`py-2 px-1 sm:px-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition-all cursor-pointer text-center ${
-                      bgIntensity === 'vivid'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                        : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
-                    }`}
-                  >
-                    🔥 Muy Notorio
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBgIntensity('bold')}
-                    className={`py-2 px-1 sm:px-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition-all cursor-pointer text-center ${
-                      bgIntensity === 'bold'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                        : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
-                    }`}
-                  >
-                    ✨ Marcado
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBgIntensity('medium')}
-                    className={`py-2 px-1 sm:px-2.5 rounded-xl text-[11px] sm:text-xs font-bold border transition-all cursor-pointer text-center ${
-                      bgIntensity === 'medium'
-                        ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                        : 'bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-stone-700'
-                    }`}
-                  >
-                    🌿 Suave
+                    <div className="text-xs font-bold text-stone-900 dark:text-stone-100 leading-tight">Perrito Real</div>
+                    <div className="text-[10px] text-stone-600 dark:text-stone-400">Fotografía fondo</div>
                   </button>
                 </div>
               </div>
@@ -774,508 +692,269 @@ export default function App() {
           </div>
         )}
 
-        {/* Contenido Principal */}
-        <main className="flex-grow flex-1 w-full px-4 sm:px-6 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:pb-32 lg:pb-12 space-y-8 overflow-x-hidden">
-
-          {/* VISTA 1: CALCULADORA NUTRICIONAL Y FICHA CON FOTO */}
+        {/* Contenido Principal con Respiro Armónico y Equilibrado */}
+        <main className="flex-grow flex-1 w-full px-3 sm:px-5 lg:pl-3 lg:pr-6 pt-1 sm:pt-4 pb-8 space-y-3 sm:space-y-4 overflow-x-hidden">
+          {/* VISTA 1: CALCULADORA Y FICHA CLÍNICA OFICIAL */}
           {activeTab === 'calculator' && (
-            <div className="space-y-8">
+            <div className="w-full animate-fade-in flex flex-col xl:flex-row items-start gap-4 sm:gap-6">
 
-              {/* Banner Editorial Veterinario de Alta Gama */}
-              <div className="relative overflow-hidden rounded-2xl bg-[#143826] text-[#faf8f5] p-6 sm:p-9 border border-[#234d38] shadow-bento no-print">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-[#2d5a42]/30 rounded-full blur-3xl pointer-events-none" />
-                <div className="relative z-10 max-w-3xl mx-auto space-y-3.5 flex flex-col items-center text-center">
-
-                  {/* Editorial Kicker */}
-                  <div className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-mono text-[#d6cebe]/90">
-                    <Award className="w-3.5 h-3.5 text-[#c89b53]" />
-                    <span>Protocolo Nutricional Clínico</span>
-                    <span aria-hidden="true">·</span>
-                    <span>FEDIAF & NRC 2026</span>
+              {/* 🟢 BANNER HERO VERDE EN MÓVIL (PRIMERO EN PANTALLAS PEQUEÑAS) */}
+              <div className="block lg:hidden w-full relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#143826] via-[#1a4a32] to-[#123020] text-[#faf8f5] px-3.5 py-3 border border-[#2a5940] shadow-xs text-center flex-col items-center justify-center no-print">
+                <div className="relative z-10 space-y-1 max-w-lg mx-auto">
+                  <div className="inline-flex items-center justify-center gap-1.5 text-[9.5px] font-mono uppercase tracking-widest text-emerald-200/90 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                    <Award className="w-3 h-3 text-amber-400 shrink-0" />
+                    <span>Fórmula Nutricional Oficial</span>
                   </div>
-
-                  <h1 className="text-2xl sm:text-4xl font-editorial font-medium tracking-tight text-[#faf8f5] leading-tight">
-                    Calculadora Nutricional <span className="font-editorial italic font-normal text-[#c89b53]">& Ficha Clínica</span>
+                  <h1 className="text-sm font-editorial font-semibold tracking-tight text-white leading-tight">
+                    Ficha Médica & <span className="font-editorial italic font-normal text-amber-300">Recomendaciones Oficiales</span>
                   </h1>
-
-                  <p className="text-[#d6cebe] text-xs sm:text-sm leading-relaxed max-w-2xl font-normal">
-                    Formulación precisa de requerimientos metabólicos (RER/MER) adaptada al peso, actividad y fisiología de tu mascota.
+                  <p className="text-[10px] text-emerald-100/80 leading-relaxed font-normal">
+                    Perfil clínico certificado para {profile.name} según pautas internacionales FEDIAF & NRC.
                   </p>
-
-                  {/* Cinta de Pasos Tipográfica */}
-                  <div className="pt-3 w-full max-w-lg">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="bg-[#1c4732]/70 border border-[#2a5940] rounded-xl py-2 px-3 text-left">
-                        <span className="text-[10px] text-[#c89b53] font-mono uppercase tracking-wider block">01 / Biometría</span>
-                        <span className="text-xs font-semibold text-[#faf8f5] block truncate">Especie & Peso</span>
-                      </div>
-
-                      <div className="bg-[#1c4732]/70 border border-[#2a5940] rounded-xl py-2 px-3 text-left">
-                        <span className="text-[10px] text-[#c89b53] font-mono uppercase tracking-wider block">02 / Actividad</span>
-                        <span className="text-xs font-semibold text-[#faf8f5] block truncate">Estilo & Dieta</span>
-                      </div>
-
-                      <div className="bg-[#1c4732]/70 border border-[#2a5940] rounded-xl py-2 px-3 text-left">
-                        <span className="text-[10px] text-[#c89b53] font-mono uppercase tracking-wider block">03 / Dosificación</span>
-                        <span className="text-xs font-semibold text-[#faf8f5] block truncate">Gramos & Ficha</span>
-                      </div>
-                    </div>
-                  </div>
                 </div>
               </div>
+              
+              {/* Bloque Calculadora: 5 cols izquierda + 7 cols derecha fluido */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-5 items-start flex-1 w-full">
 
-              {/* Formulario + Ficha */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-start">
+                {/* 📌 COLUMNA IZQUIERDA (5 COLS): BIOMÉTRICOS LIMPIOS + ASISTENTE CALCULADOR */}
+                <div className="lg:col-span-5 space-y-3 sm:space-y-4">
 
-                {/* Panel Izquierdo */}
-                <div className="lg:col-span-5 space-y-4">
-                  <div className="flex items-center justify-between px-1 no-print">
-                    <span className="text-xs font-bold text-stone-600 dark:text-stone-300">
-                      Configuración de la Mascota
-                    </span>
-                    <span className="text-[11px] font-bold px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                      Pasos 1 y 2
-                    </span>
-                  </div>
-
-                  <div className="glass-card dark:bg-stone-900/90 dark:border-stone-800 dark:shadow-[0_0_20px_rgba(16,185,129,0.06)] rounded-3xl p-6 sm:p-7 shadow-bento space-y-6 no-print transition-all">
-                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
+                  {/* 1.1 Biométricos Puros */}
+                  <div className="glass-card dark:bg-stone-900/90 dark:border-stone-800 rounded-2xl p-3 sm:p-5 shadow-2xs space-y-2.5 sm:space-y-3.5 no-print transition-all">
+                    <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-2 sm:pb-2.5">
                       <div>
-                        <h2 className="font-heading font-extrabold text-lg text-stone-900 dark:text-stone-100 flex items-center gap-2">
-                          <Scale className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                          Biométricos & Dieta
+                        <h2 className="font-heading font-extrabold text-xs sm:text-base text-stone-900 dark:text-stone-100 flex items-center gap-1.5 sm:gap-2">
+                          <Scale className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" />
+                          Perfil Biométrico
                         </h2>
-                        <p className="text-xs text-stone-500 dark:text-stone-400">Personaliza los datos para la ración exacta</p>
+                        <p className="text-[10px] sm:text-[11px] text-stone-500 dark:text-stone-400">Datos fisiológicos de {profile.name}</p>
                       </div>
 
                       {activePet && (
                         <button
                           type="button"
                           onClick={() => setIsBiometricsExpanded(prev => !prev)}
-                          className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-bold hover:bg-stone-100 dark:hover:bg-stone-750 transition-all cursor-pointer shadow-2xs shrink-0"
+                          className="px-2.5 py-1 sm:px-2.5 sm:py-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-[11px] sm:text-xs font-bold hover:bg-stone-100 transition-all cursor-pointer shadow-2xs shrink-0"
                         >
                           {isBiometricsExpanded ? '✕ Ocultar' : '✏️ Editar'}
                         </button>
                       )}
                     </div>
-
-                  {!isBiometricsExpanded && activePet ? (
-                    <div
-                      onClick={() => setIsBiometricsExpanded(true)}
-                      className="p-4 rounded-2xl bg-stone-50/90 dark:bg-stone-800/70 border border-stone-200 dark:border-stone-750 flex items-center justify-between gap-3 animate-fade-in cursor-pointer hover:bg-stone-100/90 dark:hover:bg-stone-800 transition-colors"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-black text-stone-900 dark:text-stone-100">{profile.name}</span>
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300">
-                            {profile.type === 'dog' ? '🐶 Perro' : '🐱 Gato'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-stone-600 dark:text-stone-400">
-                          {profile.weightKg} kg • {profile.condition === 'ideal' ? 'Peso Ideal' : profile.condition === 'overweight' ? 'Sobrepeso' : 'Bajo Peso'} • {profile.diet === 'kibble' ? 'Croquetas' : 'BARF'}
-                        </p>
-                      </div>
-                      <span className="text-xs text-stone-400 dark:text-stone-500 font-semibold select-none">
-                        Toca para ver o editar →
-                      </span>
-                    </div>
-                  ) : (
-                    <>
-                  {/* Foto de la Mascota */}
-                  <div className="p-4 bg-stone-50/80 dark:bg-stone-800/60 rounded-2xl border border-stone-200 dark:border-stone-750 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
-                        <Camera className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                        Foto Oficial de Ficha
-                      </span>
-                      {profile.photoUrl && (
-                        <button
-                          type="button"
-                          onClick={removePhoto}
-                          className="text-[11px] font-semibold text-red-600 dark:text-red-400 hover:text-red-700 flex items-center gap-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3 h-3" /> Quitar foto
-                        </button>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="w-16 h-16 rounded-2xl bg-white dark:bg-stone-900 border-2 border-dashed border-stone-300 dark:border-stone-700 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
-                        {profile.photoUrl ? (
-                          <img
-                            src={profile.photoUrl}
-                            alt={profile.name}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <span className="text-2xl text-stone-300">
-                            {profile.type === 'dog' ? '🐶' : '🐱'}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex-1 space-y-1">
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          accept="image/*"
-                          onChange={handlePhotoUpload}
-                          className="hidden"
-                          id="upload-pet-photo"
-                        />
-                        <label
-                          htmlFor="upload-pet-photo"
-                          className="inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-200 text-xs font-bold transition-all cursor-pointer shadow-2xs active:scale-98 w-full"
-                        >
-                          <Camera className="w-3.5 h-3.5 text-stone-600 dark:text-stone-400" />
-                          {profile.photoUrl ? 'Cambiar Foto' : 'Subir Foto de tu Mascota'}
-                        </label>
-                        <p className="text-[10px] text-stone-400 dark:text-stone-500">
-                          Se optimiza automáticamente en tu navegador
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Especie */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                      Especie
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        id="select-type-dog"
-                        onClick={() => handleTypeChange('dog')}
-                        className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2 font-bold text-sm transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-md ${
-                          profile.type === 'dog'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 shadow-xs dark:border-emerald-500'
-                            : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                        }`}
-                      >
-                        <span className="text-xl transform group-hover:scale-110 transition-transform">🐶</span>
-                        <span>Perro</span>
-                      </button>
-                      <button
-                        type="button"
-                        id="select-type-cat"
-                        onClick={() => handleTypeChange('cat')}
-                        className={`p-3.5 rounded-2xl border-2 flex items-center justify-center gap-2 font-bold text-sm transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-md ${
-                          profile.type === 'cat'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 shadow-xs dark:border-emerald-500'
-                            : 'border-stone-200 dark:border-stone-800 hover:border-stone-300 dark:hover:border-stone-700 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                        }`}
-                      >
-                        <span className="text-xl transform group-hover:scale-110 transition-transform">🐱</span>
-                        <span>Gato</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Nombre y Raza */}
-                  <div className="space-y-3">
-                    <div className="space-y-1.5">
-                      <label htmlFor="pet-name-input" className="text-xs font-bold uppercase tracking-wider text-stone-500">
-                        Nombre de la Mascota
-                      </label>
-                      <input
-                        id="pet-name-input"
-                        type="text"
-                        value={profile.name}
-                        onChange={e => setProfile(prev => ({ ...prev, name: e.target.value }))}
-                        onBlur={e => {
-                          if (!e.target.value.trim()) {
-                            setProfile(prev => ({ ...prev, name: 'Mi Mascota' }));
-                          }
-                        }}
-                        placeholder="Escribe el nombre de tu mascota"
-                        className="w-full px-4 py-2.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-stone-800 text-base sm:text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label htmlFor="pet-breed-select" className="text-xs font-bold uppercase tracking-wider text-stone-500">
-                          Raza / Contextura
-                        </label>
-                        <span className="text-[11px] text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
-                          ¿Dudas? Elige por tamaño
-                        </span>
-                      </div>
-                      <select
-                        id="pet-breed-select"
-                        value={profile.breedId}
-                        onChange={e => setProfile(prev => ({ ...prev, breedId: e.target.value }))}
-                        className="w-full px-3.5 py-3 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-stone-800 text-sm bg-white cursor-pointer touch-manipulation shadow-2xs"
-                      >
-                        {availableBreeds.map(b => (
-                          <option key={b.id} value={b.id}>
-                            {b.name} ({b.typicalWeight})
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-[11px] text-stone-500 leading-snug">
-                        💡 Si tu mascota es mestiza o no conoces su raza, escoge la opción de <strong className="text-stone-700">Mestizo por peso</strong> o la raza más similar físicamente.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Peso Actual */}
-                  <div className="p-4 bg-stone-50/80 dark:bg-stone-800/80 rounded-2xl border border-stone-200 dark:border-stone-700 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <label htmlFor="pet-weight-input" className="text-xs font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 flex items-center gap-1.5">
-                        <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        Peso Corporal Actual
-                      </label>
-                      <span className="text-[11px] font-semibold text-stone-400 dark:text-stone-500">
-                        Escribe el peso exacto
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <input
-                          id="pet-weight-input"
-                          type="number"
-                          step="0.1"
-                          min="0.1"
-                          max="150"
-                          placeholder="Ej. 12.5"
-                          value={profile.weightKg || ''}
-                          onChange={handleWeightInputChange}
-                          className="w-full px-4 py-3 rounded-xl border-2 border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 focus:outline-none focus:border-emerald-500 dark:focus:border-emerald-500 font-extrabold text-stone-900 dark:text-stone-100 text-lg sm:text-xl shadow-2xs pr-12 transition-all"
-                        />
-                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-stone-400 dark:text-stone-500 text-sm pointer-events-none">
-                          kg
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleWeightAdjust(-0.5)}
-                          className="w-11 h-11 bg-white dark:bg-stone-700 hover:bg-stone-100 dark:hover:bg-stone-650 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-600 rounded-xl font-black text-base flex items-center justify-center shadow-2xs active:scale-95 transition-all cursor-pointer"
-                          title="Restar 0.5 kg"
-                        >
-                          -
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleWeightAdjust(0.5)}
-                          className="w-11 h-11 bg-white dark:bg-stone-700 hover:bg-stone-100 dark:hover:bg-stone-650 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-600 rounded-xl font-black text-base flex items-center justify-center shadow-2xs active:scale-95 transition-all cursor-pointer"
-                          title="Sumar 0.5 kg"
-                        >
-                          +
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Etapa de Vida */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                      Etapa de Vida
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setProfile(prev => ({ ...prev, stage: 'puppy_kitten' }))}
-                        className={`p-2.5 rounded-xl border text-center text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-xs ${
-                          profile.stage === 'puppy_kitten'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 dark:border-emerald-500 font-extrabold'
-                            : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                        }`}
-                      >
-                        {profile.type === 'dog' ? 'Cachorro' : 'Gatito'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProfile(prev => ({ ...prev, stage: 'adult' }))}
-                        className={`p-2.5 rounded-xl border text-center text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-xs ${
-                          profile.stage === 'adult'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 dark:border-emerald-500 font-extrabold'
-                            : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                        }`}
-                      >
-                        Adulto
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProfile(prev => ({ ...prev, stage: 'senior' }))}
-                        className={`p-2.5 rounded-xl border text-center text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-xs ${
-                          profile.stage === 'senior'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 dark:border-emerald-500 font-extrabold'
-                            : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                        }`}
-                      >
-                        Senior (+7 años)
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Condición Corporal */}
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
-                      Condición Corporal
-                    </label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setProfile(prev => ({ ...prev, condition: 'underweight' }))}
-                        className={`p-2.5 rounded-xl border text-center text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-xs ${
-                          profile.condition === 'underweight'
-                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 font-extrabold'
-                            : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                        }`}
-                      >
-                        Bajo Peso
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProfile(prev => ({ ...prev, condition: 'ideal' }))}
-                        className={`p-2.5 rounded-xl border text-center text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-xs ${
-                          profile.condition === 'ideal'
-                            ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 dark:border-emerald-500 font-extrabold'
-                            : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                        }`}
-                      >
-                        Peso Ideal
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setProfile(prev => ({ ...prev, condition: 'overweight' }))}
-                        className={`p-2.5 rounded-xl border text-center text-xs font-bold transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-xs ${
-                          profile.condition === 'overweight'
-                            ? 'border-red-500 bg-red-50 dark:bg-red-950/70 text-red-900 dark:text-red-200 font-extrabold'
-                            : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                        }`}
-                      >
-                        Sobrepeso
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Esterilizado */}
-                  <div className="flex items-center justify-between p-3.5 rounded-2xl border border-stone-200 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-800/50">
-                    <div className="space-y-0.5">
-                      <span className="text-xs font-bold text-stone-900 dark:text-stone-100 block">¿Esterilizado / Castrado?</span>
-                      <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Ajuste calórico (-20%)</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setProfile(prev => ({ ...prev, neutered: !prev.neutered }))}
-                      className={`w-12 h-6.5 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out cursor-pointer active:scale-95 ${
-                        profile.neutered ? 'bg-emerald-600' : 'bg-stone-300 dark:bg-stone-700'
-                      }`}
-                    >
+                    {!isBiometricsExpanded && activePet ? (
                       <div
-                        className={`bg-white w-4.5 h-4.5 rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${
-                          profile.neutered ? 'translate-x-5.5' : 'translate-x-0'
-                        }`}
-                      />
-                    </button>
-                  </div>
+                        onClick={() => setIsBiometricsExpanded(true)}
+                        className="p-2.5 sm:p-3 rounded-xl bg-stone-50/90 dark:bg-stone-800/70 border border-stone-200 dark:border-stone-750 flex items-center justify-between gap-2.5 animate-fade-in cursor-pointer hover:bg-stone-100/90 transition-colors"
+                      >
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs sm:text-sm font-black text-stone-900 dark:text-stone-100 truncate">{profile.name}</span>
+                            <span className="text-[9px] sm:text-[10px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 shrink-0">
+                              {profile.type === 'dog' ? '🐶 Perro' : '🐱 Gato'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] sm:text-[11px] text-stone-600 dark:text-stone-400 truncate">
+                            {profile.weightKg} kg • {selectedBreedInfo ? selectedBreedInfo.name : 'Raza no definida'}
+                          </p>
+                        </div>
+                        <span className="text-[11px] sm:text-xs text-stone-400 dark:text-stone-500 font-semibold shrink-0 select-none">
+                          Modificar →
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="space-y-2.5 sm:space-y-3 animate-fade-in">
+                        {/* Foto Oficial */}
+                        <div className="p-2.5 sm:p-3 bg-stone-50/80 dark:bg-stone-800/60 rounded-xl border border-stone-200 dark:border-stone-750 space-y-1.5 sm:space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-300 flex items-center gap-1 sm:gap-1.5">
+                              <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-emerald-600 dark:text-emerald-400" />
+                              Foto Oficial
+                            </span>
+                            {profile.photoUrl && (
+                              <button
+                                type="button"
+                                onClick={removePhoto}
+                                className="text-[9px] sm:text-[10px] font-semibold text-red-600 dark:text-red-400 hover:text-red-700 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Trash2 className="w-2.5 h-2.5 sm:w-3 sm:h-3" /> Quitar
+                              </button>
+                            )}
+                          </div>
 
-                  {/* Dieta */}
-                  <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-100 dark:border-stone-800">
-                    <button
-                      type="button"
-                      onClick={() => setProfile(prev => ({ ...prev, diet: 'kibble' }))}
-                      className={`p-3 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-md ${
-                        profile.diet === 'kibble'
-                          ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 dark:border-emerald-500 font-extrabold'
-                          : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                      }`}
-                    >
-                      🥣 Croquetas / Pienso
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setProfile(prev => ({ ...prev, diet: 'barf' }))}
-                      className={`p-3 rounded-2xl border-2 text-xs font-bold flex items-center justify-center gap-2 transition-all duration-200 cursor-pointer active:scale-95 hover:-translate-y-0.5 hover:shadow-md ${
-                        profile.diet === 'barf'
-                          ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 dark:border-emerald-500 font-extrabold'
-                          : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
-                      }`}
-                    >
-                      🥩 Comida Natural (BARF)
-                    </button>
-                  </div>
+                          <div className="flex items-center gap-2.5 sm:gap-3">
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-white dark:bg-stone-900 border border-dashed border-stone-300 dark:border-stone-700 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
+                              {profile.photoUrl ? (
+                                <img
+                                  src={profile.photoUrl}
+                                  alt={profile.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-lg sm:text-xl">
+                                  {profile.type === 'dog' ? '🐶' : '🐱'}
+                                </span>
+                              )}
+                            </div>
 
-                  {/* Guardar Cambios */}
-                  <div className="pt-3 border-t border-stone-100 dark:border-stone-800 space-y-2">
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (isProfileEmpty || !activePet) return;
-                        const lowerId = String(profile?.id || '').toLowerCase();
-                        if (
-                          lowerId === 'defaultpet' ||
-                          lowerId === 'tempemptypet' ||
-                          lowerId.includes('default') ||
-                          lowerId.includes('temp')
-                        ) {
-                          console.warn('✖ Guardado bloqueado por mascota temporal:', profile.id);
-                          return;
-                        }
-                        await savePet(profile);
-                        setSaveSuccessMessage(`¡Perfil de ${profile.name || 'mascota'} guardado con éxito!`);
-                        setTimeout(() => setSaveSuccessMessage(null), 3500);
-                      }}
-                      disabled={isSavingPet || isProfileEmpty}
-                      className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-emerald-600 via-emerald-600 to-teal-600 hover:brightness-110 text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md hover:scale-[1.01] active:scale-98 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      {isSavingPet ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          <span>Guardando en la Nube...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4 text-emerald-200" />
-                          <span>{isProfileEmpty ? 'Selecciona una Mascota para Guardar' : 'Guardar Cambios de Mascota'}</span>
-                        </>
-                      )}
-                    </button>
+                            <div className="flex-1">
+                              <input
+                                type="file"
+                                ref={fileInputRef}
+                                accept="image/*"
+                                onChange={handlePhotoUpload}
+                                className="hidden"
+                                id="upload-pet-photo"
+                              />
+                              <label
+                                htmlFor="upload-pet-photo"
+                                className="inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-stone-800 hover:bg-stone-100 border border-stone-300 dark:border-stone-700 text-stone-800 dark:text-stone-200 text-[11px] sm:text-xs font-bold transition-all cursor-pointer shadow-2xs w-full"
+                              >
+                                <Camera className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-stone-600 dark:text-stone-400" />
+                                {profile.photoUrl ? 'Cambiar Foto' : 'Subir Foto'}
+                              </label>
+                            </div>
+                          </div>
+                        </div>
 
-                    {isProfileEmpty && (
-                      <p className="text-[11px] text-stone-500 dark:text-stone-400 text-center font-bold">
-                        💡 Para guardar datos clínicos y porciones, primero agrega o selecciona una mascota en la barra superior.
-                      </p>
-                    )}
+                        {/* Especie */}
+                        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleTypeChange('dog')}
+                            className={`py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-xl border-2 flex items-center justify-center gap-1 sm:gap-1.5 font-bold text-[11px] sm:text-xs transition-all cursor-pointer ${
+                              profile.type === 'dog'
+                                ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 shadow-2xs'
+                                : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
+                            }`}
+                          >
+                            <span>🐶 Perro</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleTypeChange('cat')}
+                            className={`py-1.5 sm:py-2 px-2.5 sm:px-3 rounded-xl border-2 flex items-center justify-center gap-1 sm:gap-1.5 font-bold text-[11px] sm:text-xs transition-all cursor-pointer ${
+                              profile.type === 'cat'
+                                ? 'border-emerald-600 bg-emerald-50 dark:bg-emerald-950/70 text-emerald-900 dark:text-emerald-200 shadow-2xs'
+                                : 'border-stone-200 dark:border-stone-800 text-stone-600 dark:text-stone-300 bg-white dark:bg-stone-900'
+                            }`}
+                          >
+                            <span>🐱 Gato</span>
+                          </button>
+                        </div>
 
-                    {saveSuccessMessage && (
-                      <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 text-xs font-black flex items-center justify-center gap-2 animate-fade-in shadow-2xs">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                        <span>{saveSuccessMessage}</span>
+                        {/* Nombre y Raza */}
+                        <div className="space-y-1.5 sm:space-y-2">
+                          <input
+                            type="text"
+                            value={profile.name}
+                            onChange={e => setProfile(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="Nombre de la mascota"
+                            className="w-full px-2.5 sm:px-3 py-1.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-stone-800 text-xs sm:text-sm"
+                          />
+                          <select
+                            value={profile.breedId}
+                            onChange={e => setProfile(prev => ({ ...prev, breedId: e.target.value }))}
+                            className="w-full px-2.5 sm:px-3 py-1.5 rounded-xl border border-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold text-stone-800 text-[11px] sm:text-xs bg-white cursor-pointer"
+                          >
+                            {availableBreeds.map(b => (
+                              <option key={b.id} value={b.id}>
+                                {b.name} ({b.typicalWeight})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Peso Actual en Tiempo Real */}
+                        <div className="p-2 sm:p-2.5 bg-stone-50/80 dark:bg-stone-800/80 rounded-xl border border-stone-200 dark:border-stone-750 flex items-center justify-between gap-1.5 sm:gap-2">
+                          <span className="text-[10px] sm:text-[11px] font-bold uppercase text-stone-600 dark:text-stone-300">
+                            Peso Actual:
+                          </span>
+                          <div className="flex items-center gap-1 sm:gap-1.5">
+                            <input
+                              type="number"
+                              step="0.5"
+                              value={profile.weightKg || ''}
+                              onChange={handleWeightInputChange}
+                              className="w-14 sm:w-16 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg border border-stone-300 dark:border-stone-600 font-extrabold text-xs sm:text-sm text-center"
+                            />
+                            <span className="text-[11px] sm:text-xs font-bold text-stone-500">kg</span>
+                            <button
+                              type="button"
+                              onClick={() => handleWeightAdjust(-0.5)}
+                              className="w-5 h-5 sm:w-6 sm:h-6 bg-white dark:bg-stone-700 border border-stone-300 rounded font-black text-[11px] sm:text-xs cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleWeightAdjust(0.5)}
+                              className="w-5 h-5 sm:w-6 sm:h-6 bg-white dark:bg-stone-700 border border-stone-300 rounded font-black text-[11px] sm:text-xs cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Botón Guardar */}
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (isProfileEmpty || !activePet) return;
+                            await savePet(profile);
+                            setSaveSuccessMessage(`¡Perfil guardado!`);
+                            setTimeout(() => setSaveSuccessMessage(null), 3000);
+                          }}
+                          disabled={isSavingPet || isProfileEmpty}
+                          className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] sm:text-xs shadow-xs transition-all cursor-pointer"
+                        >
+                          {isSavingPet ? 'Guardando...' : 'Guardar Datos Biométricos'}
+                        </button>
                       </div>
                     )}
                   </div>
-                    </>
-                  )}
-                </div>
-              </div>
 
-                {/* Panel Derecho */}
-                <div className="lg:col-span-7 space-y-4">
-                  <div className="flex items-center justify-between px-1 no-print">
-                    <span className="text-xs font-bold text-stone-600 dark:text-stone-300">
-                      Ficha Técnica & Raciones Oficiales
-                    </span>
-                    <span className="text-[11px] font-bold px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 rounded-lg border border-emerald-200 dark:border-emerald-800">
-                      Paso 3 de 3
-                    </span>
+                  {/* 1.2 Calculadora Unificada y Diagnóstico Nutricional */}
+                  <div className="no-print">
+                    <UnifiedFoodCalculator
+                      kibbleDailyGrams={result.kibbleDailyGrams}
+                      barfDailyGrams={result.barfBreakdown?.totalGrams || Math.round(result.kibbleDailyGrams * 2.1)}
+                      petName={profile.name}
+                      petType={profile.type}
+                      selectedDiet={(profile.diet as any) || 'kibble'}
+                      onDietChange={(newDiet) => setProfile(prev => ({ ...prev, diet: newDiet as any }))}
+                    />
                   </div>
 
+                </div>
+
+                {/* 📋 COLUMNA DERECHA (7 COLS): HERO ELEGANTE + FICHA CLÍNICA + REGLAS DE TRANSICIÓN */}
+                <div className="lg:col-span-7 space-y-3.5 sm:space-y-4">
+
+                  {/* 2.1 Hero Verde Editorial Centrado (ESTRICTAMENTE OCULTO EN MÓVIL, SOLO VISIBLE EN PC) */}
+                  <div className="hidden lg:block relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#143826] via-[#1a4a32] to-[#123020] text-[#faf8f5] px-4 py-3.5 sm:px-6 sm:py-4 border border-[#2a5940] shadow-xs text-center no-print">
+                    <div className="relative z-10 space-y-1 max-w-lg mx-auto">
+                      <div className="inline-flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10px] font-mono uppercase tracking-widest text-emerald-200/90 bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                        <Award className="w-3 h-3 text-amber-400 shrink-0" />
+                        <span>Fórmula Nutricional Oficial</span>
+                      </div>
+                      <h1 className="text-sm sm:text-lg font-editorial font-semibold tracking-tight text-white leading-tight">
+                        Ficha Médica & <span className="font-editorial italic font-normal text-amber-300">Recomendaciones Oficiales</span>
+                      </h1>
+                      <p className="text-[10px] sm:text-xs text-emerald-100/80 leading-relaxed font-normal">
+                        Perfil clínico certificado para {profile.name} según pautas internacionales FEDIAF & NRC.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 2.2 Ficha Clínica Oficial */}
                   <div
                     id="print-pet-sheet"
-                    className="bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-6 sm:p-8 shadow-bento space-y-6 relative overflow-hidden transition-all print:bg-white print:border print:border-black print:p-4 print:shadow-none"
+                    className="bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-2xl p-3.5 sm:p-5 shadow-2xs space-y-3 sm:space-y-4 relative overflow-hidden transition-all"
                   >
-
-                    {/* Cabecera Mascota con Jerarquía Editorial */}
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-5 border-b border-stone-100 dark:border-stone-800 gap-4">
-                      <div className="flex items-center gap-4">
-                        <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-2xl bg-stone-100 dark:bg-stone-800 border border-stone-300/80 dark:border-stone-700 overflow-hidden shrink-0 shadow-2xs flex items-center justify-center">
+                    {/* Cabecera Mascota */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-3.5 border-b border-stone-100 dark:border-stone-800 gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-stone-100 dark:bg-stone-800 border border-stone-300/80 dark:border-stone-700 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
                           {profile.photoUrl ? (
                             <img
                               src={profile.photoUrl}
@@ -1283,302 +962,131 @@ export default function App() {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span className="text-3xl">
+                            <span className="text-2xl">
                               {profile.type === 'dog' ? '🐶' : '🐱'}
                             </span>
                           )}
                         </div>
 
-                        <div>
-                          <div className="flex items-baseline gap-2">
-                            <h3 className="font-editorial text-2xl font-medium text-stone-900 dark:text-stone-100 leading-tight">
+                        <div className="min-w-0">
+                          <div className="flex items-baseline gap-1.5">
+                            <h3 className="font-editorial text-lg sm:text-xl font-medium text-stone-900 dark:text-stone-100 leading-tight truncate">
                               {profile.name || 'Mi Mascota'}
                             </h3>
-                            <span className="text-xs text-stone-500 dark:text-stone-400 font-normal">
+                            <span className="text-[11px] text-stone-500 dark:text-stone-400">
                               ({profile.type === 'dog' ? 'Canino' : 'Felino'})
                             </span>
                           </div>
 
-                          {/* Zero-Pill Unboxed Metadata */}
-                          <div className="flex flex-wrap items-center gap-2 text-xs text-stone-600 dark:text-stone-400 mt-1">
-                            <span className="font-medium text-stone-700 dark:text-stone-300">
+                          <div className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 leading-snug">
+                            <p className="font-medium text-stone-700 dark:text-stone-300">
                               {selectedBreedInfo ? selectedBreedInfo.name : 'Raza / Contextura'}
-                            </span>
-                            <span aria-hidden="true" className="text-stone-300 dark:text-stone-700">·</span>
-                            <span>
-                              Peso: <strong className="font-tabular font-semibold text-stone-900 dark:text-stone-100">{profile.weightKg} kg</strong>
-                            </span>
-                            <span aria-hidden="true" className="text-stone-300 dark:text-stone-700">·</span>
-                            <span>
-                              {profile.condition === 'ideal' ? 'Peso Ideal' : profile.condition === 'overweight' ? 'Sobrepeso' : 'Bajo Peso'}
-                            </span>
-                            <span aria-hidden="true" className="text-stone-300 dark:text-stone-700">·</span>
-                            <span>{profile.neutered ? 'Esterilizado' : 'Sin esterilizar'}</span>
+                            </p>
+                            <p className="text-[11px] text-stone-500">
+                              Peso Actual: <strong className="text-stone-900 dark:text-stone-100 font-semibold">{profile.weightKg} kg</strong> · {profile.condition === 'ideal' ? 'Peso Ideal' : profile.condition === 'overweight' ? 'Sobrepeso' : 'Bajo Peso'}
+                            </p>
                           </div>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap no-print">
-                        <button
-                          onClick={() => setShowShareModal(true)}
-                          className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 dark:bg-stone-800 dark:hover:bg-stone-700 text-white text-xs font-medium transition-all shadow-2xs cursor-pointer active:scale-95"
-                          title="Compartir por WhatsApp o copiar resumen"
-                        >
-                          <MessageCircle className="w-3.5 h-3.5 fill-current text-[#25D366]" />
-                          <span>Compartir Ficha</span>
-                        </button>
+                      <button
+                        onClick={() => setShowShareModal(true)}
+                        className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-medium transition-all shadow-2xs cursor-pointer self-start sm:self-auto shrink-0"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5 fill-current text-[#25D366]" />
+                        <span>Compartir Ficha</span>
+                      </button>
+                    </div>
+
+                    {/* Métricas Energéticas Clínicas Compactas (Ahorro del 40% vertical) */}
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2 pt-0.5 animate-fade-in">
+                      <div className="py-1.5 px-1 sm:p-2.5 rounded-xl bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200/90 dark:border-stone-800 text-center flex flex-col justify-center">
+                        <span className="text-[8px] sm:text-[9px] font-mono uppercase text-stone-500 leading-none mb-1">RER (Base)</span>
+                        <div className="text-xs sm:text-sm font-bold text-stone-900 dark:text-stone-100 font-tabular leading-tight">
+                          {result.rer} <span className="text-[8.5px] sm:text-[10px] font-normal text-stone-400">kcal</span>
+                        </div>
+                      </div>
+
+                      <div className="py-1.5 px-1 sm:p-2.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/60 text-center flex flex-col justify-center">
+                        <span className="text-[8px] sm:text-[9px] font-mono uppercase text-emerald-800 dark:text-emerald-300 leading-none mb-1">MER (Total)</span>
+                        <div className="text-xs sm:text-sm font-bold text-emerald-900 dark:text-emerald-200 font-tabular leading-tight">
+                          {result.mer} <span className="text-[8.5px] sm:text-[10px] font-normal text-emerald-700">kcal</span>
+                        </div>
+                      </div>
+
+                      <div className="py-1.5 px-1 sm:p-2.5 rounded-xl bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200/90 dark:border-stone-800 text-center flex flex-col justify-center">
+                        <span className="text-[8px] sm:text-[9px] font-mono uppercase text-stone-500 leading-none mb-1">Agua Diaria</span>
+                        <div className="text-[10.5px] sm:text-sm font-bold text-stone-900 dark:text-stone-100 font-tabular leading-tight">
+                          {result.waterDailyMl.min}-{result.waterDailyMl.max} <span className="text-[8.5px] sm:text-[10px] font-normal text-stone-400">ml</span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Ración */}
-                    {profile.diet === 'kibble' ? (
-                      <div className="space-y-4 bg-[#faf8f5] dark:bg-[#151c17] p-5 sm:p-6 rounded-2xl border border-stone-200/90 dark:border-stone-800 shadow-2xs">
+                    {/* Fórmulas Recomendadas */}
+                    {selectedBreedInfo && (
+                      <div className="space-y-1.5 pt-2 border-t border-stone-100 dark:border-stone-800">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-2xl">🥣</span>
-                            <div>
-                              <h4 className="font-editorial font-semibold text-stone-900 dark:text-stone-100 text-base sm:text-lg leading-tight">
-                                Ración Diaria de Croquetas / Pienso
-                              </h4>
-                              <p className="text-[11px] text-stone-500 dark:text-stone-400 font-normal">Recomendación calórica para {profile.name}</p>
-                            </div>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className="w-5 h-5 rounded-md bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                              <Award className="w-3.5 h-3.5" />
+                            </span>
+                            <h4 className="font-heading font-black text-xs text-stone-900 dark:text-stone-100 truncate">
+                              Nutrición Específica · <span className="text-emerald-600 dark:text-emerald-400 font-extrabold">{selectedBreedInfo.name}</span>
+                            </h4>
                           </div>
-                          <span className="text-xs font-semibold text-[#143826] dark:text-emerald-300 bg-white dark:bg-[#1a231d] px-3 py-1 rounded-xl border border-stone-200 dark:border-stone-800 shrink-0 font-tabular">
-                            {result.mealsPerDay} tomas al día
+                          <span className="text-[9px] font-mono font-black uppercase text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-200/50 dark:border-emerald-800/50 shrink-0">
+                            FEDIAF/NRC
                           </span>
                         </div>
 
-                        <div className="bg-white dark:bg-[#1a231d] p-5 rounded-xl border border-stone-200/80 dark:border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-2xs">
-                          <div className="text-center sm:text-left">
-                            <span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider block">
-                              Total diario a servir:
-                            </span>
-                            <span className="text-3xl sm:text-4xl font-bold text-[#143826] dark:text-[#52796f] font-tabular">
-                              <AnimatedCounter value={result.kibbleDailyGrams} /> <span className="text-sm font-normal text-stone-500 dark:text-stone-400 font-sans">gramos / día</span>
-                            </span>
-                          </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {selectedBreedInfo.recommendedFoodTypes.map((tier, idx) => {
+                            const isSuper = tier.tier.includes('Súper Premium');
+                            return (
+                              <div
+                                key={idx}
+                                className={`relative p-2.5 rounded-xl border flex flex-col justify-between shadow-2xs ${
+                                  isSuper
+                                    ? 'bg-gradient-to-br from-emerald-50/40 via-white to-stone-50/60 dark:from-emerald-950/25 dark:via-stone-900 dark:to-stone-900 border-emerald-500/25 dark:border-emerald-700/40'
+                                    : 'bg-gradient-to-br from-amber-50/40 via-white to-stone-50/60 dark:from-amber-950/25 dark:via-stone-900 dark:to-stone-900 border-amber-500/25 dark:border-amber-700/40'
+                                }`}
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between">
+                                    <span
+                                      className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-2xs ${
+                                        isSuper
+                                          ? 'bg-emerald-700 text-white'
+                                          : 'bg-amber-600 text-white'
+                                      }`}
+                                    >
+                                      {isSuper ? '★ Súper Premium' : '⚖ Calidad-Precio'}
+                                    </span>
+                                  </div>
+                                  <p className="text-[10px] text-stone-600 dark:text-stone-300 leading-snug line-clamp-2">
+                                    {tier.why}
+                                  </p>
+                                </div>
 
-                          <div className="flex items-center gap-2">
-                            {Array.from({ length: result.mealsPerDay }).map((_, i) => (
-                              <div key={i} className="text-center bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200 dark:border-stone-800 px-3.5 py-2 rounded-xl">
-                                <span className="text-[10px] font-mono text-stone-500 dark:text-stone-400 block uppercase tracking-wider">
-                                  Toma {i + 1}
-                                </span>
-                                <span className="text-base sm:text-lg font-bold text-stone-900 dark:text-white font-tabular">
-                                  <AnimatedCounter value={result.gramsPerMeal} suffix="g" />
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4 bg-[#faf8f5] dark:bg-[#151c17] p-5 sm:p-6 rounded-2xl border border-stone-200/90 dark:border-stone-800 shadow-2xs">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <span className="text-2xl">🥩</span>
-                            <div>
-                              <h4 className="font-editorial font-semibold text-stone-900 dark:text-stone-100 text-base sm:text-lg leading-tight">
-                                Ración Dieta Natural BARF
-                              </h4>
-                              <p className="text-[11px] text-stone-500 dark:text-stone-400 font-normal">Alimento biológicamente apropiado para {profile.name}</p>
-                            </div>
-                          </div>
-                          <span className="text-xs font-semibold text-[#b4833e] dark:text-amber-300 bg-white dark:bg-[#1a231d] px-3 py-1 rounded-xl border border-stone-200 dark:border-stone-800 shrink-0 font-tabular">
-                            {result.barfBreakdown?.percentage}% peso corporal
-                          </span>
-                        </div>
-
-                        <div className="bg-white dark:bg-[#1a231d] p-5 rounded-xl border border-stone-200/80 dark:border-stone-800 text-center sm:text-left flex items-center justify-between shadow-2xs">
-                          <div>
-                            <span className="text-xs text-stone-500 dark:text-stone-400 block font-medium uppercase tracking-wider">Total diario fresco:</span>
-                            <span className="text-3xl font-bold text-[#b4833e] dark:text-amber-400 font-tabular">
-                              <AnimatedCounter value={result.barfBreakdown?.totalGrams || 0} /> <span className="text-sm font-normal text-stone-500 dark:text-stone-400 font-sans">gramos / día</span>
-                            </span>
-                          </div>
-                          <span className="text-xs bg-[#faf8f5] dark:bg-[#151c17] text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-800 px-3 py-1.5 rounded-lg font-tabular font-semibold">
-                            {result.mealsPerDay} tomas de {Math.round((result.barfBreakdown?.totalGrams || 0) / result.mealsPerDay)}g
-                          </span>
-                        </div>
-
-                        {result.barfBreakdown && (
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                            <div className="bg-white dark:bg-[#1a231d] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800 text-center">
-                              <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Huesos Carnosos</span>
-                              <span className="text-base font-bold text-stone-900 dark:text-white font-tabular">
-                                <AnimatedCounter value={result.barfBreakdown.meatyBonesGrams} suffix="g" />
-                              </span>
-                              <span className="text-[10px] text-stone-400 dark:text-stone-500 block font-mono">50% crudo</span>
-                            </div>
-
-                            <div className="bg-white dark:bg-[#1a231d] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800 text-center">
-                              <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Carne Magra</span>
-                              <span className="text-base font-bold text-stone-900 dark:text-white font-tabular">
-                                <AnimatedCounter value={result.barfBreakdown.muscleMeatGrams} suffix="g" />
-                              </span>
-                              <span className="text-[10px] text-stone-400 dark:text-stone-500 block font-mono">30% músculo</span>
-                            </div>
-
-                            <div className="bg-white dark:bg-[#1a231d] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800 text-center">
-                              <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Vísceras</span>
-                              <span className="text-base font-bold text-stone-900 dark:text-white font-tabular">
-                                <AnimatedCounter value={result.barfBreakdown.organsGrams} suffix="g" />
-                              </span>
-                              <span className="text-[10px] text-stone-400 dark:text-stone-500 block font-mono">10% órgano</span>
-                            </div>
-
-                            <div className="bg-white dark:bg-[#1a231d] p-3 rounded-xl border border-stone-200/80 dark:border-stone-800 text-center">
-                              <span className="text-[11px] text-stone-500 dark:text-stone-400 block">Vegetales</span>
-                              <span className="text-base font-bold text-stone-900 dark:text-white font-tabular">
-                                <AnimatedCounter value={result.barfBreakdown.vegetablesFruitsGrams} suffix="g" />
-                              </span>
-                              <span className="text-[10px] text-stone-400 dark:text-stone-500 block font-mono">10% fibra</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                      {/* Métricas Energéticas */}
-                      <div className="space-y-4 pt-1 animate-fade-in">
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          <div className="p-3.5 rounded-xl bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200/90 dark:border-stone-800">
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 dark:text-stone-400 block mb-1">
-                              Gasto Base (RER)
-                            </span>
-                            <span className="text-xl font-bold text-stone-900 dark:text-stone-100 font-tabular">
-                              {result.rer} <span className="text-xs font-normal text-stone-500">kcal/día</span>
-                            </span>
-                            <span className="text-[10px] text-stone-400 dark:text-stone-500 block mt-1">Calorías en reposo</span>
-                          </div>
-
-                          <div className="p-3.5 rounded-xl bg-[#143826]/5 dark:bg-[#143826]/25 border border-[#143826]/15 dark:border-[#143826]/40">
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-[#143826] dark:text-emerald-300 block mb-1">
-                              Calorías Totales (MER)
-                            </span>
-                            <span className="text-xl font-bold text-[#143826] dark:text-emerald-200 font-tabular">
-                              {result.mer} <span className="text-xs font-normal text-[#143826]/80 dark:text-emerald-300">kcal/día</span>
-                            </span>
-                            <span className="text-[10px] text-[#143826]/70 dark:text-emerald-400/80 block mt-1">Según factor de actividad</span>
-                          </div>
-
-                          <div className="p-3.5 rounded-xl bg-[#faf8f5] dark:bg-[#151c17] border border-stone-200/90 dark:border-stone-800 col-span-2 sm:col-span-1">
-                            <span className="text-[10px] font-mono uppercase tracking-wider text-stone-500 dark:text-stone-400 block mb-1">
-                              Agua Diaria Sugerida
-                            </span>
-                            <span className="text-xl font-bold text-stone-900 dark:text-stone-100 font-tabular">
-                              {result.waterDailyMl.min} - {result.waterDailyMl.max} <span className="text-xs font-normal text-stone-500">ml</span>
-                            </span>
-                            <span className="text-[10px] text-stone-400 dark:text-stone-500 block mt-1">Hidratación fresca</span>
-                          </div>
-                        </div>
-
-                      {/* Marcas Sugeridas */}
-                      {selectedBreedInfo && (
-                        <div className="space-y-3 pt-2 border-t border-stone-100">
-                          <div className="flex items-center gap-2">
-                            <Award className="w-4 h-4 text-emerald-600 shrink-0" />
-                            <div>
-                              <h4 className="font-heading font-extrabold text-sm sm:text-base text-stone-900">
-                                Sugerencias del Mercado para {selectedBreedInfo.name}
-                              </h4>
-                              <p className="text-[11px] text-stone-500">
-                                Enfoque nutricional: {selectedBreedInfo.nutritionFocus}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-2.5">
-                            {selectedBreedInfo.recommendedFoodTypes.map((tier, idx) => (
-                              <div key={idx} className="flex flex-col gap-2.5 p-4 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-800">
-                                <span className={`font-bold text-xs px-2.5 py-1 rounded-lg w-fit ${
-                                  tier.tier.includes('Súper Premium')
-                                    ? 'bg-emerald-100/80 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300'
-                                    : 'bg-amber-100/80 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300'
-                                }`}>
-                                  {tier.tier}
-                                </span>
-
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-wrap gap-1 pt-1.5 mt-1 border-t border-stone-200/60 dark:border-stone-800">
                                   {tier.brands.map((brand, bIdx) => (
-                                    <span key={bIdx} className="px-3 py-1.5 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-xs font-semibold text-stone-900 dark:text-stone-100 shadow-2xs">
+                                    <span
+                                      key={bIdx}
+                                      className="px-1.5 py-0.5 rounded bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 text-[9.5px] font-black text-stone-800 dark:text-stone-100 shadow-2xs"
+                                    >
                                       {brand}
                                     </span>
                                   ))}
                                 </div>
-
-                                <div className="text-xs text-stone-600 dark:text-stone-400 flex items-start gap-1.5 mt-1 leading-relaxed">
-                                  <span className="shrink-0 mt-0.5">💡</span>
-                                  <div>
-                                    <strong className="text-stone-900 dark:text-stone-200">Por qué funciona:</strong> {tier.why}
-                                  </div>
-                                </div>
                               </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-
-                  {/* Llamado al Registro */}
-                  {!user && (
-                    <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-stone-900 via-stone-850 to-stone-900 text-white border border-stone-800 shadow-md flex flex-col sm:flex-row items-center justify-between gap-3.5 no-print">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white/10 border border-white/15 flex items-center justify-center text-xl shrink-0">
-                          {profile.type === 'dog' ? '🐶' : '🐱'}
-                        </div>
-                        <div className="text-center sm:text-left">
-                          <strong className="block font-bold text-sm text-white">
-                            ¿Quieres guardar la ficha y dieta de {profile.name || 'tu mascota'}?
-                          </strong>
-                          <p className="text-xs text-stone-300">
-                            Respalda su historial en la nube e incluye 15 días gratis de funciones Pro.
-                          </p>
+                            );
+                          })}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const googleBtn = document.querySelector('button[title*="Google"]') as HTMLButtonElement | null;
-                          if (googleBtn) googleBtn.click();
-                        }}
-                        className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black text-xs transition-all shadow-xs cursor-pointer active:scale-95 whitespace-nowrap text-center"
-                      >
-                        Registrarme Gratis
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Calculadora Unificada */}
-                  <div className="no-print">
-                    <UnifiedFoodCalculator
-                      dailyGrams={profile.diet === 'kibble' ? result.kibbleDailyGrams : (result.barfBreakdown?.totalGrams || 500)}
-                      petName={profile.name}
-                      petType={profile.type}
-                    />
+                    )}
                   </div>
 
-                  {/* Acceso a Rutina */}
-                  <div className="p-4 bg-emerald-50 dark:bg-stone-850 border border-emerald-200/80 dark:border-stone-700 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 no-print">
-                    <div className="flex items-center gap-3 text-stone-800 dark:text-stone-200 text-xs font-medium">
-                      <span className="p-2 bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 rounded-xl font-extrabold">⏰</span>
-                      <div>
-                        <strong className="block font-bold text-stone-900 dark:text-white">Organizador de Rutina & Horarios</strong>
-                        <p className="text-[11px] text-stone-500 dark:text-stone-400">Genera la tabla de horarios de {profile.name} para pegar en la nevera.</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('routine')}
-                      className="w-full sm:w-auto px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs whitespace-nowrap"
-                    >
-                      Ver Rutina Completa →
-                    </button>
-                  </div>
-
-                  {/* Transición de Alimento */}
+                  {/* 2.3 Regla de los 7 Días */}
                   <div className="no-print">
                     <FoodTransitionGuide
                       petName={profile.name}
@@ -1586,65 +1094,48 @@ export default function App() {
                     />
                   </div>
 
-                  {/* Acceso a Ficha Técnica */}
-                  <div className="p-4 bg-stone-50 dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-2xl text-center text-xs text-stone-600 dark:text-stone-400 no-print flex flex-col sm:flex-row items-center justify-between gap-3">
-                    <div className="flex items-center gap-2 text-center sm:text-left">
-                      <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span>
-                        ¿Deseas la ficha clínica completa, carnet de vacunas y contactos médicos de <strong>{profile.name}</strong>?
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setActiveTab('sheet')}
-                      className="w-full sm:w-auto px-4 py-2 rounded-xl bg-stone-900 hover:bg-stone-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 shrink-0 active:scale-98"
-                    >
-                      <span>Ir a la Ficha Técnica Oficial →</span>
-                    </button>
-                  </div>
-
                 </div>
 
+              </div>
+
+              {/* 📷 WIDGET FOTOGRÁFICO DE OSLO */}
+              <div className="hidden xl:block w-72 shrink-0 xl:sticky xl:top-0">
+                <PetPhotoReelWidget profile={profile} />
               </div>
 
             </div>
           )}
 
-          {/* VISTA ORGANIZADOR DE RUTINA */}
+          {/* VISTAS MODULARES CON EL MISMO BALANCE VISUAL */}
           {activeTab === 'routine' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
+                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="lg:col-span-8 space-y-6">
+              <div className="w-full lg:col-span-8 space-y-4">
                 <RoutineSchedule profile={profile} result={result} />
               </div>
             </div>
           )}
 
-          {/* VISTA 2: FICHA TÉCNICA */}
-          {activeTab === 'sheet' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
+          {/* VISTA: TIPS, GUÍAS CLÍNICAS Y PRIMEROS AUXILIOS */}
+          {activeTab === 'guides' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
+                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="lg:col-span-8 space-y-6">
+              <div className="w-full lg:col-span-8 space-y-4">
+                <TipsAndGuidesModule />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'sheet' && (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
+                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
+              </div>
+              <div className="w-full lg:col-span-8 space-y-4">
                 {isProOrTrial ? (
                   <PetTechSheet onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
                 ) : (
@@ -1657,21 +1148,12 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTA 3: EXPEDIENTE MÉDICO */}
           {activeTab === 'medical' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
+                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="lg:col-span-8 space-y-6">
+              <div className="w-full lg:col-span-8 space-y-4">
                 {isProOrTrial ? (
                   <MedicalHistory />
                 ) : (
@@ -1684,21 +1166,12 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTA 4: RECORDATORIOS */}
           {activeTab === 'reminders' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
+                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="lg:col-span-8 space-y-6">
+              <div className="w-full lg:col-span-8 space-y-4">
                 {isProOrTrial ? (
                   <RemindersModule />
                 ) : (
@@ -1711,61 +1184,34 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTA RECETAS */}
           {activeTab === 'recipes' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
+                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="lg:col-span-8 space-y-6">
+              <div className="w-full lg:col-span-8 space-y-4">
                 <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
               </div>
             </div>
           )}
 
-          {/* VISTA 5: MARCAS POR PAÍS */}
           {activeTab === 'advisor' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
+                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="lg:col-span-8 space-y-6">
+              <div className="w-full lg:col-span-8 space-y-4">
                 <CountryFoodAdvisor onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
               </div>
             </div>
           )}
 
-          {/* VISTA 6: GUÍA DE RAZAS */}
           {activeTab === 'breeds' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
+                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="lg:col-span-8 space-y-6">
+              <div className="w-full lg:col-span-8 space-y-4">
                 <BreedEncyclopedia
                   onSelectBreedForCalculation={(type, breedId) => {
                     setProfile(prev => ({
@@ -1774,49 +1220,42 @@ export default function App() {
                       breedId,
                       name: prev.name || 'Mi Mascota',
                     }));
-                    setActiveTab('calculator');
+                    handleSelectTab('calculator');
                   }}
                 />
               </div>
             </div>
           )}
 
-          {/* VISTA: SEMÁFORO DE ALIMENTOS */}
+         {/* VISTA 3: SEMÁFORO DE ALIMENTOS TÓXICOS Y SEGUROS */}
           {activeTab === 'foods' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
-              </div>
-              <div className="lg:col-span-8 space-y-6">
-                <FoodTrafficLight />
-              </div>
-            </div>
-          )}
+            <div className="w-full space-y-5">
+              {/* Contenedor Superior: Tarjeta de Oslo (4 cols) + Hero Verde y Primeras 4 Tarjetas (8 cols) */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                {/* Columna Izquierda: Tarjeta Lateral de Oslo (Solo Desktop) */}
+                <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0 space-y-3">
+                  <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
+                </div>
 
-          {/* VISTA: TIPS Y PRIMEROS AUXILIOS */}
-          {activeTab === 'guides' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
-              <div className="lg:col-span-4 lg:sticky lg:top-[128px]">
-                <PetProfileHUD
-                  profile={profile}
-                  result={result}
-                  onSelectTab={setActiveTab}
-                  onEditBiometrics={() => {
-                    setActiveTab('calculator');
-                    setIsBiometricsExpanded(true);
-                  }}
-                />
-              </div>
-              <div className="lg:col-span-8 space-y-6">
-                <TipsAndGuidesModule />
+                {/* Columna Derecha: Hero Verde idéntico + Primeras 4 Tarjetas */}
+                <div className="lg:col-span-8 space-y-4">
+                  <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#143826] via-[#1a4a32] to-[#123020] text-[#faf8f5] px-4 py-3.5 sm:px-6 sm:py-4 border border-[#2a5940] shadow-xs text-center flex flex-col items-center justify-center no-print">
+                    <div className="relative z-10 space-y-1 max-w-lg mx-auto">
+                      <div className="inline-flex items-center justify-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-emerald-200/90 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                        <Award className="w-3 h-3 text-amber-400 shrink-0" />
+                        <span>Seguridad & Toxicología Veterinaria</span>
+                      </div>
+                      <h1 className="text-base sm:text-lg font-editorial font-semibold tracking-tight text-white leading-tight">
+                        Semáforo Clínico & <span className="font-editorial italic font-normal text-amber-300">Prevención de Intoxicaciones</span>
+                      </h1>
+                      <p className="text-[11px] sm:text-xs text-emerald-100/80 leading-relaxed font-normal">
+                        Guía toxicológica certificada para {profile.name} según protocolos clínicos FEDIAF.
+                      </p>
+                    </div>
+                  </div>
+
+                  <FoodTrafficLight />
+                </div>
               </div>
             </div>
           )}
@@ -1825,23 +1264,21 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-stone-200 bg-white/90 py-8 no-print">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-3 text-xs text-stone-500">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+      <footer className="mt-auto border-t border-stone-200 bg-white/90 dark:bg-stone-900/90 py-6 no-print">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-2.5 text-xs text-stone-500">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <NutriPetLogo size="sm" />
               <span>•</span>
-              <span>Herramienta informativa y de orientación para el cuidado de mascotas en el hogar</span>
+              <span>Herramienta informativa y de orientación para el cuidado de mascotas</span>
             </div>
-            {user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com' && (
-              <div className="flex items-center gap-3">
-                <span className="text-[11px] text-stone-400">
-                  Uso exclusivamente personal y orientativo
-                </span>
+            {isAdminUser && (
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-stone-400">Uso personal</span>
                 <button
                   type="button"
                   onClick={() => setShowAdminModal(true)}
-                  className="text-stone-300 hover:text-stone-500 transition-colors p-1 rounded-sm cursor-pointer"
+                  className="text-stone-300 hover:text-stone-500 p-1 cursor-pointer"
                   title="Acceso Propietario"
                 >
                   <Lock className="w-3 h-3" />
@@ -1849,8 +1286,8 @@ export default function App() {
               </div>
             )}
           </div>
-          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 text-[11px] text-stone-600 leading-relaxed">
-            <strong>Aviso de exención de responsabilidad:</strong> Esta aplicación web es un recurso de consulta general y cálculo orientativo creado para amantes de las mascotas. La información, tablas y estimaciones aquí presentadas son solo de referencia general y <u>no constituyen asesoría médica, diagnóstico ni prescripción</u>. Cada perro o gato tiene necesidades individuales, condiciones preexistentes o alergias que requieren la valoración de un profesional de la salud animal. Ante cualquier duda, cambio de dieta o síntoma, consulta siempre a tu médico veterinario de confianza.
+          <div className="p-2.5 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-800 text-[10px] text-stone-600 dark:text-stone-400 leading-relaxed">
+            <strong>Aviso de exención de responsabilidad:</strong> Esta aplicación web es un recurso de consulta general y cálculo orientativo. La información no constituye asesoría médica, diagnóstico ni prescripción. Ante cualquier duda o síntoma, consulta siempre a tu médico veterinario.
           </div>
         </div>
       </footer>
@@ -1867,7 +1304,7 @@ export default function App() {
         isOpen={showSubscriptionModal}
         onClose={() => setShowSubscriptionModal(false)}
       />
-     <AdminDashboardModal
+      <AdminDashboardModal
         isOpen={showAdminModal}
         onClose={() => setShowAdminModal(false)}
       />

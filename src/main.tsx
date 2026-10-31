@@ -1,5 +1,5 @@
-import {StrictMode} from 'react';
-import {createRoot} from 'react-dom/client';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import App from './App.tsx';
 import { AuthProvider } from './context/AuthContext.tsx';
@@ -13,12 +13,13 @@ createRoot(document.getElementById('root')!).render(
       <PetProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<App />} />
-            {/* Ruta única para código QR público sin expone uid ni petId */}
+            {/* Rutas para código QR público y carnet de emergencia */}
             <Route path="/qr/:publicToken" element={<PublicPetProfile />} />
             <Route path="/pet/:publicToken" element={<PublicPetProfile />} />
-            {/* Redirección/Retrocompatibilidad con URLs antiguas /public/:petId */}
             <Route path="/public/:publicToken" element={<PublicPetProfile />} />
+
+            {/* Todas las demás rutas de la app interna cargan App */}
+            <Route path="/*" element={<App />} />
           </Routes>
         </BrowserRouter>
       </PetProvider>

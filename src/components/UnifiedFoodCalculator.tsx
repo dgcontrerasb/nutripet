@@ -1,477 +1,485 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Package, DollarSign, Calendar, TrendingUp, ChevronDown, Coins, Sparkles, ShoppingBag, Droplets, Info } from 'lucide-react';
-import { InfoTooltip } from './InfoTooltip';
+import {
+  Sparkles,
+  Activity,
+  Calendar,
+  CheckCircle2,
+  Droplets,
+  Beef,
+  Package,
+  SlidersHorizontal,
+  ChevronRight,
+  Scale
+} from 'lucide-react';
+import { AnimatedCounter } from './AnimatedCounter';
 
-interface UnifiedFoodCalculatorProps {
-  dailyGrams: number;
+interface Props {
+  dailyGrams?: number;
+  kibbleDailyGrams?: number;
+  barfDailyGrams?: number;
   petName: string;
-  petType: 'dog' | 'cat';
+  petType?: 'dog' | 'cat';
+  selectedDiet?: 'kibble' | 'mixed' | 'barf';
+  onDietChange?: (diet: 'kibble' | 'mixed' | 'barf') => void;
 }
 
-export interface CurrencyOption {
+interface CurrencyConfig {
   code: string;
-  name: string;
   symbol: string;
   flag: string;
-  defaultBagPrice: { dog: number; cat: number };
-  defaultMeatPerKgPrice: number;
+  defaultKibblePrice: number;
+  defaultFreshPricePerKg: number;
 }
 
-export const LATAM_CURRENCIES: CurrencyOption[] = [
-  { code: 'COP', name: 'Peso colombiano (Colombia)', symbol: '$', flag: '🇨🇴', defaultBagPrice: { dog: 180000, cat: 85000 }, defaultMeatPerKgPrice: 16000 },
-  { code: 'USD', name: 'Dólar estadounidense (USD / Ecuador / Panamá)', symbol: '$', flag: '🇺🇸', defaultBagPrice: { dog: 45, cat: 22 }, defaultMeatPerKgPrice: 6 },
-  { code: 'MXN', name: 'Peso mexicano (México)', symbol: '$', flag: '🇲🇽', defaultBagPrice: { dog: 850, cat: 420 }, defaultMeatPerKgPrice: 110 },
-  { code: 'ARS', name: 'Peso argentino (Argentina)', symbol: '$', flag: '🇦🇷', defaultBagPrice: { dog: 45000, cat: 22000 }, defaultMeatPerKgPrice: 5500 },
-  { code: 'CLP', name: 'Peso chileno (Chile)', symbol: '$', flag: '🇨🇱', defaultBagPrice: { dog: 42000, cat: 20000 }, defaultMeatPerKgPrice: 5000 },
-  { code: 'PEN', name: 'Sol peruano (Perú)', symbol: 'S/', flag: '🇵🇪', defaultBagPrice: { dog: 160, cat: 80 }, defaultMeatPerKgPrice: 20 },
-  { code: 'BRL', name: 'Real brasileño (Brasil)', symbol: 'R$', flag: '🇧🇷', defaultBagPrice: { dog: 220, cat: 110 }, defaultMeatPerKgPrice: 25 },
-  { code: 'UYU', name: 'Peso uruguayo (Uruguay)', symbol: '$', flag: '🇺🇾', defaultBagPrice: { dog: 1800, cat: 900 }, defaultMeatPerKgPrice: 380 },
-  { code: 'EUR', name: 'Euro (España / Europa)', symbol: '€', flag: '🇪🇸', defaultBagPrice: { dog: 42, cat: 20 }, defaultMeatPerKgPrice: 5.5 },
-];
-
-// Helper para detectar moneda sugerida según zona horaria del dispositivo
-const detectDefaultCurrency = (): string => {
-  try {
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    if (tz.includes('Bogota') || tz.includes('Colombia')) return 'COP';
-    if (tz.includes('Mexico')) return 'MXN';
-    if (tz.includes('Buenos_Aires') || tz.includes('Argentina')) return 'ARS';
-    if (tz.includes('Santiago') || tz.includes('Chile')) return 'CLP';
-    if (tz.includes('Lima') || tz.includes('Peru')) return 'PEN';
-    if (tz.includes('Montevideo')) return 'UYU';
-    if (tz.includes('Madrid') || tz.includes('Spain')) return 'EUR';
-  } catch (e) {
-    // ignore
-  }
-  return 'COP'; // Default Colombia por defecto
+const CURRENCIES: Record<string, CurrencyConfig> = {
+  COP: { code: 'COP', symbol: '$', flag: '🇨🇴', defaultKibblePrice: 180000, defaultFreshPricePerKg: 12000 },
+  USD: { code: 'USD', symbol: '$', flag: '🇺🇸', defaultKibblePrice: 45, defaultFreshPricePerKg: 6 },
+  MXN: { code: 'MXN', symbol: '$', flag: '🇲🇽', defaultKibblePrice: 850, defaultFreshPricePerKg: 95 },
+  EUR: { code: 'EUR', symbol: '€', flag: '🇪🇺', defaultKibblePrice: 42, defaultFreshPricePerKg: 5.5 },
+  ARS: { code: 'ARS', symbol: '$', flag: '🇦🇷', defaultKibblePrice: 45000, defaultFreshPricePerKg: 4800 },
+  CLP: { code: 'CLP', symbol: '$', flag: '🇨🇱', defaultKibblePrice: 42000, defaultFreshPricePerKg: 4500 },
+  PEN: { code: 'PEN', symbol: 'S/', flag: '🇵🇪', defaultKibblePrice: 160, defaultFreshPricePerKg: 18 },
 };
 
-export const UnifiedFoodCalculator: React.FC<UnifiedFoodCalculatorProps> = ({
-  dailyGrams: initialDailyGrams,
+export const UnifiedFoodCalculator: React.FC<Props> = ({
+  dailyGrams,
+  kibbleDailyGrams,
+  barfDailyGrams,
   petName,
-  petType,
+  selectedDiet = 'kibble',
+  onDietChange
 }) => {
-  const [selectedCurrencyCode, setSelectedCurrencyCode] = useState<string>(() => detectDefaultCurrency());
-  
-  const activeCurrency = LATAM_CURRENCIES.find((c) => c.code === selectedCurrencyCode) || LATAM_CURRENCIES[0];
+  const [activeView, setActiveView] = useState<'report' | 'settings'>('report');
+  const [selectedCurrency, setSelectedCurrency] = useState<string>('COP');
+  const curr = CURRENCIES[selectedCurrency] || CURRENCIES.COP;
 
-  const [bagWeightKg, setBagWeightKg] = useState<number | ''>(petType === 'dog' ? 15 : 3);
-  const [bagPrice, setBagPrice] = useState<number | ''>(activeCurrency.defaultBagPrice[petType]);
-  const [customDailyGrams, setCustomDailyGrams] = useState<number | ''>(initialDailyGrams || 150);
-  const [freshCostPerKg, setFreshCostPerKg] = useState<number | ''>(activeCurrency.defaultMeatPerKgPrice);
-  const [dietMode, setDietMode] = useState<'100_kibble' | 'mixed_60_40' | '100_barf'>('100_kibble');
+  // Dieta activa
+  const [currentDiet, setCurrentDiet] = useState<'kibble' | 'mixed' | 'barf'>(selectedDiet);
 
-  // Sincronizar reajustes cuando cambia la especie (petType)
   useEffect(() => {
-    setBagWeightKg(petType === 'dog' ? 15 : 3);
-    setBagPrice(activeCurrency.defaultBagPrice[petType]);
-    setFreshCostPerKg(activeCurrency.defaultMeatPerKgPrice);
-  }, [petType, activeCurrency]);
-
-  // Sincronizar ración diaria automáticamente cuando cambia la mascota activa en la calculadora principal
-  useEffect(() => {
-    if (initialDailyGrams > 0) {
-      setCustomDailyGrams(initialDailyGrams);
+    if (selectedDiet) {
+      setCurrentDiet(selectedDiet);
     }
-  }, [initialDailyGrams]);
+  }, [selectedDiet]);
 
-  // Al cambiar la moneda, adaptar precios sugeridos
+  // Factor de actividad clínica que sí altera el cálculo calórico
+  const [activityFactor, setActivityFactor] = useState<'calm' | 'moderate' | 'active'>('moderate');
+
+  // Parámetros de compra editables (no asume 15 kg fijos)
+  const [bagWeightKg, setBagWeightKg] = useState<number>(15);
+  const [bagPrice, setBagPrice] = useState<number>(curr.defaultKibblePrice);
+  const [freshPriceKg, setFreshPriceKg] = useState<number>(curr.defaultFreshPricePerKg);
+  const [freshBatchKg, setFreshBatchKg] = useState<number>(10);
+
   const handleCurrencyChange = (newCode: string) => {
-    setSelectedCurrencyCode(newCode);
-    const target = LATAM_CURRENCIES.find((c) => c.code === newCode);
+    setSelectedCurrency(newCode);
+    const target = CURRENCIES[newCode];
     if (target) {
-      setBagPrice(target.defaultBagPrice[petType]);
-      setFreshCostPerKg(target.defaultMeatPerKgPrice);
+      setBagPrice(target.defaultKibblePrice);
+      setFreshPriceKg(target.defaultFreshPricePerKg);
     }
   };
 
-  // Cálculos matemáticos unificados memoizados
-  const calculations = useMemo(() => {
-    const numericDailyGrams = typeof customDailyGrams === 'number' ? customDailyGrams : 0;
-    const numericBagWeight = typeof bagWeightKg === 'number' ? bagWeightKg : 0;
-    const numericBagPrice = typeof bagPrice === 'number' ? bagPrice : 0;
-    const numericFreshCostPerKg = typeof freshCostPerKg === 'number' ? freshCostPerKg : 0;
+  // Cálculo reactivo según la actividad física seleccionada (FEDIAF Factor)
+  const multiplier = useMemo(() => {
+    if (activityFactor === 'calm') return 0.88; // Sedentario / Castrado de baja actividad
+    if (activityFactor === 'active') return 1.15; // Muy activo / Trabajo
+    return 1.0; // Moderado estándar
+  }, [activityFactor]);
 
-    const effectiveDailyGrams = Math.max(1, numericDailyGrams);
-    const bagTotalGrams = Math.max(0, numericBagWeight) * 1000;
+  const baseKibble = Math.max(1, Number(kibbleDailyGrams || dailyGrams || 178));
+  const baseBarf = Math.max(1, Number(barfDailyGrams || Math.round(baseKibble * 2.1)));
 
-    let kibbleGramsDaily = effectiveDailyGrams;
-    let freshGramsDaily = 0;
+  // Gramajes recalculados en tiempo real por el factor de actividad
+  const calculatedKibbleGrams = Math.round(baseKibble * multiplier);
+  const calculatedBarfGrams = Math.round(baseBarf * multiplier);
 
-    if (dietMode === 'mixed_60_40') {
-      kibbleGramsDaily = Math.round(effectiveDailyGrams * 0.6);
-      freshGramsDaily = Math.round(effectiveDailyGrams * 0.4 * 2.0); // factor 2.0 por humedad
-    } else if (dietMode === '100_barf') {
-      kibbleGramsDaily = 0;
-      freshGramsDaily = effectiveDailyGrams;
+  // Raciones para Dieta Mixta (50/50 exacto)
+  const mixedKibbleGrams = Math.round(calculatedKibbleGrams * 0.5);
+  const mixedFreshGrams = Math.round(calculatedBarfGrams * 0.5);
+
+  const activeDailyKibble = currentDiet === 'kibble' ? calculatedKibbleGrams : currentDiet === 'mixed' ? mixedKibbleGrams : 0;
+  const activeDailyFresh = currentDiet === 'barf' ? calculatedBarfGrams : currentDiet === 'mixed' ? mixedFreshGrams : 0;
+
+  // Cálculos de rendimiento de compra
+  let durationDaysInt = 0;
+  let durationMonths = 0;
+  let costPerDay = 0;
+  let monthlyBudget = 0;
+
+  if (currentDiet === 'kibble') {
+    const totalGramsInBag = Math.max(1, bagWeightKg) * 1000;
+    durationDaysInt = Math.max(1, Math.floor(totalGramsInBag / activeDailyKibble));
+    durationMonths = Number((durationDaysInt / 30.4).toFixed(1));
+    costPerDay = Number((bagPrice / durationDaysInt).toFixed(2));
+    monthlyBudget = Number((costPerDay * 30.4).toFixed(2));
+  } else if (currentDiet === 'mixed') {
+    const totalGramsInBag = Math.max(1, bagWeightKg) * 1000;
+    durationDaysInt = Math.max(1, Math.floor(totalGramsInBag / activeDailyKibble));
+    durationMonths = Number((durationDaysInt / 30.4).toFixed(1));
+
+    const kibbleCostDay = bagPrice / durationDaysInt;
+    const freshCostDay = (activeDailyFresh / 1000) * freshPriceKg;
+
+    costPerDay = Number((kibbleCostDay + freshCostDay).toFixed(2));
+    monthlyBudget = Number((costPerDay * 30.4).toFixed(2));
+  } else {
+    // 100% BARF
+    const totalFreshGrams = Math.max(1, freshBatchKg) * 1000;
+    durationDaysInt = Math.max(1, Math.floor(totalFreshGrams / activeDailyFresh));
+    durationMonths = Number((durationDaysInt / 30.4).toFixed(1));
+
+    costPerDay = Number(((activeDailyFresh / 1000) * freshPriceKg).toFixed(2));
+    monthlyBudget = Number((costPerDay * 30.4).toFixed(2));
+  }
+
+  const today = new Date();
+  const finishDate = new Date();
+  finishDate.setDate(today.getDate() + durationDaysInt);
+
+  const formattedFinishDate = finishDate.toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+
+  const handleDietSelect = (diet: 'kibble' | 'mixed' | 'barf') => {
+    setCurrentDiet(diet);
+    if (typeof onDietChange === 'function') {
+      onDietChange(diet);
     }
-
-    const totalPlateGrams = kibbleGramsDaily + freshGramsDaily;
-
-    // Días de duración del saco de croquetas
-    const daysDuration = kibbleGramsDaily > 0 && bagTotalGrams > 0
-      ? Math.max(1, Math.floor(bagTotalGrams / kibbleGramsDaily)) 
-      : 0;
-    const monthsDuration = daysDuration > 0 ? (daysDuration / 30.4).toFixed(1) : '0';
-
-    // Costo por gramo
-    const pricePerKibbleGram = bagTotalGrams > 0 ? numericBagPrice / bagTotalGrams : 0;
-    const pricePerFreshGram = numericFreshCostPerKg / 1000;
-
-    const dailyKibbleCost = kibbleGramsDaily * pricePerKibbleGram;
-    const dailyFreshCost = freshGramsDaily * pricePerFreshGram;
-    const totalDailyCost = dailyKibbleCost + dailyFreshCost;
-
-    const monthlyCost = Math.round(totalDailyCost * 30.4);
-    const annualCost = Math.round(totalDailyCost * 365);
-
-    // Fecha estimada de fin del saco
-    const finishDate = new Date();
-    finishDate.setDate(finishDate.getDate() + (daysDuration || 0));
-    const formattedFinishDate = finishDate.toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric',
-    });
-
-    return {
-      effectiveDailyGrams,
-      bagTotalGrams,
-      kibbleGramsDaily,
-      freshGramsDaily,
-      totalPlateGrams,
-      daysDuration,
-      monthsDuration,
-      totalDailyCost,
-      monthlyCost,
-      annualCost,
-      formattedFinishDate,
-    };
-  }, [customDailyGrams, bagWeightKg, bagPrice, freshCostPerKg, dietMode]);
-
-  const {
-    effectiveDailyGrams,
-    kibbleGramsDaily,
-    freshGramsDaily,
-    totalPlateGrams,
-    daysDuration,
-    monthsDuration,
-    totalDailyCost,
-    monthlyCost,
-    annualCost,
-    formattedFinishDate,
-  } = calculations;
-
-  const formatMoney = (amount: number) => {
-    if (amount === 0) return '0';
-    if (amount >= 1000) {
-      return Math.round(amount).toLocaleString('es-ES');
-    }
-    return amount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
-
-  const popularBagSizes = petType === 'dog' 
-    ? [3, 8, 12, 15, 18, 20] 
-    : [1.5, 3, 7, 10];
 
   return (
-    <div className="bg-white dark:bg-stone-900 border-2 border-emerald-500/20 dark:border-stone-800 rounded-3xl p-5 sm:p-7 shadow-xs space-y-6 transition-all">
-      
-      {/* Cabecera Unificada */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 dark:border-stone-800 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 flex items-center justify-center shrink-0">
-            <Coins className="w-5 h-5" />
+    <div className="bg-white dark:bg-stone-900 border border-stone-200/90 dark:border-stone-800 rounded-2xl p-4 sm:p-5 shadow-2xs space-y-4 transition-all">
+
+      {/* Cabecera sin textos cortados */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-800 gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Sparkles className="w-4 h-4" />
           </div>
-          <div>
-            <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-lg">
-              Calculadora Unificada de Rendimiento & Presupuesto
+          <div className="min-w-0">
+            <h3 className="font-heading font-extrabold text-sm text-stone-900 dark:text-stone-100 leading-tight">
+              Diagnóstico Nutricional
             </h3>
-            <p className="text-xs text-stone-500 dark:text-stone-400">
-              Duración del saco, costo diario y presupuesto mensual para {petName || 'tu mascota'}
+            <p className="text-[10px] text-stone-500 dark:text-stone-400 truncate">
+              Rendimiento y costo de comida para {petName}
             </p>
           </div>
         </div>
 
-        {/* Selector de Moneda Sincronizada */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-xs font-bold text-stone-500 dark:text-stone-400">Moneda:</span>
-          <div className="relative">
-            <select
-              value={selectedCurrencyCode}
-              onChange={(e) => handleCurrencyChange(e.target.value)}
-              className="appearance-none pl-3 pr-8 py-1.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 text-xs font-bold text-stone-800 dark:text-stone-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-            >
-              {LATAM_CURRENCIES.map((curr) => (
-                <option key={curr.code} value={curr.code}>
-                  {curr.flag} {curr.code} ({curr.symbol})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-stone-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
+        {/* Selector de Moneda */}
+        <div className="flex items-center gap-1.5 self-start sm:self-auto bg-stone-50 dark:bg-stone-800 px-2.5 py-1 rounded-xl border border-stone-200 dark:border-stone-700 shrink-0">
+          <span className="text-sm select-none" aria-hidden="true">{curr.flag}</span>
+          <span className="text-[10px] font-bold text-stone-500 uppercase">Moneda:</span>
+          <select
+            value={selectedCurrency}
+            onChange={(e) => handleCurrencyChange(e.target.value)}
+            className="bg-transparent text-[11px] font-extrabold text-stone-800 dark:text-stone-200 focus:outline-none cursor-pointer"
+          >
+            {Object.entries(CURRENCIES).map(([code, c]) => (
+              <option key={code} value={code} className="text-stone-800 dark:text-stone-900 font-bold">
+                {c.flag} {c.code} ({c.symbol})
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Selector de Tipo de Alimentación */}
-      <div className="flex rounded-2xl bg-stone-100 dark:bg-stone-800 p-1 gap-1 text-xs font-bold">
+      {/* Selector de Esquema de Alimentación */}
+      <div className="grid grid-cols-3 gap-1.5 p-1 bg-stone-100/80 dark:bg-stone-800/80 rounded-xl text-[11px] font-bold">
         <button
           type="button"
-          onClick={() => setDietMode('100_kibble')}
-          className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer text-center ${
-            dietMode === '100_kibble'
-              ? 'bg-white dark:bg-stone-900 text-emerald-900 dark:text-emerald-300 shadow-2xs font-extrabold'
+          onClick={() => handleDietSelect('kibble')}
+          className={`py-2 px-1.5 rounded-lg transition-all text-center truncate cursor-pointer ${
+            currentDiet === 'kibble'
+              ? 'bg-white dark:bg-stone-900 text-emerald-800 dark:text-emerald-300 shadow-2xs font-extrabold border border-stone-200/80 dark:border-stone-700'
               : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
           }`}
         >
-          🥣 100% Croquetas
+          🥣 Croquetas
         </button>
-
         <button
           type="button"
-          onClick={() => setDietMode('mixed_60_40')}
-          className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer text-center inline-flex items-center justify-center gap-1 ${
-            dietMode === 'mixed_60_40'
-              ? 'bg-white dark:bg-stone-900 text-amber-900 dark:text-amber-300 shadow-2xs font-extrabold'
+          onClick={() => handleDietSelect('mixed')}
+          className={`py-2 px-1.5 rounded-lg transition-all text-center truncate cursor-pointer ${
+            currentDiet === 'mixed'
+              ? 'bg-white dark:bg-stone-900 text-emerald-800 dark:text-emerald-300 shadow-2xs font-extrabold border border-stone-200/80 dark:border-stone-700'
               : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
           }`}
         >
-          <span>🥩 Dieta Mixta</span>
-          <InfoTooltip text="La comida fresca contiene ~75% de agua celular, por lo que requiere el doble de peso en gramos que la croqueta seca (8-10% agua) para aportar la misma energía calórica." />
+          🥩 Dieta Mixta
         </button>
-
         <button
           type="button"
-          onClick={() => setDietMode('100_barf')}
-          className={`flex-1 py-2 px-3 rounded-xl transition-all cursor-pointer text-center inline-flex items-center justify-center gap-1 ${
-            dietMode === '100_barf'
-              ? 'bg-white dark:bg-stone-900 text-emerald-900 dark:text-emerald-300 shadow-2xs font-extrabold'
+          onClick={() => handleDietSelect('barf')}
+          className={`py-2 px-1.5 rounded-lg transition-all text-center truncate cursor-pointer ${
+            currentDiet === 'barf'
+              ? 'bg-white dark:bg-stone-900 text-emerald-800 dark:text-emerald-300 shadow-2xs font-extrabold border border-stone-200/80 dark:border-stone-700'
               : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
           }`}
         >
-          <span>🥦 100% BARF / Natural</span>
-          <InfoTooltip text="Cálculo basado en una dieta cruda biológicamente apropiada compuesta por hueso carnoso, carne de músculo, vísceras y vegetales." />
+          🥗 100% BARF
         </button>
       </div>
+{/* VISTA 1: REPORTE PRINCIPAL */}
+      {activeView === 'report' ? (
+        <div className="space-y-2.5 sm:space-y-3.5 animate-fade-in">
 
-      {/* Aclaración Nutricional sobre Humedad de los Alimentos */}
-      <div className="p-3.5 rounded-2xl bg-stone-100/80 dark:bg-stone-800/60 border border-stone-200/80 dark:border-stone-700/60 flex items-start gap-2.5 text-xs text-stone-700 dark:text-stone-300">
-        <Droplets className="w-4 h-4 text-teal-600 dark:text-teal-400 shrink-0 mt-0.5" />
-        <div className="text-[11.5px] leading-relaxed">
-          <span className="font-extrabold text-stone-900 dark:text-white block mb-0.5">
-            💡 ¿Por qué varían los gramos entre Croquetas y Comida Fresca / BARF?
-          </span>
-          Las croquetas secas contienen solo <strong>8-10% de agua</strong> (calorías ultra deshidratadas en menos gramos), mientras que la carne y vegetales frescos contienen un <strong>70-75% de agua celular natural</strong>. Por eso, el plato fresco requiere mayor cantidad en gramos para aportar exactamente la misma energía.
-        </div>
-      </div>
-
-      {/* Controles Sincronizados de Entrada */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        
-        {/* Tamaño del saco (si usa croquetas) */}
-        {dietMode !== '100_barf' && (
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 block">
-              Tamaño del Saco
-            </label>
-            <div className="relative">
-              <input
-                type="number"
-                min="0.5"
-                max="50"
-                step="0.5"
-                value={bagWeightKg === '' ? '' : bagWeightKg}
-                onChange={(e) => setBagWeightKg(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                className="w-full pl-4 pr-12 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-extrabold text-stone-900 dark:text-white bg-stone-50/50 dark:bg-stone-800/50"
-              />
-              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400">
-                kg
-              </span>
+          {/* Ración Diaria: 100% Croquetas */}
+          {currentDiet === 'kibble' && (
+            <div className="py-2.5 px-3 sm:p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 flex items-center justify-between">
+              <div>
+                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-300 block">Ración Diaria Total</span>
+                <div className="text-lg sm:text-2xl font-black text-emerald-950 dark:text-emerald-200 font-tabular leading-tight">
+                  <AnimatedCounter value={activeDailyKibble} /> <span className="text-[11px] sm:text-xs font-normal text-stone-500 font-sans">g / día (2 tomas de {Math.round(activeDailyKibble / 2)}g)</span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-[9px] sm:text-[10px] text-stone-400 block">Saco comprado</span>
+                <span className="text-xs sm:text-sm font-bold text-stone-800 dark:text-stone-200">{bagWeightKg} kg</span>
+              </div>
             </div>
+          )}
 
-            {/* Accesos rápidos */}
-            <div className="flex flex-wrap gap-1 pt-1">
-              {popularBagSizes.map((size) => (
+          {/* Ración Diaria: Dieta Mixta Compacta (Ahorro del 50% de alto en móvil) */}
+          {currentDiet === 'mixed' && (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="py-2 px-2.5 sm:p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 text-center flex flex-col justify-center">
+                <span className="text-[9px] sm:text-[10px] font-bold text-emerald-800 dark:text-emerald-300 block uppercase tracking-tight">🥣 Croquetas (50%)</span>
+                <div className="my-0.5 leading-none">
+                  <span className="text-base sm:text-xl font-black text-stone-900 dark:text-stone-100 font-tabular">
+                    <AnimatedCounter value={activeDailyKibble} />
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-bold text-stone-600 dark:text-stone-300 ml-1">
+                    g / día
+                  </span>
+                </div>
+                <span className="text-[8.5px] sm:text-[9px] text-stone-500 leading-none">Pienso seco</span>
+              </div>
+
+              <div className="py-2 px-2.5 sm:p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 text-center flex flex-col justify-center">
+                <span className="text-[9px] sm:text-[10px] font-bold text-amber-800 dark:text-amber-300 block uppercase tracking-tight">🥩 Carne Fresca (50%)</span>
+                <div className="my-0.5 leading-none">
+                  <span className="text-base sm:text-xl font-black text-stone-900 dark:text-stone-100 font-tabular">
+                    <AnimatedCounter value={activeDailyFresh} />
+                  </span>
+                  <span className="text-[10px] sm:text-xs font-bold text-stone-600 dark:text-stone-300 ml-1">
+                    g / día
+                  </span>
+                </div>
+                <span className="text-[8.5px] sm:text-[9px] text-stone-500 leading-none">Comida natural</span>
+              </div>
+            </div>
+          )}
+
+          {/* Ración Diaria: 100% BARF */}
+          {currentDiet === 'barf' && (
+            <div className="py-2.5 px-3 sm:p-3.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 flex items-center justify-between">
+              <div>
+                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-amber-800 dark:text-amber-300 block">Ración Diaria Fresca</span>
+                <div className="text-lg sm:text-2xl font-black text-amber-950 dark:text-emerald-200 font-tabular leading-tight">
+                  <AnimatedCounter value={activeDailyFresh} /> <span className="text-[11px] sm:text-xs font-normal text-stone-500 font-sans">g / día (2 tomas de {Math.round(activeDailyFresh / 2)}g)</span>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="text-[9px] sm:text-[10px] text-stone-400 block">Lote preparado</span>
+                <span className="text-xs sm:text-sm font-bold text-stone-800 dark:text-stone-200">{freshBatchKg} kg</span>
+              </div>
+            </div>
+          )}
+
+          {/* Selector Rápido del Tamaño de Saco Real */}
+          {currentDiet !== 'barf' ? (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+              <span className="text-[10px] text-stone-400 font-semibold shrink-0">Tu saco:</span>
+              {[3, 8, 12, 15, 18, 20].map((kg) => (
                 <button
-                  key={size}
+                  key={kg}
                   type="button"
-                  onClick={() => setBagWeightKg(size)}
-                  className={`text-[11px] px-2 py-0.5 rounded-lg font-bold transition-all cursor-pointer ${
-                    bagWeightKg === size
+                  onClick={() => setBagWeightKg(kg)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
+                    bagWeightKg === kg
                       ? 'bg-emerald-600 text-white shadow-2xs'
-                      : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400 hover:bg-stone-200'
+                      : 'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-600 dark:text-stone-300'
                   }`}
                 >
-                  {size}kg
+                  {kg} kg
                 </button>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Precio del Saco */}
-        {dietMode !== '100_barf' && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 block">
-                Precio del Saco ({activeCurrency.code})
-              </label>
-              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950 px-1.5 py-0.5 rounded border border-emerald-100 dark:border-emerald-800">
-                {activeCurrency.symbol}
-              </span>
-            </div>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-stone-400">
-                {activeCurrency.symbol}
-              </span>
-              <input
-                type="number"
-                min="0"
-                step="any"
-                value={bagPrice === '' ? '' : bagPrice}
-                onChange={(e) => setBagPrice(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-extrabold text-stone-900 dark:text-white bg-stone-50/50 dark:bg-stone-800/50"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Ración Diaria Auto-Sincronizada */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 inline-flex items-center">
-              <span>Ración Diaria Servida</span>
-              <InfoTooltip text="Calculada según peso ideal, edad, nivel de actividad y estado reproductivo en la ficha. Si la modificas aquí, recalcularemos el presupuesto sin alterar su ficha oficial." />
-            </label>
-            <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-100 dark:border-emerald-800">
-              Autosincronizado
-            </span>
-          </div>
-          <div className="relative">
-            <input
-              type="number"
-              min="1"
-              value={customDailyGrams === '' ? '' : customDailyGrams}
-              onChange={(e) => setCustomDailyGrams(e.target.value === '' ? '' : parseFloat(e.target.value))}
-              className="w-full pl-4 pr-12 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-extrabold text-stone-900 dark:text-white bg-stone-50/50 dark:bg-stone-800/50"
-            />
-            <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400">
-              g/día
-            </span>
-          </div>
-        </div>
-
-        {/* Precio de comida fresca/carne si aplica */}
-        {dietMode !== '100_kibble' && (
-          <div className="space-y-2">
-            <label className="text-xs font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400 block">
-              Precio Carne/Alimento Real x kg ({activeCurrency.code})
-            </label>
-            <div className="relative">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-stone-400">
-                {activeCurrency.symbol}
-              </span>
-              <input
-                type="number"
-                min="0"
-                value={freshCostPerKg === '' ? '' : freshCostPerKg}
-                onChange={(e) => setFreshCostPerKg(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-base font-extrabold text-stone-900 dark:text-white bg-stone-50/50 dark:bg-stone-800/50"
-              />
-            </div>
-          </div>
-        )}
-
-      </div>
-
-      {/* Resultados Unificados (Duración + Costo Diario + Presupuesto Mensual) */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        
-        {/* 1. Duración exactas en días */}
-        {dietMode !== '100_barf' ? (
-          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-1 text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>Duración del Saco ({bagWeightKg || 0} kg)</span>
-              <InfoTooltip text="Días exactos que alcanzará la bolsa según los gramos de croqueta servidos por día." />
-            </div>
-            <div className="text-3xl font-black text-emerald-950 dark:text-white font-heading">
-              {daysDuration} <span className="text-base font-bold text-emerald-700 dark:text-emerald-400">días exactos</span>
-            </div>
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium mt-1">
-              Rinde aprox. <strong>{monthsDuration} meses</strong>
-            </p>
-          </div>
-        ) : (
-          <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/80 dark:border-emerald-800/60 text-center sm:text-left">
-            <div className="flex items-center justify-center sm:justify-start gap-1 text-emerald-800 dark:text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1">
-              <Package className="w-3.5 h-3.5" />
-              <span>Comida Real Mensual</span>
-              <InfoTooltip text="Cálculo basado en una dieta cruda biológicamente apropiada compuesta por hueso carnoso, carne de músculo, vísceras y vegetales." />
-            </div>
-            <div className="text-3xl font-black text-emerald-950 dark:text-white font-heading">
-              {((freshGramsDaily * 30.4) / 1000).toFixed(1)} <span className="text-base font-bold text-emerald-700 dark:text-emerald-400">kg/mes</span>
-            </div>
-            <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium mt-1">
-              Raciones frescas preparadas
-            </p>
-          </div>
-        )}
-
-        {/* 2. Gasto Diario */}
-        <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-750 text-center sm:text-left space-y-1">
-          <div className="flex items-center justify-center sm:justify-start gap-1.5 text-stone-500 dark:text-stone-400 text-xs font-bold uppercase tracking-wider">
-            <DollarSign className="w-3.5 h-3.5 text-stone-400" />
-            <span>Costo por Día</span>
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white font-heading truncate">
-            <span className="text-lg font-bold text-stone-400 mr-1">{activeCurrency.symbol}</span>
-            {formatMoney(totalDailyCost)}
-          </div>
-          <p className="text-[11px] text-stone-500 dark:text-stone-400 font-medium">
-            {activeCurrency.code} por {totalPlateGrams}g servidos en total
-          </p>
-          {dietMode === 'mixed_60_40' && (
-            <div className="pt-1">
-              <span className="inline-block px-2 py-0.5 bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-200 text-[10px] font-bold rounded-lg border border-amber-200 dark:border-amber-800/60">
-                🥣 {kibbleGramsDaily}g croquetas + 🥩 {freshGramsDaily}g carne fresca
-              </span>
+          ) : (
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+              <span className="text-[10px] text-stone-400 font-semibold shrink-0">Tu lote:</span>
+              {[2, 5, 10, 15, 20].map((kg) => (
+                <button
+                  key={kg}
+                  type="button"
+                  onClick={() => setFreshBatchKg(kg)}
+                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
+                    freshBatchKg === kg
+                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      : 'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-600 dark:text-stone-300'
+                  }`}
+                >
+                  {kg} kg
+                </button>
+              ))}
             </div>
           )}
+
+          {/* Tarjetas de Presupuesto */}
+          <div className="grid grid-cols-3 gap-2">
+            <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 text-center">
+              <span className="text-[9px] font-mono uppercase text-stone-500 block mb-0.5">Duración</span>
+              <span className="text-base font-bold text-stone-900 dark:text-stone-100 font-tabular block leading-tight">
+                <AnimatedCounter value={durationDaysInt} /> días
+              </span>
+              <span className="text-[9px] text-stone-400">~{durationMonths} meses</span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 text-center">
+              <span className="text-[9px] font-mono uppercase text-stone-500 block mb-0.5">Costo Diario</span>
+              <span className="text-base font-bold text-stone-900 dark:text-stone-100 font-tabular block leading-tight">
+                {curr.symbol}<AnimatedCounter value={Math.round(costPerDay)} />
+              </span>
+              <span className="text-[9px] text-stone-400">Gasto real</span>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 text-center">
+              <span className="text-[9px] font-mono uppercase text-stone-500 block mb-0.5">Presupuesto Mes</span>
+              <span className="text-base font-bold text-stone-900 dark:text-stone-100 font-tabular block leading-tight">
+                {curr.symbol}<AnimatedCounter value={Math.round(monthlyBudget)} />
+              </span>
+              <span className="text-[9px] text-stone-400">30.4 días</span>
+            </div>
+          </div>
+
+          {/* Fecha Estimada */}
+          <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>
+              {currentDiet === 'barf' ? `El lote de ${freshBatchKg}kg` : `El saco de ${bagWeightKg}kg`} se terminará aprox. el <strong>{formattedFinishDate}</strong>.
+            </span>
+          </div>
+
+          {/* BOTÓN EVIDENTE PARA EDITAR DATOS Y ACTIVIDAD */}
+          <button
+            type="button"
+            onClick={() => setActiveView('settings')}
+            className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
+            <span>Ajustar Actividad Física y Precios de Compra</span>
+          </button>
         </div>
+      ) : (
 
-        {/* 3. Presupuesto Mensual */}
-        <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-750 text-center sm:text-left">
-          <div className="flex items-center justify-center sm:justify-start gap-1 text-stone-500 dark:text-stone-400 text-xs font-bold uppercase tracking-wider mb-1">
-            <TrendingUp className="w-3.5 h-3.5 text-stone-400" />
-            <span>Presupuesto Mensual</span>
-            <InfoTooltip text="Proyección estimada sobre un mes estándar de 30.4 días para planificar compras periódicas." />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-stone-900 dark:text-white font-heading truncate">
-            <span className="text-lg font-bold text-stone-400 mr-1">{activeCurrency.symbol}</span>
-            {formatMoney(monthlyCost)}
-          </div>
-          <p className="text-[11px] text-stone-500 dark:text-stone-400 font-medium mt-1">
-            Proyección anual: {activeCurrency.symbol} {formatMoney(annualCost)} {activeCurrency.code}
-          </p>
-        </div>
+        /* VISTA 2: PANEL DE AJUSTES CLÍNICOS Y PRECIOS */
+        <div className="space-y-4 animate-fade-in">
+          {/* Actividad Física que sí cambia los gramos */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-stone-600 dark:text-stone-400 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5 text-emerald-600" />
+              Nivel de Actividad Diaria de {petName}
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setActivityFactor('calm')}
+                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                  activityFactor === 'calm'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold shadow-2xs'
+                    : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                }`}
+              >
+                <div className="text-sm mb-0.5">🛋️</div>
+                <div className="text-xs font-bold">Sedentario</div>
+                <div className="text-[9px] text-stone-400">-12% calorías</div>
+              </button>
 
-      </div>
+              <button
+                type="button"
+                onClick={() => setActivityFactor('moderate')}
+                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                  activityFactor === 'moderate'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold shadow-2xs'
+                    : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                }`}
+              >
+                <div className="text-sm mb-0.5">🐕</div>
+                <div className="text-xs font-bold">Moderado</div>
+                <div className="text-[9px] text-stone-400">Ración normal</div>
+              </button>
 
-      {/* Alerta de frescura / Fecha de Fin */}
-      {dietMode !== '100_barf' && daysDuration > 0 && (
-        <div className="p-3.5 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
-          <Sparkles className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
-          <div className="space-y-0.5">
-            <p className="font-bold">
-              📅 Si abres este saco de {bagWeightKg || 0}kg hoy, se terminará el <u>{formattedFinishDate}</u>
-            </p>
-            <p className="text-[11px] text-amber-800 dark:text-amber-300">
-              💡 Conserva el concentrado en su empaque original bien sellado para evitar humedad y conservar sabor.
-            </p>
+              <button
+                type="button"
+                onClick={() => setActivityFactor('active')}
+                className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer ${
+                  activityFactor === 'active'
+                    ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold shadow-2xs'
+                    : 'border-stone-200 text-stone-600 hover:border-stone-300'
+                }`}
+              >
+                <div className="text-sm mb-0.5">⚡</div>
+                <div className="text-xs font-bold">Muy Activo</div>
+                <div className="text-[9px] text-stone-400">+15% calorías</div>
+              </button>
+            </div>
           </div>
+
+          {/* Precios de Compra */}
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                Precio Saco Croquetas ({curr.code})
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400">{curr.symbol}</span>
+                <input
+                  type="number"
+                  value={bagPrice || ''}
+                  onChange={(e) => setBagPrice(Math.max(0, Number(e.target.value)))}
+                  className="w-full h-10 pl-7 pr-3 rounded-xl border border-stone-200 font-bold text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold uppercase tracking-wider text-stone-500">
+                Precio x Kilo Carne Fresca ({curr.code})
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-stone-400">{curr.symbol}</span>
+                <input
+                  type="number"
+                  value={freshPriceKg || ''}
+                  onChange={(e) => setFreshPriceKg(Math.max(0, Number(e.target.value)))}
+                  className="w-full h-10 pl-7 pr-3 rounded-xl border border-stone-200 font-bold text-xs"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setActiveView('report')}
+            className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            <span>Aplicar Cambios y Ver Reporte</span>
+          </button>
         </div>
       )}
+
+      {/* Explicación Didáctica al pie */}
+      <div className="p-3 rounded-xl bg-stone-50/90 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-800 flex items-start gap-2 text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+        <Droplets className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+        <p className="text-[11px]">
+          <strong>¿Por qué varían los gramos?</strong> Las croquetas contienen <strong>8–10% de agua</strong> (energía deshidratada), mientras que la comida natural tiene <strong>70–75% de agua biológica</strong>[cite: 10]. Por eso el plato fresco pesa más para aportar la misma energía[cite: 10].
+        </p>
+      </div>
 
     </div>
   );

@@ -425,3 +425,17 @@ html.dark {
     display: block !important;
   }
 }
+
+@keyframes verticalScroll {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-vertical-scroll {
+  animation: verticalScroll 26s linear infinite;
+  will-change: transform;
+}
