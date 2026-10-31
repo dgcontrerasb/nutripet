@@ -77,22 +77,6 @@ export const BreedEncyclopedia: React.FC<BreedEncyclopediaProps> = ({
   return (
     <div className="space-y-4 animate-fade-in pb-12">
       
-      {/* 1. HERO VERDE INSTITUCIONAL 100% SIMÉTRICO */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#143826] via-[#1a4a32] to-[#123020] text-[#faf8f5] px-3.5 py-3 sm:px-6 sm:py-3.5 border border-[#2a5940] shadow-xs text-center flex flex-col items-center justify-center no-print">
-        <div className="relative z-10 space-y-1 max-w-lg mx-auto">
-          <div className="inline-flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10px] font-mono uppercase tracking-widest text-emerald-200/90 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-            <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
-            <span>Enciclopedia Morfológica & Nutrición</span>
-          </div>
-          <h1 className="text-sm sm:text-base font-editorial font-semibold tracking-tight text-white leading-tight">
-            Alimentos & Marcas <span className="font-editorial italic font-normal text-amber-300">según Raza y Contextura</span>
-          </h1>
-          <p className="text-[10px] sm:text-xs text-emerald-100/80 leading-relaxed font-normal">
-            Susceptibilidad genética y pautas de alimentación preventiva para {petName}.
-          </p>
-        </div>
-      </div>
-
       {/* ========================================================================= */}
       {/* 📐 ARQUITECTURA SPLIT-SCREEN EN 3 MÓDULOS (CERO VACÍOS EN PC Y MÓVIL)       */}
       {/* ========================================================================= */}
@@ -100,7 +84,7 @@ export const BreedEncyclopedia: React.FC<BreedEncyclopediaProps> = ({
         
         {/* MÓDULO 1 (IZQUIERDA - 4 COLS): PET PROFILE HUD DE OSLO */}
         {profileHUD && (
-          <div className="lg:col-span-4">
+          <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-4">
             {profileHUD}
           </div>
         )}
@@ -108,6 +92,22 @@ export const BreedEncyclopedia: React.FC<BreedEncyclopediaProps> = ({
         {/* CONTENEDOR CENTRAL + DERECHO (8 COLS EN PC) */}
         <div className={`space-y-4 ${profileHUD ? 'lg:col-span-8' : 'col-span-12'}`}>
           
+          {/* 1. HERO VERDE INSTITUCIONAL 100% SIMÉTRICO */}
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#143826] via-[#1a4a32] to-[#123020] text-[#faf8f5] px-3.5 py-3 sm:px-6 sm:py-3.5 border border-[#2a5940] shadow-xs text-center flex flex-col items-center justify-center no-print">
+            <div className="relative z-10 space-y-1 max-w-lg mx-auto">
+              <div className="inline-flex items-center justify-center gap-1.5 text-[9.5px] sm:text-[10px] font-mono uppercase tracking-widest text-emerald-200/90 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
+                <Sparkles className="w-3 h-3 text-amber-400 shrink-0" />
+                <span>Enciclopedia Morfológica & Nutrición</span>
+              </div>
+              <h1 className="text-sm sm:text-base font-editorial font-semibold tracking-tight text-white leading-tight">
+                Alimentos & Marcas <span className="font-editorial italic font-normal text-amber-300">según Raza y Contextura</span>
+              </h1>
+              <p className="text-[10px] sm:text-xs text-emerald-100/80 leading-relaxed font-normal">
+                Susceptibilidad genética y pautas de alimentación preventiva para {petName}.
+              </p>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             
             {/* ======================================================== */}
