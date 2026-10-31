@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePets } from '../context/PetContext';
 import {
   Plus,
@@ -17,7 +17,9 @@ import {
   User,
   X,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { MedicalRecord, WeightLog } from '../types';
 
@@ -30,6 +32,43 @@ export const MedicalHistory: React.FC = () => {
   const [showWeightModal, setShowWeightModal] = useState<boolean>(false);
   const [confirmDeleteRecordId, setConfirmDeleteRecordId] = useState<string | null>(null);
   const [confirmDeleteWeightId, setConfirmDeleteWeightId] = useState<string | null>(null);
+
+  // Estados para scroll y flechas de navegación del carrusel de filtros
+  const filterScrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  const checkFilterScroll = useCallback(() => {
+    const el = filterScrollRef.current;
+    if (el) {
+      const overflow = el.scrollWidth > el.clientWidth + 4;
+      setHasOverflow(overflow);
+      setCanScrollLeft(overflow && el.scrollLeft > 4);
+      setCanScrollRight(overflow && el.scrollLeft + el.clientWidth < el.scrollWidth - 4);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(checkFilterScroll, 60);
+    window.addEventListener('resize', checkFilterScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkFilterScroll);
+    };
+  }, [checkFilterScroll, medicalRecords.length]);
+
+  const scrollFilters = (direction: 'left' | 'right') => {
+    const el = filterScrollRef.current;
+    if (el) {
+      const scrollAmount = 240;
+      el.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+      setTimeout(checkFilterScroll, 320);
+    }
+  };
 
   // Form states
   const [recordForm, setRecordForm] = useState<{
@@ -230,42 +269,42 @@ export const MedicalHistory: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Selector de subpestañas y Botones de Acción */}
-      <div className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-4 sm:p-6 shadow-bento flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 animate-fade-in">
-        <div className="flex items-center gap-1.5 bg-stone-100 dark:bg-stone-800/80 p-1 rounded-xl flex-wrap sm:flex-nowrap">
+      {/* Selector de subpestañas y Botón de Acción */}
+      <div className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-3 sm:p-4.5 shadow-bento flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-fade-in">
+        <div className="grid grid-cols-2 gap-1.5 bg-stone-100 dark:bg-stone-800/80 p-1 rounded-xl w-full sm:w-auto">
           <button
             type="button"
             onClick={() => setActiveSubTab('records')}
-            className={`px-3.5 py-2 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-2 rounded-lg text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeSubTab === 'records'
                 ? 'bg-white dark:bg-stone-900 text-[#143826] dark:text-emerald-300 shadow-2xs font-semibold'
                 : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 font-medium'
             }`}
           >
-            <Stethoscope className="w-3.5 h-3.5 text-[#143826] dark:text-emerald-400" />
-            <span>Consultas ({medicalRecords.length})</span>
+            <Stethoscope className="w-3.5 h-3.5 text-[#143826] dark:text-emerald-400 shrink-0" />
+            <span className="truncate">Consultas ({medicalRecords.length})</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveSubTab('weights')}
-            className={`px-3.5 py-2 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-2 rounded-lg text-xs transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
               activeSubTab === 'weights'
                 ? 'bg-white dark:bg-stone-900 text-[#143826] dark:text-emerald-300 shadow-2xs font-semibold'
                 : 'text-stone-500 dark:text-stone-400 hover:text-stone-800 dark:hover:text-stone-200 font-medium'
             }`}
           >
-            <Scale className="w-3.5 h-3.5 text-[#143826] dark:text-emerald-400" />
-            <span>Pesos ({weightLogs.length})</span>
+            <Scale className="w-3.5 h-3.5 text-[#143826] dark:text-emerald-400 shrink-0" />
+            <span className="truncate">Pesos ({weightLogs.length})</span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="w-full sm:w-auto flex items-center">
           {activeSubTab === 'records' ? (
             <button
               type="button"
               onClick={() => handleOpenAddModal()}
-              className="px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1b4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-95"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1b4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
             >
               {addButtonContent.icon}
               <span>{addButtonContent.label}</span>
@@ -274,7 +313,7 @@ export const MedicalHistory: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowWeightModal(true)}
-              className="px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1b4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-95"
+              className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1b4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
             >
               <Plus className="w-4 h-4" /> Registrar Peso
             </button>
@@ -287,35 +326,75 @@ export const MedicalHistory: React.FC = () => {
         {/* SUBPESTAÑA 1: CONSULTAS Y PROCEDIMIENTOS */}
         {activeSubTab === 'records' && (
           <div className="space-y-4">
-            {/* Filtros por categoría con contadores dinámicos */}
-            <div className="flex flex-wrap gap-2">
-              {filterCategories.map(f => {
-                const count = getCategoryCount(f.id);
-                const isSelected = filterType === f.id;
-                return (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setFilterType(f.id)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
-                      isSelected
-                        ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-stone-900 dark:border-stone-100 shadow-xs'
-                        : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-850'
-                    }`}
-                  >
-                    <span>{f.label}</span>
-                    <span
-                      className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold leading-none ${
+            {/* Filtros por categoría con carrusel deslizable y flechas laterales */}
+            <div className="flex items-center gap-1.5 w-full">
+              {hasOverflow && (
+                <button
+                  type="button"
+                  onClick={() => scrollFilters('left')}
+                  disabled={!canScrollLeft}
+                  aria-label="Ver filtros anteriores"
+                  className={`shrink-0 w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-full border transition-all flex items-center justify-center ${
+                    canScrollLeft
+                      ? 'bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-stone-200/90 dark:border-stone-700 text-stone-700 dark:text-stone-200 hover:border-[#143826] hover:text-[#143826] dark:hover:text-emerald-400 shadow-2xs hover:shadow-xs cursor-pointer active:scale-90'
+                      : 'bg-white/40 dark:bg-stone-900/40 border-stone-200/40 dark:border-stone-800/40 text-stone-300 dark:text-stone-700 cursor-not-allowed opacity-30'
+                  }`}
+                  title={canScrollLeft ? 'Ver filtros anteriores' : undefined}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+
+              <div
+                ref={filterScrollRef}
+                onScroll={checkFilterScroll}
+                className="flex-1 min-w-0 flex items-center gap-2 overflow-x-auto scrollbar-none py-1.5 px-0.5 flex-nowrap scroll-smooth"
+              >
+                {filterCategories.map(f => {
+                  const count = getCategoryCount(f.id);
+                  const isSelected = filterType === f.id;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFilterType(f.id)}
+                      className={`shrink-0 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 ${
                         isSelected
-                          ? 'bg-white/20 dark:bg-stone-900/20 text-white dark:text-stone-900'
-                          : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400'
+                          ? 'bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 border-stone-900 dark:border-stone-100 shadow-xs'
+                          : 'bg-white dark:bg-stone-900 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-850'
                       }`}
                     >
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
+                      <span>{f.label}</span>
+                      <span
+                        className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md font-bold leading-none ${
+                          isSelected
+                            ? 'bg-white/20 dark:bg-stone-900/20 text-white dark:text-stone-900'
+                            : 'bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {hasOverflow && (
+                <button
+                  type="button"
+                  onClick={() => scrollFilters('right')}
+                  disabled={!canScrollRight}
+                  aria-label="Ver más filtros"
+                  className={`shrink-0 w-7.5 h-7.5 sm:w-8 sm:h-8 rounded-full border transition-all flex items-center justify-center ${
+                    canScrollRight
+                      ? 'bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border-emerald-500/60 dark:border-emerald-600/60 text-[#143826] dark:text-emerald-400 hover:bg-[#143826] hover:text-white dark:hover:bg-emerald-600 dark:hover:text-white shadow-2xs hover:shadow-xs cursor-pointer active:scale-90 group/btn ring-2 ring-emerald-500/15'
+                      : 'bg-white/40 dark:bg-stone-900/40 border-stone-200/40 dark:border-stone-800/40 text-stone-300 dark:text-stone-700 cursor-not-allowed opacity-30'
+                  }`}
+                  title={canScrollRight ? 'Ver más filtros' : undefined}
+                >
+                  <ChevronRight className={`w-4 h-4 ${canScrollRight ? 'group-hover/btn:translate-x-0.5 transition-transform' : ''}`} />
+                </button>
+              )}
             </div>
 
             {filteredRecords.length === 0 ? (
@@ -341,20 +420,22 @@ export const MedicalHistory: React.FC = () => {
                 </button>
               </div>
             ) : (
-              /* Contenedor delimitado para erradicar el scroll infinito */
-              <div className="space-y-4 max-h-[640px] overflow-y-auto pr-1.5 scrollbar-thin scrollbar-thumb-stone-200 dark:scrollbar-thumb-stone-800">
+              /* Contenedor delimitado para erradicar el scroll infinito y dar holgura al dock móvil inferior */
+              <div className="space-y-4 max-h-[640px] overflow-y-auto pr-1 sm:pr-1.5 pb-28 sm:pb-8 scrollbar-thin scrollbar-thumb-stone-200 dark:scrollbar-thumb-stone-800">
                 {/* Riel cronológico Clinical Timeline Bento */}
-                <div className="relative pl-8 sm:pl-9 space-y-4 before:absolute before:left-3.5 before:top-3.5 before:bottom-3.5 before:w-0.5 before:bg-stone-200 dark:before:bg-stone-800">
+                <div className="relative pl-6 sm:pl-8 space-y-4 before:absolute before:left-3 sm:before:left-3.5 before:top-3.5 before:bottom-3.5 before:w-0.5 before:bg-stone-200 dark:before:bg-stone-800">
                   {filteredRecords.map(record => {
                     const badge = getTypeBadge(record.type);
                     return (
                       <div key={record.id} className="relative group">
-                        {/* Nodo en el riel cronológico */}
+                        {/* Nodo en el riel cronológico (acoplado y contenido) */}
                         <div
-                          className={`absolute -left-[32px] sm:-left-[36px] top-4 w-7 h-7 rounded-full bg-white dark:bg-stone-900 border-2 shadow-xs flex items-center justify-center ${badge.nodeBorder} ${badge.nodeText} z-10`}
+                          className={`absolute -left-6 sm:-left-8 top-3.5 sm:top-4 w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-white dark:bg-stone-900 border-2 shadow-xs flex items-center justify-center ${badge.nodeBorder} ${badge.nodeText} z-10`}
                           title={badge.label}
                         >
-                          {badge.icon}
+                          <span className="scale-75 sm:scale-90">
+                            {badge.icon}
+                          </span>
                         </div>
 
                         {/* Tarjeta Bento */}
@@ -481,7 +562,7 @@ export const MedicalHistory: React.FC = () => {
 
         {/* SUBPESTAÑA 2: HISTÓRICO DE PESO (INTACTA) */}
         {activeSubTab === 'weights' && (
-          <div className="space-y-4">
+          <div className="space-y-4 pb-28 sm:pb-8">
             <div className="bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-3xl p-5 sm:p-7 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
