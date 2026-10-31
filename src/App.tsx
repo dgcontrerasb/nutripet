@@ -1206,24 +1206,16 @@ export default function App() {
             </div>
           )}
 
+          {/* VISTA: ENCICLOPEDIA DE RAZAS & NUTRICIÓN (CONSULTA CLÍNICA PURA) */}
           {activeTab === 'breeds' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
-                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
-              </div>
-              <div className="w-full lg:col-span-8 space-y-4">
-                <BreedEncyclopedia
-                  onSelectBreedForCalculation={(type, breedId) => {
-                    setProfile(prev => ({
-                      ...prev,
-                      type,
-                      breedId,
-                      name: prev.name || 'Mi Mascota',
-                    }));
-                    handleSelectTab('calculator');
-                  }}
-                />
-              </div>
+            <div className="w-full animate-fade-in">
+              <BreedEncyclopedia
+                profileHUD={
+                  <div className="hidden lg:block lg:sticky lg:top-0">
+                    <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
+                  </div>
+                }
+              />
             </div>
           )}
 
