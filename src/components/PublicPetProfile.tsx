@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { Phone, Stethoscope, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { Stethoscope, ArrowLeft } from 'lucide-react';
 import { NutriPetLogo } from './NutriPetLogo';
 import { PublicPetEmergencyCard } from '../types';
 
@@ -14,8 +14,7 @@ export const PublicPetProfile: React.FC = () => {
 
   useEffect(() => {
     const fetchPublicCard = async () => {
-      // 🔗 Log DEV: Ruta detectada
-      console.log('🔗 [QR Público] Ruta detectada con token presente:', publicToken);
+      console.log('🔗 [QR Público] Ruta detectada con token:', publicToken);
 
       if (!publicToken) {
         console.warn('⚠️ [QR Público] Token no especificado en URL.');
@@ -25,7 +24,6 @@ export const PublicPetProfile: React.FC = () => {
       }
 
       try {
-        // 📥 Log DEV: Lectura directa getDoc
         console.log(`📥 [QR Público] Leyendo publicPets/${publicToken}`);
         const docRef = doc(db, 'publicPets', publicToken);
         const docSnap = await getDoc(docRef);
@@ -33,25 +31,21 @@ export const PublicPetProfile: React.FC = () => {
         if (docSnap.exists()) {
           const data = docSnap.data() as PublicPetEmergencyCard;
           if (data.active) {
-            // ✅ Log DEV: Carnet activo
             console.log('✅ [QR Público] Carnet público activo cargado.');
             setCard(data);
             setLoading(false);
             return;
           } else {
-            // ⚠️ Log DEV: Carnet inactivo
-            console.warn('⚠️ [QR Público] Carnet no disponible o inactivo.');
+            console.warn('⚠️ [QR Público] Carnet inactivo.');
             setError('Carnet de emergencia inactivo o deshabilitado por el propietario.');
             setLoading(false);
             return;
           }
         } else {
-          // ⚠️ Log DEV: Documento no existe
-          console.warn('⚠️ [QR Público] Carnet no disponible o inactivo.');
+          console.warn('⚠️ [QR Público] Documento no existe.');
           setError('Carnet de emergencia inactivo o no encontrado.');
         }
       } catch (err: any) {
-        // ❌ Log DEV: Error de lectura
         console.error('❌ [QR Público] Error de lectura:', err?.message || err);
         setError('Carnet de emergencia inactivo o no encontrado.');
       }
@@ -64,10 +58,10 @@ export const PublicPetProfile: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-stone-100 dark:bg-[#0f1712] flex items-center justify-center p-4">
         <div className="text-center space-y-3">
           <div className="w-12 h-12 border-4 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-stone-600 font-bold text-sm">Verificando pasaporte digital de emergencia...</p>
+          <p className="text-stone-600 dark:text-stone-300 font-bold text-sm">Verificando pasaporte digital de emergencia...</p>
         </div>
       </div>
     );
@@ -75,24 +69,24 @@ export const PublicPetProfile: React.FC = () => {
 
   if (error || !card) {
     return (
-      <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white rounded-3xl p-6 shadow-xl border border-stone-200 text-center space-y-4">
-          <div className="w-16 h-16 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center mx-auto text-3xl">
+      <div className="min-h-screen bg-stone-100 dark:bg-[#0f1712] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-stone-900 rounded-3xl p-6 shadow-xl border border-stone-200 dark:border-stone-800 text-center space-y-4">
+          <div className="w-16 h-16 bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 rounded-2xl flex items-center justify-center mx-auto text-3xl">
             🛡️
           </div>
-          <h2 className="text-xl font-black text-stone-900">Carnet de Emergencia No Disponible</h2>
-          <p className="text-stone-600 text-xs leading-relaxed">
+          <h2 className="text-xl font-black text-stone-900 dark:text-stone-100">Carnet de Emergencia No Disponible</h2>
+          <p className="text-stone-600 dark:text-stone-400 text-xs leading-relaxed">
             {error || 'El pasaporte digital de esta mascota no se encuentra activo o ha sido renovado.'}
           </p>
-          <div className="pt-2 border-t border-stone-100 text-left bg-stone-50 p-3 rounded-xl space-y-1">
+          <div className="pt-2 border-t border-stone-100 dark:border-stone-800 text-left bg-stone-50 dark:bg-stone-850 p-3 rounded-xl space-y-1">
             <span className="text-[10px] font-bold text-stone-500 uppercase block">¿Eres el tutor de la mascota?</span>
-            <p className="text-[11px] text-stone-600">
+            <p className="text-[11px] text-stone-600 dark:text-stone-300">
               Ingresa a tu cuenta de NutriPet y abre la sección <strong>Carnet de Salud & Ficha Médica</strong> para activar el código QR público o generar uno nuevo con consentimiento.
             </p>
           </div>
           <Link 
             to="/" 
-            className="inline-block w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs transition-colors"
+            className="inline-block w-full py-3 bg-emerald-700 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs transition-colors"
           >
             Ir a NutriPet Inicio
           </Link>
@@ -101,118 +95,173 @@ export const PublicPetProfile: React.FC = () => {
     );
   }
 
+  // Formateo de variables biométricas
+  const rawPhone = (card.shareOwnerContact && card.ownerPhone) ? card.ownerPhone : '';
+  const telefonoLimpio = rawPhone.replace(/\D/g, '');
+  const microchip = (card as any).microchip || 'Registrado';
+  const edad = (card as any).ageMonths 
+    ? Math.floor((card as any).ageMonths / 12) + ' años' 
+    : (card.stage === 'puppy' ? 'Cachorro' : card.stage === 'senior' ? 'Senior' : 'Adulto');
+  const sexo = card.gender === 'male' ? 'Macho' : card.gender === 'female' ? 'Hembra' : 'Registrado';
+
   return (
-    <div className="min-h-screen bg-stone-100 py-6 px-4 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border-4 border-emerald-600/20 overflow-hidden space-y-4 p-6">
+    <div className="min-h-screen bg-stone-100 dark:bg-[#0f1712] py-8 px-4 flex flex-col items-center justify-center gap-4 transition-colors">
+      {/* 💳 APPLE WALLET DIGITAL PASS */}
+      <div className="w-full max-w-sm sm:max-w-md mx-auto bg-white dark:bg-[#1a231d] rounded-[32px] border border-stone-200/90 dark:border-stone-800 shadow-2xl overflow-hidden transition-all text-stone-800 dark:text-stone-100">
         
-        {/* Header con Logo y Estado */}
-        <div className="flex justify-between items-center border-b pb-4">
-          <NutriPetLogo size="xs" />
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-300">
-            🛡️ Pasaporte de Emergencia
+        {/* A) Cabecera de Pase con Chip ID */}
+        <div className="p-4 sm:p-5 border-b border-dashed border-stone-200 dark:border-stone-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <NutriPetLogo size="xs" />
+            <span className="text-[9px] font-mono font-bold tracking-widest uppercase text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-stone-800 px-1.5 py-0.5 rounded">
+              EMERGENCY ID
+            </span>
+          </div>
+          <span className="px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800 text-[10px] font-mono font-black uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            ID: #{card.publicToken ? card.publicToken.slice(0, 8).toUpperCase() : 'PASS-2026'}
           </span>
         </div>
 
-        {/* Foto y Ficha Básica */}
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-2xl bg-emerald-50 overflow-hidden border-2 border-emerald-600 shrink-0 shadow-sm flex items-center justify-center">
-            {card.photoUrl ? (
-              <img src={card.photoUrl} alt={card.name} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-3xl">{card.type === 'dog' ? '🐶' : '🐱'}</span>
-            )}
-          </div>
-          <div>
-            <h1 className="text-2xl font-black text-stone-900">{card.name}</h1>
-            <p className="text-xs font-bold text-emerald-700">
-              {card.type === 'dog' ? 'Canino' : 'Felino'} • {card.breedName}
-            </p>
-            <p className="text-[11px] text-stone-500 font-medium mt-0.5">
-              Peso: {card.weightKg} kg • Esterilizado: {card.neutered ? 'Sí' : 'No'}
-            </p>
-          </div>
-        </div>
-
-        {/* Información Médica / Salud */}
-        {card.shareHealthEmergencyInfo && (card.allergies || card.knownDiseases) ? (
-          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-1">
-            <div className="flex items-center gap-1.5 text-amber-900 font-bold text-xs">
-              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>Alergias & Cuidados Médicos</span>
+        {/* B) Identidad del Paciente */}
+        <div className="p-4 sm:p-5 pb-2 flex items-center gap-3.5">
+          {card.photoUrl ? (
+            <img 
+              src={card.photoUrl} 
+              alt={card.name} 
+              className="w-[68px] h-[68px] rounded-2xl object-cover border-2 border-stone-200 dark:border-stone-700 shadow-sm shrink-0" 
+            />
+          ) : (
+            <div className="w-[68px] h-[68px] rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border-2 border-stone-200 dark:border-stone-700 shadow-sm shrink-0 flex items-center justify-center text-3xl">
+              {card.type === 'dog' ? '🐶' : '🐱'}
             </div>
-            {card.allergies && (
-              <p className="text-xs text-amber-950 font-medium">
-                <strong>Alergias:</strong> {card.allergies}
-              </p>
-            )}
-            {card.knownDiseases && (
-              <p className="text-xs text-amber-950 font-medium">
-                <strong>Condiciones:</strong> {card.knownDiseases}
-              </p>
-            )}
+          )}
+          <div className="min-w-0 flex-1">
+            <h1 className="font-heading font-black text-2xl text-stone-900 dark:text-white leading-tight truncate">
+              {card.name}
+            </h1>
+            <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400 mt-0.5 truncate">
+              {card.type === 'dog' ? 'Canino' : 'Felino'} • {card.breedName || 'Raza Certificada'}
+            </p>
           </div>
-        ) : null}
+        </div>
 
-        {/* Contacto del Tutor */}
-        {card.shareOwnerContact && (card.ownerName || card.ownerPhone) ? (
-          <div className="space-y-2 bg-emerald-50/50 p-3.5 rounded-2xl border border-emerald-200">
-            <span className="text-[10px] font-bold text-emerald-800 uppercase block">👤 Contacto del Tutor</span>
-            {card.ownerName && (
-              <p className="font-bold text-stone-900 text-sm">{card.ownerName}</p>
-            )}
-            {card.ownerPhone && (
-              <div className="flex items-center justify-between pt-1 border-t border-emerald-100">
-                <span className="text-xs font-semibold text-stone-700">{card.ownerPhone}</span>
-                <a 
-                  href={`tel:${card.ownerPhone}`}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-extrabold flex items-center gap-1 shadow-xs"
-                >
-                  <Phone className="w-3.5 h-3.5" /> Llamar
-                </a>
-              </div>
-            )}
+        {/* C) Rejilla 2x2 de Datos Biométricos */}
+        <div className="grid grid-cols-2 gap-2 px-4 sm:px-5 py-2">
+          <div className="bg-stone-50 dark:bg-stone-850 p-2 rounded-xl text-center border border-stone-200/60 dark:border-stone-800">
+            <span className="text-[9px] font-mono font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider block">
+              PESO ACTUAL
+            </span>
+            <span className="text-xs sm:text-sm font-extrabold text-stone-800 dark:text-stone-100 font-tabular mt-0.5 block">
+              {card.weightKg} kg
+            </span>
           </div>
-        ) : null}
 
-        {/* Contacto Veterinario */}
-        {card.shareVetContact && (card.veterinarian || card.veterinarianPhone) ? (
-          <div className="p-3 bg-stone-50 rounded-xl border border-stone-200 space-y-1">
-            <div className="flex items-center gap-1.5 text-stone-900 font-bold text-xs">
-              <Stethoscope className="w-4 h-4 text-emerald-700 shrink-0" />
-              <span>Veterinario Tratante</span>
+          <div className="bg-stone-50 dark:bg-stone-850 p-2 rounded-xl text-center border border-stone-200/60 dark:border-stone-800">
+            <span className="text-[9px] font-mono font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider block">
+              EDAD / SEXO
+            </span>
+            <span className="text-xs sm:text-sm font-extrabold text-stone-800 dark:text-stone-100 mt-0.5 block truncate">
+              {edad} · {sexo}
+            </span>
+          </div>
+
+          <div className="bg-stone-50 dark:bg-stone-850 p-2 rounded-xl text-center border border-stone-200/60 dark:border-stone-800">
+            <span className="text-[9px] font-mono font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider block">
+              ESTERILIZADO
+            </span>
+            <span className="text-xs sm:text-sm font-extrabold text-stone-800 dark:text-stone-100 mt-0.5 block">
+              {card.neutered ? 'Sí' : 'No'}
+            </span>
+          </div>
+
+          <div className="bg-stone-50 dark:bg-stone-850 p-2 rounded-xl text-center border border-stone-200/60 dark:border-stone-800">
+            <span className="text-[9px] font-mono font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider block">
+              MICROCHIP ISO
+            </span>
+            <span className="text-xs sm:text-sm font-mono font-bold text-stone-800 dark:text-stone-100 mt-0.5 block truncate">
+              {microchip}
+            </span>
+          </div>
+        </div>
+
+        {/* D) Alerta Médica (Solo si hay alergias/condiciones activadas) */}
+        {card.shareHealthEmergencyInfo && (card.allergies || card.knownDiseases) && (
+          <div className="mx-4 sm:mx-5 my-2 p-3 rounded-2xl bg-amber-50/90 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/80 flex items-start gap-2.5">
+            <span className="text-base shrink-0">⚠️</span>
+            <div className="text-[11px] leading-snug text-amber-950 dark:text-amber-200 font-medium">
+              <strong className="font-bold">Alerta Médica:</strong>{' '}
+              {[card.allergies ? `Alergias: ${card.allergies}` : null, card.knownDiseases ? `Condición: ${card.knownDiseases}` : null].filter(Boolean).join(' · ')}
+              . No suministrar comida sin consultar al tutor.
             </div>
-            {card.veterinarian && (
-              <p className="text-xs text-stone-800 font-medium">{card.veterinarian}</p>
-            )}
-            {card.veterinarianPhone && (
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs font-mono text-stone-600">{card.veterinarianPhone}</span>
-                <a 
-                  href={`tel:${card.veterinarianPhone}`}
-                  className="px-2.5 py-1 bg-stone-800 hover:bg-stone-700 text-white rounded-lg text-[11px] font-bold flex items-center gap-1"
-                >
-                  <Phone className="w-3 h-3" /> Llamar Vet
-                </a>
-              </div>
-            )}
           </div>
-        ) : null}
+        )}
 
-        {/* Aviso de privacidad y seguridad */}
-        <div className="p-2.5 rounded-xl bg-stone-100 text-stone-500 text-[10px] text-center">
-          Pasaporte de Emergencia verificado por NutriPet. La información mostrada ha sido compartida voluntariamente por el tutor.
+        {/* E) Botones SOS de Acción Rápida (Zona del Pulgar) */}
+        <div className="p-4 sm:p-5 space-y-2">
+          {card.shareOwnerContact && card.ownerPhone ? (
+            <>
+              {/* Botón de Llamada Principal (Verde Esmeralda NutriPet) */}
+              <a
+                href={'tel:' + telefonoLimpio}
+                className="w-full h-12 rounded-2xl bg-[#143826] hover:bg-[#1a4a32] text-white font-black text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md cursor-pointer transition-all active:scale-98"
+              >
+                <span>📞</span>
+                <span>Llamar al Tutor ({card.ownerPhone})</span>
+              </a>
+
+              {/* Botón WhatsApp SOS */}
+              <a
+                href={'https://wa.me/' + telefonoLimpio + '?text=' + encodeURIComponent('Hola, tengo a tu mascota ' + card.name + ' gracias a su placa NutriPet. Te escribo para coordinar su regreso.')}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full h-11 rounded-2xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-98"
+              >
+                <span>💬</span>
+                <span>Enviar WhatsApp con Ubicación</span>
+              </a>
+            </>
+          ) : (
+            <div className="p-3 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800 text-center text-xs text-stone-500">
+              El tutor mantiene en privado su contacto directo. Si encontraste a esta mascota, comunícate con un centro veterinario.
+            </div>
+          )}
+
+          {/* Contacto Veterinario (si está activo) */}
+          {card.shareVetContact && (card.veterinarian || card.veterinarianPhone) && (
+            <div className="pt-1">
+              {card.veterinarianPhone ? (
+                <a
+                  href={'tel:' + card.veterinarianPhone.replace(/\D/g, '')}
+                  className="w-full py-2 px-3 rounded-xl bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer"
+                >
+                  <Stethoscope className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Veterinario: {card.veterinarian || 'Tratante'} ({card.veterinarianPhone})</span>
+                </a>
+              ) : (
+                <div className="py-2 px-3 rounded-xl bg-stone-50 dark:bg-stone-850 text-stone-600 dark:text-stone-400 text-[11px] text-center border border-stone-200/60 dark:border-stone-800">
+                  Veterinario Tratante: {card.veterinarian}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Botón de retorno */}
-        <div className="pt-2 text-center">
-          <Link 
-            to="/"
-            className="text-xs font-bold text-emerald-700 hover:underline inline-flex items-center gap-1"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Volver a NutriPet
-          </Link>
+        {/* F) Pie de Tarjeta */}
+        <div className="px-4 pb-4 pt-2 text-center text-[9.5px] text-stone-400 dark:text-stone-500 border-t border-stone-100 dark:border-stone-800 leading-tight">
+          Pasaporte de Emergencia verificado por NutriPet. Datos autorizados por el tutor para fines de auxilio.
         </div>
 
+      </div>
+
+      {/* Botón de retorno fuera de la tarjeta */}
+      <div className="pt-2 text-center">
+        <Link 
+          to="/"
+          className="text-xs font-bold text-emerald-800 dark:text-emerald-400 hover:underline inline-flex items-center gap-1.5 transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" /> Volver a NutriPet
+        </Link>
       </div>
     </div>
   );
