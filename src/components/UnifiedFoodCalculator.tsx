@@ -365,10 +365,11 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
           </div>
 
           {/* BOTÓN EVIDENTE PARA EDITAR DATOS Y ACTIVIDAD */}
+          {/* BOTÓN EVIDENTE PARA EDITAR DATOS Y ACTIVIDAD */}
           <button
             type="button"
             onClick={() => setActiveView('settings')}
-            className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-all"
+            className="w-full py-2.5 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs transition-all active:scale-95"
           >
             <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-600" />
             <span>Ajustar Actividad Física y Precios de Compra</span>

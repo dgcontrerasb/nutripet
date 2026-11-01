@@ -508,8 +508,8 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                         onClick={() => setShowExportModal(true)}
                         className="flex-1 bg-[#143826] hover:bg-[#1a4a32] text-white py-2 px-3 rounded-xl text-xs font-bold shadow-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95"
                       >
-                        <Download className="w-3.5 h-3.5 shrink-0" />
-                        <span>Exportar PDF</span>
+                        <QrCode className="w-3.5 h-3.5 shrink-0" />
+                        <span>Ver Ficha QR</span>
                       </button>
 
                       <button

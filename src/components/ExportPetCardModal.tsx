@@ -106,7 +106,7 @@ export const ExportPetCardModal: React.FC<Props> = ({ isOpen, onClose, onOpenSub
 
   // URL del QR estable y única basada en publicId (100% local, cero escrituras a Firestore)
   const qrUrl = (qrActive && publicId)
-    ? `${window.location.origin}/qr/${encodeURIComponent(publicId)}`
+    ? `https://nutripet-v2.vercel.app/qr/${encodeURIComponent(publicId)}`
     : null;
 
   // Generación local del código QR como Data URL (PNG base64 puro, sin llamadas a servidores externos)
@@ -231,7 +231,7 @@ export const ExportPetCardModal: React.FC<Props> = ({ isOpen, onClose, onOpenSub
   };
 
   const handleShareWhatsApp = () => {
-    const qrLink = qrActive ? `${window.location.origin}/qr/${encodeURIComponent(publicId)}` : null;
+    const qrLink = qrActive ? `https://nutripet-v2.vercel.app/qr/${encodeURIComponent(publicId)}` : null;
     const lines = [
       `🐾 *FICHA TÉCNICA Y CARNET VETERINARIO - ${activePet.name.toUpperCase()}* 🐾`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
@@ -246,11 +246,11 @@ export const ExportPetCardModal: React.FC<Props> = ({ isOpen, onClose, onOpenSub
       activePet.ownerPhone ? `• *Teléfono:* ${activePet.ownerPhone}` : null,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       qrLink ? `🛡️ *Pasaporte Digital QR:* ${qrLink}` : null,
-      `✨ _Generado con NutriPet (https://nutripet.ai.studio)_`
+      `✨ _Generado con NutriPet (https://nutripet-v2.vercel.app)_`
     ].filter(Boolean).join('\n');
 
-    const url = `https://wa.me/?text=${encodeURIComponent(lines)}`;
-    window.open(url, '_blank');
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(lines)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   // Descarga limpia y segura a PDF

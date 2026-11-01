@@ -7,7 +7,6 @@ import {
   Droplets,
   Flame,
   Activity,
-  FileText,
   ChevronRight,
   ShieldCheck,
   Heart,
@@ -321,31 +320,19 @@ export const PetProfileHUD: React.FC<Props> = ({
           colorScheme={conditionMeta.scheme}
         />
 
-        {/* 6. BOTONES DE ACCIÓN RÁPIDA (CONEXIÓN INMEDIATA) */}
-        <div className="pt-2 border-t border-stone-100 dark:border-stone-800 grid grid-cols-2 gap-2">
-          {onSelectTab && (
+        {/* 6. BOTÓN DE ACCIÓN RÁPIDA: AJUSTAR PESO CENTRADO */}
+        {onSelectTab && (
+          <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex justify-center">
             <button
               type="button"
               onClick={() => onSelectTab('calculator')}
-              className="py-2.5 px-3 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-800 dark:text-stone-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+              className="w-full py-2.5 px-4 rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-800 dark:text-stone-200 text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs active:scale-95"
             >
-              <Scale className="w-3.5 h-3.5 text-emerald-600" />
+              <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
               <span>Ajustar Peso</span>
             </button>
-          )}
-
-          {onSelectTab && (
-            <button
-              type="button"
-              onClick={() => onSelectTab('sheet')}
-              className="py-2.5 px-3 rounded-xl bg-stone-900 hover:bg-stone-800 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-            >
-              <FileText className="w-3.5 h-3.5 text-emerald-400 dark:text-white" />
-              <span>Ver Ficha QR</span>
-            </button>
-          )}
-        </div>
-
+          </div>
+        )}
       </div>
     </aside>
   );
