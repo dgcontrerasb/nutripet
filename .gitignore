@@ -9,6 +9,9 @@
 !.env.example
 firebase-applet-config.json
 
+# Documentación interna y reglas locales
+ROLES_AND_RULES.md
+
 # Dependencias
 node_modules/
 
