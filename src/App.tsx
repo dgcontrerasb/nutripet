@@ -1256,31 +1256,36 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-stone-200 bg-white/90 dark:bg-stone-900/90 py-6 no-print">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-2.5 text-xs text-stone-500">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <NutriPetLogo size="sm" />
-              <span>•</span>
-              <span>Herramienta informativa y de orientación para el cuidado de mascotas</span>
+      <footer className="mt-auto border-t border-stone-200/80 dark:border-stone-800/80 bg-white/70 dark:bg-stone-900/70 backdrop-blur-md py-3 sm:py-3.5 no-print transition-colors">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-2.5 text-center md:text-left">
+          {/* Marca y Propósito */}
+          <div className="flex items-center gap-2 shrink-0">
+            <NutriPetLogo size="sm" />
+            <span className="text-stone-300 dark:text-stone-700 hidden sm:inline">•</span>
+            <span className="text-[10.5px] text-stone-500 dark:text-stone-400 font-medium hidden sm:inline">
+              Nutrición & Bienestar Animal
+            </span>
+          </div>
+
+          {/* Descargo Médico Compacto (Cero cajas toscas) */}
+          <p className="text-[9.5px] sm:text-[10px] text-stone-400 dark:text-stone-500 max-w-xl leading-tight">
+            <strong>Aviso Clínico:</strong> Recurso orientativo basado en pautas FEDIAF & NRC. No constituye diagnóstico ni prescripción. Ante cualquier anomalía, consulta a tu médico veterinario colegiado.
+          </p>
+
+          {/* Acceso Privado Propietario (Discreto) */}
+          {isAdminUser && (
+            <div className="flex items-center gap-1.5 shrink-0 opacity-40 hover:opacity-100 transition-opacity">
+              <span className="text-[9px] font-mono text-stone-400">Admin</span>
+              <button
+                type="button"
+                onClick={() => setShowAdminModal(true)}
+                className="p-1 rounded text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 cursor-pointer"
+                title="Panel Propietario"
+              >
+                <Lock className="w-2.5 h-2.5" />
+              </button>
             </div>
-            {isAdminUser && (
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-stone-400">Uso personal</span>
-                <button
-                  type="button"
-                  onClick={() => setShowAdminModal(true)}
-                  className="text-stone-300 hover:text-stone-500 p-1 cursor-pointer"
-                  title="Acceso Propietario"
-                >
-                  <Lock className="w-3 h-3" />
-                </button>
-              </div>
-            )}
-          </div>
-          <div className="p-2.5 bg-stone-50 dark:bg-stone-850 rounded-xl border border-stone-200 dark:border-stone-800 text-[10px] text-stone-600 dark:text-stone-400 leading-relaxed">
-            <strong>Aviso de exención de responsabilidad:</strong> Esta aplicación web es un recurso de consulta general y cálculo orientativo. La información no constituye asesoría médica, diagnóstico ni prescripción. Ante cualquier duda o síntoma, consulta siempre a tu médico veterinario.
-          </div>
+          )}
         </div>
       </footer>
 

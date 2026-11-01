@@ -405,37 +405,73 @@ export const Sidebar: React.FC<SidebarProps> = ({
         )}
 
         {/* Tarjeta Pro */}
-        <div className="p-3 border-t border-stone-100 dark:border-stone-800 shrink-0">
+        <div className="p-1 sm:p-1.5 border-t border-stone-100 dark:border-stone-800 shrink-0">
           {isCollapsed ? (
-            <button
-              onClick={onOpenSubscriptionModal}
-              className="w-10 h-10 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 text-white flex items-center justify-center mx-auto shadow-xs active:scale-95 cursor-pointer"
-              title="Suscripción NutriPet Pro"
-            >
-              <Crown className="w-5 h-5 text-amber-200" />
-            </button>
-          ) : (
-            <div className="p-3 rounded-2xl bg-gradient-to-br from-amber-500 to-amber-600 text-white space-y-2 shadow-xs border border-amber-400/40 relative overflow-hidden">
-              <div className="absolute right-0 bottom-0 translate-y-2 translate-x-2 w-14 h-14 bg-white/10 rounded-full blur-xl pointer-events-none" />
-              <div className="flex items-center gap-1.5 font-heading">
-                <Crown className="w-4 h-4 text-amber-200 shrink-0" />
-                <span className="text-[11px] font-black uppercase tracking-wider">NutriPet Pro</span>
+            isProOrTrial ? (
+              <div 
+                onClick={onOpenSubscriptionModal} 
+                className="w-9 h-9 mx-auto my-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white border border-amber-300/40 flex items-center justify-center cursor-pointer shadow-xs shadow-amber-500/20 hover:brightness-105 active:scale-95 transition-all" 
+                title="NutriPet Pro Activo"
+              >
+                👑
               </div>
-              <p className="text-[10px] text-amber-100/90 leading-normal font-normal">
-                {isProOrTrial 
-                  ? `Suscripción activa • ${trialDaysRemaining} días` 
-                  : 'Sube fotos ilimitadas, descarga en PDF, alertas y chat veterinario IA.'}
-              </p>
-              {!isProOrTrial && (
-                <button
-                  type="button"
-                  onClick={onOpenSubscriptionModal}
-                  className="w-full py-1.5 px-3 bg-white hover:bg-amber-50 text-amber-950 font-bold text-[10px] rounded-lg cursor-pointer transition-all active:scale-97 text-center shadow-2xs"
-                >
-                  🔒 Activar NutriPet Pro
-                </button>
-              )}
-            </div>
+            ) : (
+              <div 
+                onClick={onOpenSubscriptionModal} 
+                className="w-9 h-9 mx-auto my-2 rounded-xl bg-gradient-to-br from-amber-500/90 to-orange-500/90 text-white border border-amber-300/30 flex items-center justify-center cursor-pointer shadow-xs hover:brightness-105 active:scale-95 transition-all" 
+                title="Activar NutriPet Pro"
+              >
+                <Crown className="w-4 h-4 text-amber-100" />
+              </div>
+            )
+          ) : (
+            isProOrTrial ? (
+              <div 
+                onClick={onOpenSubscriptionModal}
+                className="mx-3 my-2 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 text-white border border-amber-300/40 shadow-xs shadow-amber-500/25 flex items-center justify-between cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
+                title="Ver detalles de tu suscripción NutriPet Pro"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs filter drop-shadow-xs">👑</span>
+                  <div className="min-w-0 text-left">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-black uppercase font-heading tracking-wide leading-none text-white">
+                        NutriPet Pro
+                      </span>
+                      <span className="text-[8.5px] font-mono font-bold bg-white/20 text-white px-1.5 py-0.5 rounded-full border border-white/25 leading-none">
+                        ACTIVO
+                      </span>
+                    </div>
+                    <p className="text-[9.5px] text-amber-100 font-medium truncate mt-0.5 leading-none">
+                      {trialDaysRemaining !== null ? `${trialDaysRemaining} días de prueba` : 'Suscripción 365 días'}
+                    </p>
+                  </div>
+                </div>
+
+                <span className="w-2 h-2 rounded-full bg-emerald-400 border border-white/60 shadow-xs animate-pulse shrink-0 ml-1.5" />
+              </div>
+            ) : (
+              <div
+                onClick={onOpenSubscriptionModal}
+                className="mx-3 my-2 px-3 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 text-white border border-amber-300/40 shadow-xs shadow-amber-500/25 flex items-center justify-between cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
+                title="Activar NutriPet Pro"
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs filter drop-shadow-xs">👑</span>
+                  <div className="min-w-0 text-left">
+                    <span className="text-[11px] font-black uppercase font-heading tracking-wide leading-none text-white block">
+                      Activar NutriPet Pro
+                    </span>
+                    <p className="text-[9.5px] text-amber-100 font-medium truncate mt-0.5 leading-none">
+                      Desbloquear funciones
+                    </p>
+                  </div>
+                </div>
+                <span className="text-[9px] font-bold bg-white/20 text-white border border-white/25 px-2 py-0.5 rounded-full shrink-0">
+                  Ver planes
+                </span>
+              </div>
+            )
           )}
         </div>
       </aside>
@@ -543,29 +579,53 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </button>
                 )}
 
-                <div 
-                  onClick={() => {
-                    if (!isProOrTrial) {
+                {isProOrTrial ? (
+                  <div 
+                    onClick={() => {
                       setIsMobileOpen(false);
                       onOpenSubscriptionModal();
-                    }
-                  }}
-                  className={`w-full py-2 px-3 rounded-xl flex items-center justify-between gap-2 shadow-xs transition-all ${
-                    isProOrTrial 
-                      ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white' 
-                      : 'bg-emerald-600 text-white cursor-pointer active:scale-98'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Crown className="w-4 h-4 text-amber-200 shrink-0" />
-                    <span className="text-xs font-black truncate">
-                      {isProOrTrial ? 'NutriPet Pro' : 'Activar NutriPet Pro'}
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 text-white border border-amber-300/40 shadow-xs shadow-amber-500/25 flex items-center justify-between cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
+                    title="Ver detalles de tu suscripción NutriPet Pro"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs filter drop-shadow-xs">👑</span>
+                      <div className="min-w-0 text-left">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[11px] font-black uppercase font-heading tracking-wide leading-none text-white">
+                            NutriPet Pro
+                          </span>
+                          <span className="text-[8.5px] font-mono font-bold bg-white/20 text-white px-1.5 py-0.5 rounded-full border border-white/25 leading-none">
+                            ACTIVO
+                          </span>
+                        </div>
+                        <p className="text-[9.5px] text-amber-100 font-medium truncate mt-0.5 leading-none">
+                          {trialDaysRemaining !== null ? `${trialDaysRemaining} días de prueba` : 'Suscripción 365 días'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 border border-white/60 shadow-xs animate-pulse shrink-0 ml-1.5" />
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => {
+                      setIsMobileOpen(false);
+                      onOpenSubscriptionModal();
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 text-white border border-amber-300/40 shadow-xs shadow-amber-500/25 flex items-center justify-between cursor-pointer active:scale-98 transition-all select-none"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-xs filter drop-shadow-xs">👑</span>
+                      <span className="text-xs font-black truncate">
+                        Activar NutriPet Pro
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold bg-white/20 text-white border border-white/25 px-2 py-0.5 rounded-full shrink-0">
+                      Ver planes
                     </span>
                   </div>
-                  <span className="text-[10px] font-bold bg-white/20 px-2 py-0.5 rounded-full shrink-0">
-                    {isProOrTrial ? `${trialDaysRemaining}d activos` : 'Ver planes'}
-                  </span>
-                </div>
+                )}
               </div>
             </motion.div>
           </div>
