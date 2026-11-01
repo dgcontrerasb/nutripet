@@ -1,6 +1,3 @@
-import html2canvas from 'html2canvas-pro';
-import { jsPDF } from 'jspdf';
-
 export async function downloadElementAsPdf(
   elementOrId: HTMLElement | string = 'printable-pet-card',
   fileName = 'Carnet-NutriPet.pdf'
@@ -22,6 +19,11 @@ export async function downloadElementAsPdf(
   let tempContainer: HTMLDivElement | null = null;
 
   try {
+    const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+      import('html2canvas-pro'),
+      import('jspdf')
+    ]);
+
     tempContainer = document.createElement('div');
     tempContainer.style.position = 'fixed';
     tempContainer.style.left = '-100000px';

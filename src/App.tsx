@@ -21,30 +21,31 @@ import {
 import { PetProfile, CalculationResult, BreedInfo, AppTab } from './types';
 import { calculatePetNutrition, POPULAR_BREEDS } from './data';
 import { UnifiedFoodCalculator } from './components/UnifiedFoodCalculator';
-import { ShareModal } from './components/ShareModal';
-import { RoutineSchedule } from './components/RoutineSchedule';
 import { FoodTransitionGuide } from './components/FoodTransitionGuide';
 import { PetHeaderBar } from './components/PetHeaderBar';
-import { PetTechSheet } from './components/PetTechSheet';
-import { MedicalHistory } from './components/MedicalHistory';
-import { RemindersModule } from './components/RemindersModule';
-import { CountryFoodAdvisor } from './components/CountryFoodAdvisor';
-import { BreedEncyclopedia } from './components/BreedEncyclopedia';
-import { TipsAndGuidesModule } from './components/TipsAndGuidesModule';
-import { FoodTrafficLight } from './components/FoodTrafficLight';
 import { PetPhotoReelWidget } from './components/PetPhotoReelWidget';
-import { SubscriptionModal } from './components/SubscriptionModal';
 import { ProFeatureLock } from './components/ProFeatureLock';
-import { AnimatedCounter } from './components/AnimatedCounter';
-import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { RegistrationLockModal } from './components/RegistrationLockModal';
 import { PetProfileHUD } from './components/PetProfileHUD';
 import { NutriPetLogo } from './components/NutriPetLogo';
-import { BarfRecipeGenerator } from './components/BarfRecipeGenerator';
 import { Sidebar } from './components/Sidebar';
 import { BackToTopButton } from './components/BackToTopButton';
 import { LogoutTransitionModal } from './components/LogoutTransitionModal';
-import { FeedbackModal } from './components/FeedbackModal';
+
+// Carga diferida (Code Splitting) de módulos secundarios y modales bajo demanda
+const RoutineSchedule = React.lazy(() => import('./components/RoutineSchedule').then(m => ({ default: m.RoutineSchedule })));
+const PetTechSheet = React.lazy(() => import('./components/PetTechSheet').then(m => ({ default: m.PetTechSheet })));
+const MedicalHistory = React.lazy(() => import('./components/MedicalHistory').then(m => ({ default: m.MedicalHistory })));
+const RemindersModule = React.lazy(() => import('./components/RemindersModule').then(m => ({ default: m.RemindersModule })));
+const CountryFoodAdvisor = React.lazy(() => import('./components/CountryFoodAdvisor').then(m => ({ default: m.CountryFoodAdvisor })));
+const BreedEncyclopedia = React.lazy(() => import('./components/BreedEncyclopedia').then(m => ({ default: m.BreedEncyclopedia })));
+const TipsAndGuidesModule = React.lazy(() => import('./components/TipsAndGuidesModule').then(m => ({ default: m.TipsAndGuidesModule })));
+const FoodTrafficLight = React.lazy(() => import('./components/FoodTrafficLight').then(m => ({ default: m.FoodTrafficLight })));
+const BarfRecipeGenerator = React.lazy(() => import('./components/BarfRecipeGenerator').then(m => ({ default: m.BarfRecipeGenerator })));
+const ShareModal = React.lazy(() => import('./components/ShareModal').then(m => ({ default: m.ShareModal })));
+const SubscriptionModal = React.lazy(() => import('./components/SubscriptionModal').then(m => ({ default: m.SubscriptionModal })));
+const AdminDashboardModal = React.lazy(() => import('./components/AdminDashboardModal').then(m => ({ default: m.AdminDashboardModal })));
+const FeedbackModal = React.lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
 import { usePets } from './context/PetContext';
 import { useBgPreferences } from './hooks/useBgPreferences';
 
@@ -1106,7 +1107,15 @@ export default function App() {
             </div>
           )}
 
-          {/* VISTAS MODULARES CON EL MISMO BALANCE VISUAL */}
+          {/* VISTAS MODULARES CON CARGA DIFERIDA BAJO DEMANDA */}
+          <React.Suspense
+            fallback={
+              <div className="w-full py-16 flex flex-col items-center justify-center gap-2.5">
+                <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-bold text-stone-500 dark:text-stone-400">Cargando módulo...</span>
+              </div>
+            }
+          >
           {activeTab === 'routine' && (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
               <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
@@ -1251,6 +1260,7 @@ export default function App() {
               </div>
             </div>
           )}
+          </React.Suspense>
 
         </main>
       </div>
@@ -1289,26 +1299,36 @@ export default function App() {
         </div>
       </footer>
 
-      {/* Modales */}
-      <ShareModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        profile={profile}
-        result={result}
-        breedName={selectedBreedInfo?.name}
-      />
-      <SubscriptionModal
-        isOpen={showSubscriptionModal}
-        onClose={() => setShowSubscriptionModal(false)}
-      />
-      <AdminDashboardModal
-        isOpen={showAdminModal}
-        onClose={() => setShowAdminModal(false)}
-      />
-      <FeedbackModal
-        isOpen={showFeedbackModal}
-        onClose={() => setShowFeedbackModal(false)}
-      />
+      {/* Modales bajo demanda */}
+      <React.Suspense fallback={null}>
+        {showShareModal && (
+          <ShareModal
+            isOpen={showShareModal}
+            onClose={() => setShowShareModal(false)}
+            profile={profile}
+            result={result}
+            breedName={selectedBreedInfo?.name}
+          />
+        )}
+        {showSubscriptionModal && (
+          <SubscriptionModal
+            isOpen={showSubscriptionModal}
+            onClose={() => setShowSubscriptionModal(false)}
+          />
+        )}
+        {showAdminModal && (
+          <AdminDashboardModal
+            isOpen={showAdminModal}
+            onClose={() => setShowAdminModal(false)}
+          />
+        )}
+        {showFeedbackModal && (
+          <FeedbackModal
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+          />
+        )}
+      </React.Suspense>
       <RegistrationLockModal />
       <LogoutTransitionModal isOpen={isLoggingOut} />
       <BackToTopButton />
