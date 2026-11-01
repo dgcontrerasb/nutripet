@@ -24,8 +24,10 @@ export const ALLOWED_PUBLIC_PET_KEYS = [
   'type',
   'breedName',
   'stage',
+  'ageMonths',
   'weightKg',
   'neutered',
+  'microchip',
   'photoUrl',
   'gender',
   'shareHealthEmergencyInfo',
@@ -70,7 +72,7 @@ export async function ensurePublicPetCard(
 
   // 1. Verificación del tamaño de foto (< 250 KB) para proteger cuota de Firestore
   let safePhotoUrl: string | undefined = undefined;
-  const rawPhoto = pet.photoUrl || (pet as any).photoURL;
+  const rawPhoto = pet.photoUrl || pet.photoURL;
   if (rawPhoto && typeof rawPhoto === 'string' && rawPhoto.trim() !== '') {
     const photoBytes = new Blob([rawPhoto]).size;
     if (photoBytes <= 250 * 1024) {
@@ -84,7 +86,8 @@ export async function ensurePublicPetCard(
   const safeType: 'dog' | 'cat' = pet.type === 'cat' ? 'cat' : 'dog';
 
   let safeStage: 'puppy_kitten' | 'adult' | 'senior' = 'adult';
-  if (pet.stage === 'puppy_kitten' || (pet.stage as any) === 'puppy' || (pet.stage as any) === 'kitten') {
+  const rawStage = String(pet.stage || '');
+  if (pet.stage === 'puppy_kitten' || rawStage === 'puppy' || rawStage === 'kitten') {
     safeStage = 'puppy_kitten';
   } else if (pet.stage === 'senior') {
     safeStage = 'senior';
@@ -154,6 +157,12 @@ export async function ensurePublicPetCard(
     }
     if (pet.gender === 'male' || pet.gender === 'female') {
       publicPayload.gender = pet.gender;
+    }
+    if (typeof pet.ageMonths === 'number' && !isNaN(pet.ageMonths) && pet.ageMonths > 0) {
+      publicPayload.ageMonths = Math.round(pet.ageMonths);
+    }
+    if (pet.microchip && pet.microchip.trim() !== '') {
+      publicPayload.microchip = pet.microchip.trim().slice(0, 40);
     }
 
     // Datos de salud SOLO si shareHealthEmergencyInfo es true

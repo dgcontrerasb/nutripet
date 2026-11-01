@@ -52,10 +52,25 @@ service cloud.firestore {
       }
     }
 
-    // Fichas públicas para lectura por código QR
+    // Fichas públicas para lectura individual por código QR
     match /publicPets/{petId} {
-      allow read: if true;
-      allow write: if isAuthenticated() || isAdmin();
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if isAdmin() || (
+        isAuthenticated() &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.publicToken == petId
+      );
+      allow update: if isAdmin() || (
+        isAuthenticated() &&
+        (!('ownerId' in resource.data) || resource.data.ownerId == request.auth.uid) &&
+        request.resource.data.ownerId == request.auth.uid &&
+        request.resource.data.publicToken == petId
+      );
+      allow delete: if isAdmin() || (
+        isAuthenticated() &&
+        (!('ownerId' in resource.data) || resource.data.ownerId == request.auth.uid)
+      );
     }
 
     // Feedbacks y opiniones

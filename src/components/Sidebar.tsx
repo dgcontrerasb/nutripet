@@ -495,7 +495,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               transition={{ type: 'spring', damping: 25, stiffness: 220 }}
               className="relative w-72 max-w-[85vw] bg-white dark:bg-stone-900 h-full shadow-2xl flex flex-col z-[130] border-r border-stone-200 dark:border-stone-800 overflow-hidden"
             >
-              <div className="p-4 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2 h-16 shrink-0 bg-white dark:bg-stone-900">
+              <div className="px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between gap-2 min-h-16 shrink-0 bg-white dark:bg-stone-900">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-9 h-9 rounded-full bg-stone-100 dark:bg-stone-800 border border-stone-200 dark:border-stone-700 overflow-hidden flex items-center justify-center shrink-0">
                     {petPhotoUrl ? (
@@ -524,7 +524,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {renderNavLinks(handleSelectTab, true)}
               </nav>
 
-              <div className="p-3 border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/90 space-y-2 shrink-0">
+              <div className="px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/90 space-y-2 shrink-0">
                 {/* Botón Calificar en Menú Móvil */}
                 {onOpenFeedbackModal && (
                   <button

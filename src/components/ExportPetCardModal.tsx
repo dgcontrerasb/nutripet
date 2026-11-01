@@ -98,7 +98,7 @@ export const ExportPetCardModal: React.FC<Props> = ({ isOpen, onClose, onOpenSub
   const publicId = activePet ? (activePet.publicId || activePet.id) : '';
   const breed = activePet ? POPULAR_BREEDS.find(b => b.id === activePet.breedId) : null;
   const breedName = activePet ? (breed ? breed.name : activePet.breedCustom || 'Mestizo / Único') : '';
-  const photoSrc = activePet ? (activePet.photoUrl || (activePet as any).photoURL) : null;
+  const photoSrc = activePet ? (activePet.photoUrl || activePet.photoURL) : null;
 
   useEffect(() => {
     setPhotoError(false);

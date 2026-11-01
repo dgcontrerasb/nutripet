@@ -1,6 +1,12 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, Auth } from 'firebase/auth';
-import { getFirestore, Firestore } from 'firebase/firestore';
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  Firestore
+} from 'firebase/firestore';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
 // Función defensiva para normalizar y corregir errores tipográficos en el authDomain
@@ -34,7 +40,19 @@ export const auth: Auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
-export const db: Firestore = getFirestore(app);
+const initPersistentFirestore = (firebaseApp: FirebaseApp): Firestore => {
+  try {
+    return initializeFirestore(firebaseApp, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  } catch {
+    return getFirestore(firebaseApp);
+  }
+};
+
+export const db: Firestore = initPersistentFirestore(app);
 
 // Preparación de Firebase App Check (sin romper el entorno de desarrollo)
 if (typeof window !== 'undefined') {
@@ -60,6 +78,6 @@ console.log('📌 Firebase config:', {
 console.log('🔍 Entorno Firebase: NutriPet Dev');
 console.log('🔍 Firebase key presente:', Boolean(firebaseConfig.apiKey));
 console.log('🔍 Firebase project:', firebaseConfig.projectId);
-console.log('🔍 Firestore database: (default)');
+console.log('🔍 Firestore database: (default) [Persistent Local Cache]');
 
 export default app;

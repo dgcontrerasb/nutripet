@@ -78,6 +78,7 @@ export interface PetProfile {
   diet: DietType;
   kibbleKcalPer100g: number;
   photoUrl?: string;
+  photoURL?: string;
   microchip?: string;
   allergies?: string;
   knownDiseases?: string;
@@ -109,8 +110,10 @@ export interface PublicPetEmergencyCard {
   photoUrl?: string;
   gender?: Gender;
   stage: LifeStage;
+  ageMonths?: number;
   weightKg: number;
   neutered: boolean;
+  microchip?: string;
   
   // Consentimientos explícitos
   shareHealthEmergencyInfo: boolean;

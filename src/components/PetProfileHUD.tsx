@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PetProfile, CalculationResult, AppTab } from '../types';
+import { PetProfile, CalculationResult, AppTab, DietType } from '../types';
 import { POPULAR_BREEDS, getSuggestedIdealWeight } from '../data';
 import {
   Scale,
@@ -34,8 +34,8 @@ export const PetProfileHUD: React.FC<Props> = ({
   className = ''
 }) => {
   const isDog = profile.type === 'dog';
-  const [hudDiet, setHudDiet] = useState<'kibble' | 'mixed' | 'barf'>(
-    (profile.diet as any) === 'barf' ? 'barf' : (profile.diet as any) === 'mixed' ? 'mixed' : 'kibble'
+  const [hudDiet, setHudDiet] = useState<DietType>(
+    profile.diet === 'barf' ? 'barf' : profile.diet === 'mixed' ? 'mixed' : 'kibble'
   );
 
   // Información de Raza y Pesos Clínicos

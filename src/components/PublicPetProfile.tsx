@@ -98,14 +98,14 @@ export const PublicPetProfile: React.FC = () => {
   // Formateo de variables biométricas
   const rawPhone = (card.shareOwnerContact && card.ownerPhone) ? card.ownerPhone : '';
   const telefonoLimpio = rawPhone.replace(/\D/g, '');
-  const microchip = (card as any).microchip || 'Registrado';
-  const edad = (card as any).ageMonths 
-    ? Math.floor((card as any).ageMonths / 12) + ' años' 
-    : (card.stage === 'puppy' ? 'Cachorro' : card.stage === 'senior' ? 'Senior' : 'Adulto');
+  const microchip = card.microchip || 'Registrado';
+  const edad = card.ageMonths 
+    ? Math.floor(card.ageMonths / 12) + ' años' 
+    : (card.stage === 'puppy_kitten' ? 'Cachorro' : card.stage === 'senior' ? 'Senior' : 'Adulto');
   const sexo = card.gender === 'male' ? 'Macho' : card.gender === 'female' ? 'Hembra' : 'Registrado';
 
   return (
-    <div className="min-h-screen bg-stone-100 dark:bg-[#0f1712] py-8 px-4 flex flex-col items-center justify-center gap-4 transition-colors">
+    <div className="min-h-screen bg-stone-100 dark:bg-[#0f1712] pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] px-4 flex flex-col items-center justify-center gap-4 transition-colors">
       {/* 💳 APPLE WALLET DIGITAL PASS */}
       <div className="w-full max-w-sm sm:max-w-md mx-auto bg-white dark:bg-[#1a231d] rounded-[32px] border border-stone-200/90 dark:border-stone-800 shadow-2xl overflow-hidden transition-all text-stone-800 dark:text-stone-100">
         

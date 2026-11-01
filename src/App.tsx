@@ -693,7 +693,7 @@ export default function App() {
         )}
 
         {/* Contenido Principal con Respiro Armónico y Equilibrado */}
-        <main className="flex-grow flex-1 w-full px-3 sm:px-5 lg:pl-3 lg:pr-6 pt-1 sm:pt-4 pb-8 space-y-3 sm:space-y-4 overflow-x-hidden">
+        <main className="flex-grow flex-1 w-full px-3 sm:px-5 lg:pl-3 lg:pr-6 pt-1 sm:pt-4 pb-10 lg:pb-8 space-y-3 sm:space-y-4 overflow-x-hidden">
           {/* VISTA 1: CALCULADORA Y FICHA CLÍNICA OFICIAL */}
           {activeTab === 'calculator' && (
             <div className="w-full animate-fade-in flex flex-col xl:flex-row items-start gap-4 sm:gap-6">
@@ -920,8 +920,8 @@ export default function App() {
                       barfDailyGrams={result.barfBreakdown?.totalGrams || Math.round(result.kibbleDailyGrams * 2.1)}
                       petName={profile.name}
                       petType={profile.type}
-                      selectedDiet={(profile.diet as any) || 'kibble'}
-                      onDietChange={(newDiet) => setProfile(prev => ({ ...prev, diet: newDiet as any }))}
+                      selectedDiet={profile.diet || 'kibble'}
+                      onDietChange={(newDiet) => setProfile(prev => ({ ...prev, diet: newDiet }))}
                     />
                   </div>
 
@@ -1256,7 +1256,7 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-stone-200/80 dark:border-stone-800/80 bg-white/70 dark:bg-stone-900/70 backdrop-blur-md py-3 sm:py-3.5 no-print transition-colors">
+      <footer className="mt-auto border-t border-stone-200/80 dark:border-stone-800/80 bg-white/70 dark:bg-stone-900/70 backdrop-blur-md pt-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:py-3.5 no-print transition-colors">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-2.5 text-center md:text-left">
           {/* Marca y Propósito */}
           <div className="flex items-center gap-2 shrink-0">

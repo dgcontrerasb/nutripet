@@ -358,6 +358,12 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           await deleteDoc(doc(db, 'users', anonUid, 'pets', petId, 'weightLogs', weightDoc.id));
         }
 
+        const bathColSnap = await getDocs(collection(db, 'users', anonUid, 'pets', petId, 'bathLogs'));
+        for (const bathDoc of bathColSnap.docs) {
+          await setDoc(doc(db, 'users', googleUid, 'pets', petId, 'bathLogs', bathDoc.id), bathDoc.data());
+          await deleteDoc(doc(db, 'users', anonUid, 'pets', petId, 'bathLogs', bathDoc.id));
+        }
+
         await deleteDoc(doc(db, 'users', anonUid, 'pets', petId));
       }
 
@@ -368,19 +374,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   useEffect(() => {
-    // Procesar retorno si el usuario inició sesión mediante signInWithRedirect
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result?.user) {
-          console.log('✅ [Auth] Sesión iniciada exitosamente con Redirect:', result.user.email);
-        }
-      })
-      .catch((err) => {
-        if (err.code !== 'auth/popup-closed-by-user') {
-          console.warn('[Auth] Redirect result info:', err);
-        }
-      });
-
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       const prevAnonUid = prevAnonUidRef.current;
 
@@ -443,6 +436,15 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               photoURL: currentUser.photoURL || '',
               createdAt: new Date().toISOString()
             }), { merge: true });
+          } else {
+            const userData = userSnap.data();
+            if (userData?.lastActivePetId) {
+              setActivePetIdState(prev => {
+                const resolved = prev || userData.lastActivePetId;
+                try { localStorage.setItem(LOCAL_STORAGE_ACTIVE_KEY, resolved); } catch {}
+                return resolved;
+              });
+            }
           }
         } catch (e: any) {
           if (e?.code === 'permission-denied') {
@@ -464,40 +466,6 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     return () => unsubscribe();
   }, [syncTrialFromBackend]);
-
-  useEffect(() => {
-    if (!user) return;
-
-    const userDocRef = doc(db, 'users', user.uid);
-    const unsubscribeUserDoc = onSnapshot(userDocRef, async (snap) => {
-      const isAdmin = user.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
-
-      if (snap.exists()) {
-        const data = snap.data();
-
-        if (data.lastActivePetId) {
-          setActivePetIdState(data.lastActivePetId);
-          try { localStorage.setItem(LOCAL_STORAGE_ACTIVE_KEY, data.lastActivePetId); } catch {}
-        }
-
-        if (isAdmin) {
-          setSubscription({
-            tier: 'pro_annual',
-            status: 'active',
-            planName: 'NutriPet Pro (Administrador)',
-            validUntil: '2030-12-31'
-          });
-          setTrialDaysRemaining(365);
-          setIsProState(true);
-        }
-      }
-    }, (err) => {
-      console.error('Error listening to user document:', err);
-      setSyncError(`Error en usuario: ${err.message}`);
-    });
-
-    return () => unsubscribeUserDoc();
-  }, [user]);
 
   useEffect(() => {
     if (!user) return;
@@ -553,64 +521,70 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!user || !activePetId) return;
 
-    // Si los registros de esta mascota ya se cargaron en el estado durante la sesión actual,
-    // se leen directamente de la memoria / localStorage para evitar reconexión masiva y lecturas redundantes
+    // Si los registros de esta mascota ya se cargaron en la sesión actual,
+    // se leen de memoria / localStorage para evitar lecturas redundantes (Plan Spark $0)
     if (loadedPetsRef.current.has(activePetId)) {
       return;
     }
 
-    loadedPetsRef.current.add(activePetId);
+    let cancelled = false;
+    const currentUid = auth.currentUser?.uid || user.uid;
 
-    const recordsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'medicalRecords');
-    const unsubscribeRecords = onSnapshot(recordsRef, (snap) => {
-      const records: MedicalRecord[] = [];
-      snap.forEach(d => records.push({ ...(d.data() as MedicalRecord), id: d.id }));
-      setMedicalRecords(prev => {
-        const others = prev.filter(r => r.petId !== activePetId);
-        return [...others, ...records];
-      });
-    }, (err) => {
-      console.warn('Medical records listener offline / notice:', err.message);
-    });
+    const loadPetSubcollections = async () => {
+      try {
+        const [recordsSnap, remindersSnap, weightsSnap, bathsSnap] = await Promise.all([
+          getDocs(collection(db, 'users', currentUid, 'pets', activePetId, 'medicalRecords')),
+          getDocs(collection(db, 'users', currentUid, 'pets', activePetId, 'reminders')),
+          getDocs(collection(db, 'users', currentUid, 'pets', activePetId, 'weightLogs')),
+          getDocs(collection(db, 'users', currentUid, 'pets', activePetId, 'bathLogs'))
+        ]);
 
-    const remindersRef = collection(db, 'users', user.uid, 'pets', activePetId, 'reminders');
-    const unsubscribeReminders = onSnapshot(remindersRef, (snap) => {
-      const rems: Reminder[] = [];
-      snap.forEach(d => rems.push({ ...(d.data() as Reminder), id: d.id }));
-      setReminders(prev => {
-        const others = prev.filter(r => r.petId !== activePetId);
-        return [...others, ...rems];
-      });
-    }, (err) => {
-      console.warn('Reminders listener offline / notice:', err.message);
-    });
+        if (cancelled) return;
+        loadedPetsRef.current.add(activePetId);
 
-    const weightsRef = collection(db, 'users', user.uid, 'pets', activePetId, 'weightLogs');
-    const unsubscribeWeights = onSnapshot(weightsRef, (snap) => {
-      const weights: WeightLog[] = [];
-      snap.forEach(d => weights.push({ ...(d.data() as WeightLog), id: d.id }));
-      setWeightLogs(prev => {
-        const others = prev.filter(w => w.petId !== activePetId);
-        return [...others, ...weights];
-      });
-    }, (err) => {
-      console.warn('Weights listener offline / notice:', err.message);
-    });
+        const records: MedicalRecord[] = [];
+        recordsSnap.forEach(d => records.push({ ...(d.data() as MedicalRecord), id: d.id }));
+        setMedicalRecords(prev => {
+          const others = prev.filter(r => r.petId !== activePetId);
+          return sanitizeRecords([...others, ...records]);
+        });
+
+        const rems: Reminder[] = [];
+        remindersSnap.forEach(d => rems.push({ ...(d.data() as Reminder), id: d.id }));
+        setReminders(prev => {
+          const others = prev.filter(r => r.petId !== activePetId);
+          return [...others, ...rems];
+        });
+
+        const weights: WeightLog[] = [];
+        weightsSnap.forEach(d => weights.push({ ...(d.data() as WeightLog), id: d.id }));
+        setWeightLogs(prev => {
+          const others = prev.filter(w => w.petId !== activePetId);
+          return [...others, ...weights];
+        });
+
+        const baths: BathLog[] = [];
+        bathsSnap.forEach(d => baths.push({ ...(d.data() as BathLog), id: d.id }));
+        setBathLogs(prev => {
+          const others = prev.filter(b => b.petId !== activePetId);
+          return [...others, ...baths];
+        });
+      } catch (err: any) {
+        console.warn('Subcollections fetch offline / notice:', err?.message || err);
+      }
+    };
+
+    loadPetSubcollections();
 
     return () => {
-      unsubscribeRecords();
-      unsubscribeReminders();
-      unsubscribeWeights();
+      cancelled = true;
     };
   }, [user, activePetId]);
 
   const setActivePetId = useCallback((id: string) => {
     setActivePetIdState(id);
     try { localStorage.setItem(LOCAL_STORAGE_ACTIVE_KEY, id); } catch {}
-    if (user) {
-      setDoc(doc(db, 'users', user.uid), { lastActivePetId: id }, { merge: true }).catch(() => {});
-    }
-  }, [user]);
+  }, []);
 
   // === FUNCIÓN setPetPublicId: PERSISTENCIA TOTAL DEL ID PÚBLICO (REACT + LOCALSTORAGE + FIRESTORE) ===
   const setPetPublicId = useCallback(async (petId: string, publicId: string) => {
@@ -869,18 +843,16 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return remaining;
     });
 
-    // Limpiar expedientes, recordatorios y pesos asociados en memoria local
+    // Limpiar expedientes, recordatorios, pesos y baños asociados en memoria local
     setMedicalRecords(prev => prev.filter(r => r.petId !== petId));
     setReminders(prev => prev.filter(r => r.petId !== petId));
     setWeightLogs(prev => prev.filter(w => w.petId !== petId));
+    setBathLogs(prev => prev.filter(b => b.petId !== petId));
 
     // 4. Actualizar activePetId si coincide con la eliminada de forma atómica
     setActivePetIdState(currentActiveId => {
       if (currentActiveId === petId) {
         try { localStorage.setItem(LOCAL_STORAGE_ACTIVE_KEY, nextActiveId); } catch {}
-        if (user) {
-          setDoc(doc(db, 'users', user.uid), { lastActivePetId: nextActiveId }, { merge: true }).catch(() => {});
-        }
         return nextActiveId;
       }
       return currentActiveId;
@@ -919,6 +891,16 @@ export const PetProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           }
         } catch (e) {
           console.warn('Nota limpiando weightLogs en Firestore:', e);
+        }
+
+        // Limpiar subcolección bathLogs
+        try {
+          const bathSnap = await getDocs(collection(db, 'users', currentUid, 'pets', petId, 'bathLogs'));
+          for (const d of bathSnap.docs) {
+            await deleteDoc(doc(db, 'users', currentUid, 'pets', petId, 'bathLogs', d.id));
+          }
+        } catch (e) {
+          console.warn('Nota limpiando bathLogs en Firestore:', e);
         }
 
         // Eliminar también la ficha pública asociada en publicPets/{targetPublicId}
