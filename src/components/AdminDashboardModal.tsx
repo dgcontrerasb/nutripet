@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Users, 
   Crown, 
@@ -10,19 +10,20 @@ import {
   Clock, 
   AlertCircle, 
   UserCheck, 
-  Calendar,
-  X,
-  Sparkles,
-  TrendingUp,
-  CreditCard,
-  Trash2,
-  Edit2,
-  Download,
-  Eye,
-  MessageSquare,
-  Star,
-  Smartphone,
-  Monitor
+  X, 
+  Sparkles, 
+  TrendingUp, 
+  CreditCard, 
+  Trash2, 
+  Edit2, 
+  Download, 
+  Eye, 
+  MessageSquare, 
+  Star, 
+  Activity,
+  UserPlus,
+  ArrowUpRight,
+  Filter
 } from 'lucide-react';
 import { 
   collection, 
@@ -71,6 +72,28 @@ interface UserDetailsModalProps {
   onEdit: () => void;
 }
 
+// Micro-componente Sparkline decorativo SVG
+const MicroSparkline: React.FC<{ trend: 'up' | 'stable' | 'down'; color: string }> = ({ trend, color }) => {
+  const points = trend === 'up'
+    ? '0,18 10,16 20,12 30,14 40,8 50,4 60,2'
+    : trend === 'down'
+    ? '0,2 10,6 20,8 30,12 40,14 50,16 60,18'
+    : '0,10 10,12 20,9 30,11 40,9 50,10 60,10';
+
+  return (
+    <svg className="w-16 h-5 overflow-visible shrink-0" viewBox="0 0 60 20">
+      <polyline
+        fill="none"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        points={points}
+      />
+    </svg>
+  );
+};
+
 // Modal de Detalles del Usuario
 const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose, onEdit }) => {
   const isProUser = user.subscription && user.subscription.tier !== 'free' && user.subscription.status === 'active';
@@ -79,13 +102,13 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose, onEd
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-stone-200 dark:border-stone-800 transition-colors">
+      <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-lg w-full shadow-2xl overflow-hidden border border-stone-200 dark:border-stone-800 transition-colors animate-fade-in">
         {/* Cabecera */}
         <div className="bg-gradient-to-r from-emerald-600 to-teal-700 p-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl">
+            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-2xl overflow-hidden shadow-xs">
               {user.photoURL ? (
-                <img src={user.photoURL} alt={user.email} className="w-full h-full rounded-2xl object-cover" />
+                <img src={user.photoURL} alt={user.email} className="w-full h-full object-cover" />
               ) : (
                 '👤'
               )}
@@ -102,7 +125,6 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose, onEd
 
         {/* Contenido */}
         <div className="p-5 space-y-4">
-          {/* Estado */}
           <div className="grid grid-cols-2 gap-3">
             <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
               <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 uppercase block">Estado</span>
@@ -221,7 +243,7 @@ const EditSubscriptionModal: React.FC<EditSubscriptionModalProps> = ({ user, onC
 
   return (
     <div className="fixed inset-0 z-[60] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full shadow-2xl p-5 space-y-4 border border-stone-200 dark:border-stone-800">
+      <div className="bg-white dark:bg-stone-900 rounded-3xl max-w-md w-full shadow-2xl p-5 space-y-4 border border-stone-200 dark:border-stone-800 animate-fade-in">
         <div className="flex items-center justify-between">
           <h3 className="font-heading font-black text-stone-900 dark:text-stone-100">Editar Suscripción</h3>
           <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 cursor-pointer">
@@ -287,7 +309,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
   const ADMIN_EMAIL = 'dgcontrerasb@gmail.com';
   const isEmailAdmin = user?.email?.toLowerCase() === ADMIN_EMAIL;
 
-  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'feedback'>('users');
+  const [activeAdminTab, setActiveAdminTab] = useState<'users' | 'feedback' | 'manual'>('users');
   const [usersList, setUsersList] = useState<UserSummary[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -311,6 +333,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
   const [lastFetchTime, setLastFetchTime] = useState<number>(0);
   const [lastFeedbackFetchTime, setLastFeedbackFetchTime] = useState<number>(0);
 
+  // Consulta controlada para costo cero: solo lee cuando es necesario o el admin lo pide explícitamente
   const fetchUsers = async (forceRefresh = false) => {
     if (!forceRefresh && usersList.length > 0 && Date.now() - lastFetchTime < 10 * 60 * 1000) {
       return;
@@ -352,7 +375,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
             updatedAt: data.updatedAt,
           });
 
-          // Si el admin en Firestore tiene datos de prueba, corregir la base de datos automáticamente
           if (isThisAdmin && (!data.subscription || data.subscription.tier !== 'pro_annual' || data.subscription.validUntil !== '2030-12-31')) {
             setDoc(doc(db, 'users', docSnap.id), {
               subscription: {
@@ -405,17 +427,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
           };
 
           userMap.set(key, mergedUser);
-
-          if (!chosenUid.startsWith('manual_') && chosenSub && chosenSub.tier !== 'free') {
-            try {
-              await setDoc(doc(db, 'users', chosenUid), {
-                subscription: chosenSub,
-                updatedAt: new Date().toISOString()
-              }, { merge: true });
-            } catch (e) {
-              console.error('Error auto-sincronizando suscripción:', e);
-            }
-          }
         }
       }
 
@@ -488,7 +499,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
 
   useEffect(() => {
     if (isOpen && user && isEmailAdmin) {
-      if (activeAdminTab === 'users') {
+      if (activeAdminTab === 'users' || activeAdminTab === 'manual') {
         fetchUsers(false);
       } else {
         fetchFeedbacks(false);
@@ -521,6 +532,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     );
   }
 
+  // Exportar a CSV (Excel compatible)
   const exportToCSV = () => {
     const headers = ['Email', 'Nombre', 'Estado', 'Plan', 'Vigencia', 'Tipo', 'Fecha Registro'];
     const rows = usersList.map(u => {
@@ -565,6 +577,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     }
   };
 
+  // Cálculos financieros y métricas
   const payingSubscribers = usersList.filter((u) => {
     const sub = u.subscription;
     if (!sub) return false;
@@ -604,6 +617,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
   const totalRevenueCop = (copMonthlySubscribers.length * 9900) + (copAnnualSubscribers.length * 69900);
   const totalRevenueUsd = (usdMonthlySubscribers.length * 2.99) + (usdAnnualSubscribers.length * 19.99);
 
+  // Filtros reactivos en memoria (0 consultas a Firestore)
   const filteredUsers = usersList.filter((u) => {
     const matchesSearch = 
       u.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -685,7 +699,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
     const isManual = Boolean(sub?.isManual || sub?.planName?.toLowerCase().includes('manual') || targetUser.uid.startsWith('manual_'));
 
     if (!isManual) {
-      alert('Restricción de Seguridad: Solo puedes eliminar usuarios cuya suscripción fue creada o activada manualmente por el administrador.');
+      alert('Restricción de Seguridad: Solo puedes eliminar usuarios cuya suscripción fue creada o activada manualmente.');
       return;
     }
 
@@ -700,167 +714,213 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
       alert(`El registro manual de ${targetUser.email} ha sido eliminado correctamente.`);
     } catch (err: any) {
       console.error('Error al eliminar usuario manual:', err);
-      alert('Error al eliminar usuario: ' + (err.message || 'Error de conexión con Firebase'));
+      alert('Error al eliminar usuario: ' + (err.message || 'Error de conexión'));
     } finally {
       setDeletingUid(null);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-xs no-print animate-fade-in overflow-y-auto">
-      <div className="bg-white dark:bg-stone-900 rounded-3xl p-5 sm:p-8 max-w-5xl w-full shadow-2xl border border-stone-200 dark:border-stone-800 space-y-6 max-h-[92vh] overflow-y-auto my-auto text-stone-800 dark:text-stone-100 transition-colors">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/65 backdrop-blur-md no-print animate-fade-in overflow-y-auto">
+      <div className="bg-white dark:bg-[#121915] rounded-[32px] p-5 sm:p-7 max-w-5xl w-full shadow-2xl border border-stone-200/90 dark:border-stone-800 space-y-6 max-h-[92vh] overflow-y-auto my-auto text-stone-800 dark:text-stone-100 transition-colors">
         
-        {/* Cabecera */}
+        {/* 1. CABECERA EJECUTIVA ESTILO COMMAND CENTER */}
         <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400 flex items-center justify-center shadow-xs">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
               <Crown className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-lg sm:text-xl">
+                <h3 className="font-heading font-black text-stone-900 dark:text-stone-100 text-lg sm:text-xl tracking-tight">
                   Panel de Administrador
                 </h3>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[10px] font-black tracking-wide uppercase">
-                  Solo Propietario
+                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60 text-[10px] font-black tracking-wide uppercase">
+                  Propietario
+                </span>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 text-[10px] font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Panel Activo
                 </span>
               </div>
               <p className="text-xs text-stone-500 dark:text-stone-400">
-                Gestión de suscriptores, finanzas y retroalimentación de NutriPet
+                Monitoreo comercial, finanzas y control de usuarios
               </p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 cursor-pointer text-lg font-bold"
-          >
-            ✕
-          </button>
+          
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fetchUsers(true)}
+              disabled={isLoading}
+              title="Actualizar datos manualmente"
+              className="px-3 py-1.5 rounded-xl border border-stone-200 dark:border-stone-750 bg-stone-50 dark:bg-stone-800/80 hover:bg-stone-100 text-stone-600 dark:text-stone-300 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-600 ${isLoading ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refrescar</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-8 h-8 rounded-full hover:bg-stone-100 dark:hover:bg-stone-800 flex items-center justify-center text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 cursor-pointer text-base font-bold transition-colors"
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
-        {/* Selector de Pestañas */}
-        <div className="flex items-center gap-2 border-b border-stone-100 dark:border-stone-800 pb-3 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setActiveAdminTab('users')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeAdminTab === 'users'
-                ? 'bg-stone-900 dark:bg-stone-750 text-white shadow-xs'
-                : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Usuarios & Suscripciones</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveAdminTab('feedback')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-              activeAdminTab === 'feedback'
-                ? 'bg-amber-500 text-white shadow-xs'
-                : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-200 dark:hover:bg-stone-700'
-            }`}
-          >
-            <MessageSquare className="w-4 h-4" />
-            <span>Opiniones & Feedback</span>
-            {feedbackList.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 text-[10px] font-black">
-                {feedbackList.length}
+        {/* 2. TARJETAS KPI DE RENDIMIENTO CON MICRO-SPARKLINES */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          
+          {/* KPI 1: Usuarios Registrados */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100/60 dark:from-stone-850 dark:to-stone-900 border border-stone-200/80 dark:border-stone-800 space-y-2">
+            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400">
+              <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider">Total Usuarios</span>
+              <Users className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="text-2xl sm:text-3xl font-black font-tabular text-stone-900 dark:text-stone-100">
+                {usersList.length}
               </span>
-            )}
-          </button>
-        </div>
+              <MicroSparkline trend="up" color="#059669" />
+            </div>
+            <div className="text-[10px] text-stone-500 dark:text-stone-400 font-medium truncate">
+              {usersList.filter(u => !u.uid.startsWith('manual_')).length} orgánicos · {usersList.filter(u => u.uid.startsWith('manual_')).length} manuales
+            </div>
+          </div>
 
-        {/* Contenido según pestaña */}
-        {activeAdminTab === 'users' ? (
-          <div className="space-y-6">
-            {/* Métricas */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 dark:from-emerald-950/30 dark:to-emerald-900/20 border border-emerald-200 dark:border-emerald-800/60">
-                <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-300 mb-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider">Pagando (Pro)</span>
-                  <Crown className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="text-2xl sm:text-3xl font-black text-emerald-950 dark:text-emerald-100 font-heading">
-                  {payingSubscribers.length}
-                </div>
-                <div className="text-[10px] text-emerald-700 dark:text-emerald-400 mt-1 font-medium">
-                  {monthlySubscribers.length} mensual(es) • {annualSubscribers.length} anual(es)
-                </div>
+          {/* KPI 2: Clientes Pagando Pro */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-emerald-50/70 to-emerald-100/40 dark:from-emerald-950/40 dark:to-emerald-900/20 border border-emerald-200/80 dark:border-emerald-800/60 space-y-2">
+            <div className="flex items-center justify-between text-emerald-800 dark:text-emerald-300">
+              <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider">Suscriptores Pro</span>
+              <Crown className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="text-2xl sm:text-3xl font-black font-tabular text-emerald-950 dark:text-emerald-100">
+                {payingSubscribers.length}
+              </span>
+              <MicroSparkline trend="up" color="#10b981" />
+            </div>
+            <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium truncate">
+              {monthlySubscribers.length} mensual(es) · {annualSubscribers.length} anual(es)
+            </div>
+          </div>
+
+          {/* KPI 3: En Periodo de Prueba */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-50/70 to-amber-100/40 dark:from-amber-950/40 dark:to-amber-900/20 border border-amber-200/80 dark:border-amber-800/60 space-y-2">
+            <div className="flex items-center justify-between text-amber-800 dark:text-amber-300">
+              <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider">En Prueba</span>
+              <Clock className="w-4 h-4 text-amber-500" />
+            </div>
+            <div className="flex items-baseline justify-between gap-1">
+              <span className="text-2xl sm:text-3xl font-black font-tabular text-amber-950 dark:text-amber-100">
+                {trialUsers.length}
+              </span>
+              <MicroSparkline trend="stable" color="#f59e0b" />
+            </div>
+            <div className="text-[10px] text-amber-700 dark:text-amber-400 font-medium truncate">
+              {usersList.length > 0 ? Math.round((trialUsers.length / usersList.length) * 100) : 0}% de la base activa
+            </div>
+          </div>
+
+          {/* KPI 4: Ingresos Recurrentes Consolidados */}
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-stone-50 to-stone-100/60 dark:from-stone-850 dark:to-stone-900 border border-stone-200/80 dark:border-stone-800 space-y-2">
+            <div className="flex items-center justify-between text-stone-500 dark:text-stone-400">
+              <span className="text-[10.5px] font-mono font-bold uppercase tracking-wider">Ingresos Totales</span>
+              <CreditCard className="w-4 h-4 text-blue-500" />
+            </div>
+            <div className="space-y-0.5">
+              <div className="text-lg font-black font-tabular text-stone-900 dark:text-stone-100 leading-tight">
+                ${totalRevenueCop.toLocaleString('es-CO')} <span className="text-[10px] font-bold text-stone-400">COP</span>
               </div>
-
-              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60">
-                <div className="flex items-center justify-between text-amber-800 dark:text-amber-300 mb-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider">En Prueba</span>
-                  <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div className="text-2xl sm:text-3xl font-black text-amber-950 dark:text-amber-100 font-heading">
-                  {trialUsers.length}
-                </div>
-                <div className="text-[10px] text-amber-700 dark:text-amber-400 mt-1 font-medium">
-                  Potenciales compradores
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-750">
-                <div className="flex items-center justify-between text-stone-600 dark:text-stone-400 mb-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider">Ingresos COP</span>
-                  <DollarSign className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-stone-900 dark:text-stone-100 font-heading">
-                  ${totalRevenueCop.toLocaleString('es-CO')}
-                </div>
-                <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-1 font-medium">
-                  Wompi / Nequi / PSE
-                </div>
-              </div>
-
-              <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800/50 border border-stone-200 dark:border-stone-750">
-                <div className="flex items-center justify-between text-stone-600 dark:text-stone-400 mb-1">
-                  <span className="text-[11px] font-extrabold uppercase tracking-wider">Ingresos USD</span>
-                  <CreditCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="text-xl sm:text-2xl font-black text-stone-900 dark:text-stone-100 font-heading">
-                  ${totalRevenueUsd.toFixed(2)}
-                </div>
-                <div className="text-[10px] text-stone-500 dark:text-stone-400 mt-1 font-medium">
-                  PayPal / Tarjeta Int.
-                </div>
+              <div className="text-xs font-bold font-tabular text-emerald-700 dark:text-emerald-400">
+                +${totalRevenueUsd.toFixed(2)} USD (PayPal)
               </div>
             </div>
+          </div>
 
-            {/* Barra de Búsqueda y Acciones */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-stone-50 dark:bg-stone-800/50 p-3 rounded-2xl border border-stone-200 dark:border-stone-750">
+        </div>
+
+        {/* 3. SELECTOR DE PESTAÑAS PRINCIPALES */}
+        <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3 flex-wrap gap-2">
+          <div className="flex items-center gap-1.5 p-1 bg-stone-100 dark:bg-stone-850 rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setActiveAdminTab('users')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeAdminTab === 'users'
+                  ? 'bg-white dark:bg-stone-750 text-stone-900 dark:text-white shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
+              }`}
+            >
+              <Users className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Usuarios Registrados ({usersList.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveAdminTab('manual')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeAdminTab === 'manual'
+                  ? 'bg-white dark:bg-stone-750 text-stone-900 dark:text-white shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
+              }`}
+            >
+              <UserPlus className="w-3.5 h-3.5 text-amber-500" />
+              <span>Activar Manual</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveAdminTab('feedback')}
+              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeAdminTab === 'feedback'
+                  ? 'bg-white dark:bg-stone-750 text-stone-900 dark:text-white shadow-xs'
+                  : 'text-stone-600 dark:text-stone-400 hover:text-stone-900'
+              }`}
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+              <span>Opiniones ({feedbackList.length})</span>
+            </button>
+          </div>
+
+          {activeAdminTab === 'users' && (
+            <button
+              type="button"
+              onClick={exportToCSV}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs active:scale-95"
+              title="Exportar base completa a archivo CSV compatible con Excel"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Exportar Excel</span>
+            </button>
+          )}
+        </div>
+
+        {/* 4. VISTA: TABLA Y GESTIÓN DE USUARIOS */}
+        {activeAdminTab === 'users' && (
+          <div className="space-y-4 animate-fade-in">
+            {/* Buscador y Filtros reactivos */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
               <div className="relative flex-1">
-                <Search className="w-4 h-4 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-3.5 h-3.5 text-stone-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Buscar usuario por correo o nombre..."
+                  placeholder="Buscar por correo o nombre en tiempo real..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-stone-100"
+                  className="w-full pl-9 pr-3 py-2 bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-750 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-stone-100 font-medium"
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 overflow-x-auto">
-                <button
-                  type="button"
-                  onClick={exportToCSV}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
-                  title="Exportar lista a CSV"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Exportar CSV</span>
-                </button>
-
+              <div className="flex items-center gap-1 overflow-x-auto">
                 <button
                   type="button"
                   onClick={() => setFilterType('all')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     filterType === 'all'
                       ? 'bg-stone-900 dark:bg-stone-700 text-white'
-                      : 'bg-white dark:bg-stone-800 text-stone-600 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-750 border border-stone-200 dark:border-stone-700'
+                      : 'bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-400'
                   }`}
                 >
                   Todos ({usersList.length})
@@ -868,62 +928,34 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
                 <button
                   type="button"
                   onClick={() => setFilterType('paying')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
                     filterType === 'paying'
                       ? 'bg-emerald-700 text-white'
-                      : 'bg-white dark:bg-stone-800 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800'
+                      : 'bg-stone-100 dark:bg-stone-800 text-emerald-800 dark:text-emerald-300'
                   }`}
                 >
                   <Crown className="w-3 h-3 text-amber-400" />
-                  <span>Pagando ({payingSubscribers.length})</span>
+                  <span>Pro ({payingSubscribers.length})</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFilterType('trial')}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                     filterType === 'trial'
                       ? 'bg-amber-600 text-white'
-                      : 'bg-white dark:bg-stone-800 text-amber-800 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 border border-amber-200 dark:border-amber-800'
+                      : 'bg-stone-100 dark:bg-stone-800 text-amber-800 dark:text-amber-300'
                   }`}
                 >
                   Prueba ({trialUsers.length})
                 </button>
-                <button
-                  type="button"
-                  onClick={() => fetchUsers(true)}
-                  disabled={isLoading}
-                  title="Refrescar lista"
-                  className="p-2 rounded-xl bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-600 dark:text-stone-300 cursor-pointer"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                </button>
               </div>
             </div>
 
-            {loadError && (
-              <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-2xl text-xs text-amber-900 dark:text-amber-300 space-y-2">
-                <div className="flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <span className="font-medium leading-relaxed">{loadError}</span>
-                </div>
-                {!user && (
-                  <button
-                    type="button"
-                    onClick={loginWithGoogle}
-                    className="mt-2 py-2 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer"
-                  >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>Iniciar sesión con Google</span>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Tabla de Usuarios */}
-            <div className="border border-stone-200 dark:border-stone-800 rounded-2xl overflow-hidden bg-white dark:bg-stone-900 shadow-2xs">
+            {/* Tabla Estilizada tipo Notion / Linear */}
+            <div className="border border-stone-200/90 dark:border-stone-800 rounded-2xl overflow-hidden bg-white dark:bg-stone-900 shadow-2xs">
               <div className="max-h-72 overflow-y-auto">
                 <table className="w-full text-left border-collapse text-xs">
-                  <thead className="bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 sticky top-0 font-bold border-b border-stone-200 dark:border-stone-750">
+                  <thead className="bg-stone-50 dark:bg-stone-850 text-stone-600 dark:text-stone-400 sticky top-0 font-bold border-b border-stone-200 dark:border-stone-750 z-10">
                     <tr>
                       <th className="py-2.5 px-3">Usuario</th>
                       <th className="py-2.5 px-3">Estado</th>
@@ -937,13 +969,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-stone-400">
                           <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-600" />
-                          <span>Cargando suscriptores de Firebase...</span>
+                          <span>Consultando base de usuarios...</span>
                         </td>
                       </tr>
                     ) : filteredUsers.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-stone-400">
-                          No se encontraron usuarios en esta categoría.
+                          No se encontraron usuarios con ese criterio.
                         </td>
                       </tr>
                     ) : (
@@ -960,12 +992,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
                             </td>
                             <td className="py-2.5 px-3 whitespace-nowrap">
                               {isProUser ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[10px] font-black">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[10px] font-black border border-emerald-200/50">
                                   <Crown className="w-2.5 h-2.5 text-amber-500" />
                                   Activo (Paga)
                                 </span>
                               ) : isTrial ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 text-[10px] font-bold">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 text-[10px] font-bold border border-amber-200/50">
                                   <Clock className="w-2.5 h-2.5" />
                                   En Prueba
                                 </span>
@@ -978,50 +1010,41 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
                             <td className="py-2.5 px-3 whitespace-nowrap font-medium text-stone-700 dark:text-stone-300">
                               {u.subscription?.planName || (isTrial ? 'Prueba Gratuita' : 'Plan Básico')}
                             </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap text-stone-500 dark:text-stone-400">
-                              {u.subscription?.validUntil ? (
-                                <span className="font-mono text-[11px] text-stone-800 dark:text-stone-200 font-bold">{u.subscription.validUntil}</span>
-                              ) : (
-                                '—'
-                              )}
+                            <td className="py-2.5 px-3 whitespace-nowrap font-mono text-stone-600 dark:text-stone-400 text-[11px]">
+                              {u.subscription?.validUntil || 'Indefinida'}
                             </td>
-                            <td className="py-2.5 px-3 whitespace-nowrap text-right">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedUser(u)}
-                                  className="p-1.5 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-950/50 text-blue-600 dark:text-blue-400 cursor-pointer transition-all"
-                                  title="Ver detalles"
-                                >
-                                  <Eye className="w-3.5 h-3.5" />
-                                </button>
-                                
-                                {isManualUser && (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={() => setEditingUser(u)}
-                                      className="p-1.5 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/50 text-amber-600 dark:text-amber-400 cursor-pointer transition-all"
-                                      title="Editar plan"
-                                    >
-                                      <Edit2 className="w-3.5 h-3.5" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteManualUser(u)}
-                                      disabled={deletingUid === u.uid}
-                                      className="p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 cursor-pointer transition-all disabled:opacity-50"
-                                      title="Eliminar"
-                                    >
-                                      {deletingUid === u.uid ? (
-                                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                                      ) : (
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      )}
-                                    </button>
-                                  </>
-                                )}
-                              </div>
+                            <td className="py-2.5 px-3 text-right whitespace-nowrap space-x-1">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedUser(u)}
+                                className="p-1.5 rounded-lg bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 transition-colors cursor-pointer"
+                                title="Ver detalles completos"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              
+                              {isManualUser && (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingUser(u)}
+                                    className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 text-amber-700 dark:text-amber-400 transition-colors cursor-pointer"
+                                    title="Modificar días de plan"
+                                  >
+                                    <Edit2 className="w-3.5 h-3.5" />
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteManualUser(u)}
+                                    disabled={deletingUid === u.uid}
+                                    className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950/60 hover:bg-red-100 text-red-600 dark:text-red-400 transition-colors cursor-pointer disabled:opacity-50"
+                                    title="Eliminar usuario manual"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </>
+                              )}
                             </td>
                           </tr>
                         );
@@ -1031,229 +1054,192 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({ isOpen
                 </table>
               </div>
             </div>
+          </div>
+        )}
 
-            {/* Activación Manual */}
-            <div className="p-4 rounded-2xl bg-stone-50 dark:bg-stone-800/40 border border-stone-200 dark:border-stone-750 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                  <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs sm:text-sm">
-                    Activar Suscripción Pro Manualmente
-                  </h4>
-                </div>
-                <span className="text-[10px] text-stone-400">
-                  Para clientes que te pagan por transferencia directa
-                </span>
+        {/* 5. VISTA: ACTIVACIÓN MANUAL DE SUSCRIPCIÓN */}
+        {activeAdminTab === 'manual' && (
+          <div className="p-5 rounded-2xl bg-stone-50 dark:bg-stone-850/60 border border-stone-200 dark:border-stone-800 space-y-4 animate-fade-in max-w-xl mx-auto">
+            <div className="flex items-center gap-2">
+              <UserPlus className="w-4 h-4 text-emerald-600" />
+              <h4 className="font-heading font-black text-stone-900 dark:text-stone-100 text-sm">
+                Activación Manual de Suscripción Pro
+              </h4>
+            </div>
+
+            <form onSubmit={handleManualActivation} className="space-y-3.5">
+              <div>
+                <label className="text-[11px] font-bold text-stone-600 dark:text-stone-400 uppercase block mb-1">
+                  Correo Electrónico del Tutor:
+                </label>
+                <input
+                  type="email"
+                  required
+                  placeholder="ejemplo@correo.com"
+                  value={manualEmail}
+                  onChange={(e) => setManualEmail(e.target.value)}
+                  className="w-full px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-stone-100 font-medium"
+                />
               </div>
 
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-stone-600 dark:text-stone-400 uppercase block mb-1">
+                    Plan a Otorgar:
+                  </label>
+                  <select
+                    value={manualPlan}
+                    onChange={(e) => {
+                      const val = e.target.value as SubscriptionTier;
+                      setManualPlan(val);
+                      setManualDays(val === 'pro_annual' ? 420 : 60);
+                    }}
+                    className="w-full px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-xs focus:outline-none dark:text-stone-100"
+                  >
+                    <option value="pro_monthly">Mensual (60 días cortesía)</option>
+                    <option value="pro_annual">Anual (420 días cortesía)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[11px] font-bold text-stone-600 dark:text-stone-400 uppercase block mb-1">
+                    Días Totales:
+                  </label>
+                  <input
+                    type="number"
+                    value={manualDays}
+                    onChange={(e) => setManualDays(Number(e.target.value))}
+                    className="w-full px-3 py-2 bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-700 rounded-xl text-xs focus:outline-none dark:text-stone-100 font-mono"
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer pt-1">
+                <input
+                  type="checkbox"
+                  checked={manualIncludeInRevenue}
+                  onChange={(e) => setManualIncludeInRevenue(e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                />
+                <span className="text-xs text-stone-700 dark:text-stone-300 font-medium">
+                  Sumar este pago al contador de ingresos del panel (ej. pago recibido por transferencia directa/efectivo)
+                </span>
+              </label>
+
               {manualSuccessMsg && (
-                <div className="p-2.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs font-bold flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-700 dark:text-emerald-400 shrink-0" />
-                  <span>{manualSuccessMsg}</span>
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs text-emerald-900 dark:text-emerald-200 font-medium">
+                  {manualSuccessMsg}
                 </div>
               )}
 
-              <form onSubmit={handleManualActivation} className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 pt-1">
-                <input
-                  type="email"
-                  placeholder="Correo del cliente (ej: cliente@gmail.com)"
-                  value={manualEmail}
-                  onChange={(e) => setManualEmail(e.target.value)}
-                  required
-                  className="sm:col-span-2 px-3 py-2 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-stone-100"
-                />
-
-                <select
-                  value={manualPlan}
-                  onChange={(e) => {
-                    const val = e.target.value as SubscriptionTier;
-                    setManualPlan(val);
-                    setManualDays(val === 'pro_annual' ? 420 : 60);
-                  }}
-                  className="px-3 py-2 bg-white dark:bg-stone-900 border border-stone-300 dark:border-stone-700 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-stone-100"
-                >
-                  <option value="pro_monthly">Mensual 2x1 (60 días)</option>
-                  <option value="pro_annual">Anual (14 meses / 420 días)</option>
-                </select>
-
-                <button
-                  type="submit"
-                  disabled={isActivatingManual}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs disabled:opacity-50"
-                >
-                  {isActivatingManual ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <UserCheck className="w-3.5 h-3.5" />
-                  )}
-                  <span>Activar Pro</span>
-                </button>
-
-                <div className="flex items-start gap-2.5 px-1 py-1.5 text-[11px] text-stone-600 dark:text-stone-300 font-bold select-none col-span-full">
-                  <input
-                    type="checkbox"
-                    id="includeInRevenue"
-                    checked={manualIncludeInRevenue}
-                    onChange={(e) => setManualIncludeInRevenue(e.target.checked)}
-                    className="w-4 h-4 mt-0.5 rounded-sm border-stone-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <label htmlFor="includeInRevenue" className="cursor-pointer leading-normal flex flex-col sm:flex-row sm:items-center sm:gap-2">
-                    <span>¿Sumar este pago manual a las métricas de ingresos del panel?</span>
-                    <span className="text-[10px] font-medium text-stone-400 font-sans">(Marca solo si el cliente ya te pagó el dinero real)</span>
-                  </label>
-                </div>
-              </form>
-            </div>
+              <button
+                type="submit"
+                disabled={isActivatingManual}
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-all shadow-xs cursor-pointer disabled:opacity-50 active:scale-98"
+              >
+                {isActivatingManual ? 'Activando...' : 'Activar Suscripción Pro Ahora'}
+              </button>
+            </form>
           </div>
-        ) : (
-          /* Vista de Opiniones & Feedback */
-          <div className="space-y-4">
+        )}
+
+        {/* 6. VISTA: OPINIONES Y FEEDBACK */}
+        {activeAdminTab === 'feedback' && (
+          <div className="space-y-4 animate-fade-in">
             <div className="flex items-center justify-between">
-              <div>
-                <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm">
-                  Opiniones y Calificaciones de Usuarios
-                </h4>
-                <p className="text-xs text-stone-500 dark:text-stone-400">
-                  Mensajes enviados directamente desde la opción "Calificar y Opinión"
-                </p>
-              </div>
+              <span className="text-xs font-bold text-stone-500 dark:text-stone-400">
+                Opiniones enviadas por usuarios en la plataforma ({feedbackList.length})
+              </span>
               <button
                 type="button"
                 onClick={() => fetchFeedbacks(true)}
                 disabled={loadingFeedback}
-                className="px-3 py-1.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                className="px-3 py-1 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-600 dark:text-stone-300 text-xs font-bold flex items-center gap-1 cursor-pointer"
               >
-                <RefreshCw className={`w-3.5 h-3.5 ${loadingFeedback ? 'animate-spin' : ''}`} />
-                <span>Actualizar Opiniones</span>
+                <RefreshCw className={`w-3 h-3 ${loadingFeedback ? 'animate-spin' : ''}`} />
+                <span>Refrescar</span>
               </button>
             </div>
 
             {loadingFeedback ? (
-              <div className="py-12 text-center text-stone-400 text-xs">
-                <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-amber-500" />
-                Consultando comentarios en Firestore...
+              <div className="py-12 text-center text-stone-400">
+                <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-emerald-600" />
+                <span>Cargando comentarios...</span>
               </div>
             ) : feedbackList.length === 0 ? (
-              <div className="py-12 text-center text-stone-400 text-xs border border-stone-200 dark:border-stone-800 rounded-2xl bg-stone-50 dark:bg-stone-850">
-                Aún no has recibido ningún comentario de tus usuarios.
+              <div className="py-12 text-center text-stone-400 bg-stone-50 dark:bg-stone-850 rounded-2xl border border-stone-200 dark:border-stone-800">
+                No hay opiniones registradas aún.
               </div>
             ) : (
-              <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                {feedbackList.map((item) => {
-                  let dateStr = 'Fecha desconocida';
-                  if (item.createdAt?.toDate) {
-                    dateStr = item.createdAt.toDate().toLocaleString('es-CO');
-                  } else if (item.createdAt?.seconds) {
-                    dateStr = new Date(item.createdAt.seconds * 1000).toLocaleString('es-CO');
-                  } else if (item.createdAt) {
-                    dateStr = new Date(item.createdAt).toLocaleString('es-CO');
-                  }
-
-                  return (
-                    <div key={item.id} className="p-4 rounded-2xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-850 space-y-2.5 shadow-2xs">
-                      <div className="flex items-center justify-between pb-2 border-b border-stone-100 dark:border-stone-800 gap-2 flex-wrap">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-stone-900 dark:text-stone-100 text-xs">{item.userName || 'Usuario Anónimo'}</span>
-                            <span className="text-[10px] bg-stone-100 dark:bg-stone-800 text-stone-500 dark:text-stone-400 px-2 py-0.5 rounded-full font-mono">
-                              {dateStr}
-                            </span>
-                          </div>
-                          <span className="text-[11px] text-stone-400 dark:text-stone-500 block">{item.userEmail || 'Sin correo'}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-96 overflow-y-auto pr-1">
+                {feedbackList.map((fb) => (
+                  <div
+                    key={fb.id}
+                    className="p-3.5 rounded-2xl bg-stone-50 dark:bg-stone-850 border border-stone-200 dark:border-stone-800 space-y-2 relative"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-bold text-xs text-stone-900 dark:text-stone-100">
+                          {fb.userName || 'Usuario anónimo'}
                         </div>
-                        
-                        <div className="flex items-center gap-3">
-                          <div className="flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-xl border border-amber-200 dark:border-amber-800">
-                            {Array.from({ length: 5 }).map((_, i) => (
-                              <Star
-                                key={i}
-                                className={`w-3.5 h-3.5 ${
-                                  i < item.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200 dark:text-stone-700'
-                                }`}
-                              />
-                            ))}
-                            <span className="text-xs font-black text-amber-900 dark:text-amber-300 ml-1">
-                              {item.rating}/5
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteFeedback(item.id)}
-                            disabled={deletingFeedbackId === item.id}
-                            className="p-1 text-stone-400 hover:text-red-600 dark:hover:text-red-400 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors cursor-pointer disabled:opacity-50"
-                            title="Eliminar este comentario"
-                          >
-                            {deletingFeedbackId === item.id ? (
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <Trash2 className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                        </div>
+                        <div className="text-[10px] text-stone-400 font-mono">{fb.userEmail || 'Sin email'}</div>
                       </div>
 
-                      <p className="text-xs text-stone-700 dark:text-stone-200 whitespace-pre-wrap leading-relaxed bg-stone-50/50 dark:bg-stone-900/40 p-3 rounded-xl border border-stone-100 dark:border-stone-800">
-                        "{item.comment}"
-                      </p>
-
-                      <div className="flex items-center justify-between pt-1 text-[10px] text-stone-400 dark:text-stone-500">
-                        <span className="bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 px-2 py-0.5 rounded-md font-bold uppercase">
-                          {item.category === 'bug' ? '🐛 Error / Bug' : item.category === 'feature' ? '💡 Sugerencia' : item.category === 'recipe' ? '🥩 Porciones' : '⭐ Opinión General'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          {item.device === 'pc' ? (
-                            <>
-                              <Monitor className="w-3 h-3 text-sky-500" />
-                              <span>Computador</span>
-                            </>
-                          ) : (
-                            <>
-                              <Smartphone className="w-3 h-3 text-emerald-500" />
-                              <span>Celular</span>
-                            </>
-                          )}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-0.5 text-amber-400">
+                          {Array.from({ length: fb.rating }).map((_, i) => (
+                            <Star key={i} className="w-3 h-3 fill-current" />
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteFeedback(fb.id)}
+                          disabled={deletingFeedbackId === fb.id}
+                          className="p-1 rounded-md text-stone-400 hover:text-red-500 cursor-pointer transition-colors"
+                          title="Eliminar este comentario"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     </div>
-                  );
-                })}
+
+                    <p className="text-xs text-stone-700 dark:text-stone-300 leading-relaxed italic">
+                      "{fb.comment}"
+                    </p>
+
+                    {fb.category && (
+                      <span className="inline-block px-2 py-0.5 rounded-full bg-stone-200 dark:bg-stone-700 text-stone-600 dark:text-stone-300 text-[9.5px] font-bold">
+                        {fb.category}
+                      </span>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         )}
 
-        <div className="pt-2 border-t border-stone-100 dark:border-stone-800 flex items-center justify-between text-[11px] text-stone-400">
-          <span>🔒 Acceso exclusivo para {ADMIN_EMAIL}</span>
-          <button
-            onClick={onClose}
-            className="text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 font-bold cursor-pointer transition-colors"
-          >
-            Cerrar Panel
-          </button>
-        </div>
+        {/* Modales Secundarios de Usuario */}
+        {selectedUser && (
+          <UserDetailsModal
+            user={selectedUser}
+            onClose={() => setSelectedUser(null)}
+            onEdit={() => {
+              setEditingUser(selectedUser);
+              setSelectedUser(null);
+            }}
+          />
+        )}
+
+        {editingUser && (
+          <EditSubscriptionModal
+            user={editingUser}
+            onClose={() => setEditingUser(null)}
+            onSave={handleEditSubscription}
+          />
+        )}
 
       </div>
-
-      {/* Modales de Detalles y Edición */}
-      {selectedUser && (
-        <UserDetailsModal
-          user={selectedUser}
-          onClose={() => setSelectedUser(null)}
-          onEdit={() => {
-            setSelectedUser(null);
-            setEditingUser(selectedUser);
-          }}
-        />
-      )}
-
-      {editingUser && (
-        <EditSubscriptionModal
-          user={editingUser}
-          onClose={() => setEditingUser(null)}
-          onSave={handleEditSubscription}
-        />
-      )}
     </div>
   );
 };

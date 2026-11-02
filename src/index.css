@@ -426,7 +426,7 @@ html.dark {
   }
 }
 
-@keyframes verticalScroll {
+@keyframes verticalScrollUp {
   0% {
     transform: translateY(0);
   }
@@ -435,7 +435,34 @@ html.dark {
   }
 }
 
-.animate-vertical-scroll {
-  animation: verticalScroll 26s linear infinite;
+@keyframes verticalScrollDown {
+  0% {
+    transform: translateY(-50%);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-film-up {
+  animation: verticalScrollUp 24s linear infinite;
   will-change: transform;
+}
+
+.animate-film-down {
+  animation: verticalScrollDown 24s linear infinite;
+  will-change: transform;
+}
+
+/* Efecto de perforaciones de rollo de película adaptativo a la paleta NutriPet */
+.film-perforations-editorial {
+  background-image: radial-gradient(#d6cebe 40%, transparent 42%);
+  background-size: 100% 16px;
+  background-repeat: repeat-y;
+}
+
+.dark .film-perforations-editorial {
+  background-image: radial-gradient(#101713 40%, transparent 42%);
+  background-size: 100% 16px;
+  background-repeat: repeat-y;
 }
