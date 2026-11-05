@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { auth } from './lib/firebase';
 import {
   Calculator,
@@ -155,6 +156,7 @@ const PATH_TO_TAB: Record<string, AppTab> = {
 };
 
 export default function App() {
+  const navigate = useNavigate();
   const { activePet, updatePetLocal, savePet, updateSubscription, isProOrTrial, trialDaysRemaining, user, isSavingPet } = usePets();
   const isAdminUser = user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
 
@@ -361,7 +363,7 @@ export default function App() {
 
       const timer = setTimeout(() => {
         setIsLoggingOut(false);
-        window.location.reload();
+        navigate('/sign-in');
       }, 2500);
 
       return () => clearTimeout(timer);
@@ -1277,6 +1279,33 @@ export default function App() {
             </span>
           </div>
 
+          {/* Redes Sociales Oficiales */}
+          <div className="flex items-center gap-2 shrink-0 select-none">
+            <span className="text-[10px] font-bold text-stone-400 dark:text-stone-500 uppercase tracking-wider hidden sm:inline">
+              Comunidad:
+            </span>
+            <a
+              href="https://www.facebook.com/NutriPet.v2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-100 hover:bg-stone-200/90 dark:bg-stone-800 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 text-[11px] font-bold border border-stone-200/90 dark:border-stone-700 hover:border-blue-500 transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+              title="NutriPet en Facebook (@NutriPet.v2)"
+            >
+              <img src="/facebook-logo.png" alt="Facebook" className="w-3.5 h-3.5 object-contain" />
+              <span>Facebook</span>
+            </a>
+            <a
+              href="https://www.tiktok.com/@nutripetv2"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-stone-100 hover:bg-stone-200/90 dark:bg-stone-800 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 text-[11px] font-bold border border-stone-200/90 dark:border-stone-700 hover:border-stone-400 transition-all cursor-pointer shadow-2xs hover:scale-105 active:scale-95"
+              title="NutriPet en TikTok (@nutripetv2)"
+            >
+              <img src="/tiktok-logo.png" alt="TikTok" className="w-3.5 h-3.5 object-contain" />
+              <span>TikTok</span>
+            </a>
+          </div>
+
           {/* Descargo Médico Compacto (Cero cajas toscas) */}
           <p className="text-[9.5px] sm:text-[10px] text-stone-400 dark:text-stone-500 max-w-xl leading-tight">
             <strong>Aviso Clínico:</strong> Recurso orientativo basado en pautas FEDIAF & NRC. No constituye diagnóstico ni prescripción. Ante cualquier anomalía, consulta a tu médico veterinario colegiado.
@@ -1330,7 +1359,7 @@ export default function App() {
         )}
       </React.Suspense>
       <RegistrationLockModal />
-      <LogoutTransitionModal isOpen={isLoggingOut} />
+      <LogoutTransitionModal isOpen={isLoggingOut} userName={user?.displayName} />
       <BackToTopButton />
     </div>
   );

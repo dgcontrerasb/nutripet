@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { usePets } from '../context/PetContext';
+import { useNavigate } from 'react-router-dom';
 import { Plus, X, LogIn, LogOut, Check, ShieldCheck, Sparkles, Crown, ChevronDown, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
 import { PetProfile, PetType } from '../types';
 import { POPULAR_BREEDS } from '../data';
@@ -11,12 +12,15 @@ interface PetHeaderBarProps {
   onToggleDarkMode?: () => void;
 }
 
-export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({ 
+export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
+  // Header bar
+ 
   onOpenSubscriptionModal, 
   onOpenAdminModal,
   darkMode = false,
   onToggleDarkMode
 }) => {
+  const navigate = useNavigate();
   const { 
     user, 
     pets, 
@@ -454,7 +458,7 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
             ) : (
               <button
                 type="button"
-                onClick={() => setShowAuthModal(true)}
+                onClick={() => navigate('/sign-in')}
                 title="Inicia sesión con tu cuenta de Google para respaldar tus mascotas"
                 className="flex items-center gap-2 px-2.5 sm:px-3.5 py-1.5 rounded-2xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-700 border border-emerald-500 text-stone-800 dark:text-stone-100 text-xs font-black shadow-sm transition-all cursor-pointer ring-2 ring-emerald-400/30 hover:scale-[1.02]"
               >

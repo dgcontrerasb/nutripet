@@ -9,6 +9,7 @@ const App = lazy(() => import('./App.tsx'));
 const PublicPetProfile = lazy(() =>
   import('./components/PublicPetProfile').then((m) => ({ default: m.PublicPetProfile }))
 );
+const LoginPage = lazy(() => import('./pages/LoginPage.tsx'));
 
 const RouteFallback = () => (
   <div className="min-h-screen bg-stone-100 dark:bg-[#0f1712] flex items-center justify-center p-4">
@@ -25,6 +26,32 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/qr/:publicToken" element={<PublicPetProfile />} />
           <Route path="/pet/:publicToken" element={<PublicPetProfile />} />
           <Route path="/public/:publicToken" element={<PublicPetProfile />} />
+
+          {/* Rutas dedicadas de autenticación y bienvenida oficial */}
+          <Route
+            path="/sign-in"
+            element={
+              <AuthProvider>
+                <LoginPage />
+              </AuthProvider>
+            }
+          />
+          <Route
+            path="/sing-in"
+            element={
+              <AuthProvider>
+                <LoginPage />
+              </AuthProvider>
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              <AuthProvider>
+                <LoginPage />
+              </AuthProvider>
+            }
+          />
 
           {/* Todas las demás rutas de la app interna cargan App con sus proveedores */}
           <Route
