@@ -238,7 +238,7 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
               </div>
               <div className="text-right shrink-0">
                 <span className="text-[9px] sm:text-[10px] text-stone-400 block">Saco comprado</span>
-                <span className="text-xs sm:text-sm font-bold text-stone-800 dark:text-stone-200">{bagWeightKg} kg</span>
+                <span className="text-xs sm:text-sm font-bold font-tabular text-stone-800 dark:text-stone-200">{bagWeightKg} kg</span>
               </div>
             </div>
           )}
@@ -259,8 +259,8 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
                 <span className="text-[8.5px] sm:text-[9px] text-stone-500 leading-none">Pienso seco</span>
               </div>
 
-              <div className="py-2 px-2.5 sm:p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 text-center flex flex-col justify-center">
-                <span className="text-[9px] sm:text-[10px] font-bold text-amber-800 dark:text-amber-300 block uppercase tracking-tight">🥩 Carne Fresca (50%)</span>
+              <div className="py-2 px-2.5 sm:p-3 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-800 text-center flex flex-col justify-center">
+                <span className="text-[9px] sm:text-[10px] font-bold text-stone-700 dark:text-stone-300 block uppercase tracking-tight">🥩 Carne Fresca (50%)</span>
                 <div className="my-0.5 leading-none">
                   <span className="text-base sm:text-xl font-black text-stone-900 dark:text-stone-100 font-tabular">
                     <AnimatedCounter value={activeDailyFresh} />
@@ -276,16 +276,16 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
 
           {/* Ración Diaria: 100% BARF */}
           {currentDiet === 'barf' && (
-            <div className="py-2.5 px-3 sm:p-3.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 flex items-center justify-between">
+            <div className="py-2.5 px-3 sm:p-3.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-800 flex items-center justify-between">
               <div>
-                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-amber-800 dark:text-amber-300 block">Ración Diaria Fresca</span>
-                <div className="text-lg sm:text-2xl font-black text-amber-950 dark:text-emerald-200 font-tabular leading-tight">
+                <span className="text-[9px] sm:text-[10px] uppercase font-bold text-stone-700 dark:text-stone-300 block">Ración Diaria Fresca</span>
+                <div className="text-lg sm:text-2xl font-black text-stone-900 dark:text-stone-100 font-tabular leading-tight">
                   <AnimatedCounter value={activeDailyFresh} /> <span className="text-[11px] sm:text-xs font-normal text-stone-500 font-sans">g / día (2 tomas de {Math.round(activeDailyFresh / 2)}g)</span>
                 </div>
               </div>
               <div className="text-right shrink-0">
                 <span className="text-[9px] sm:text-[10px] text-stone-400 block">Lote preparado</span>
-                <span className="text-xs sm:text-sm font-bold text-stone-800 dark:text-stone-200">{freshBatchKg} kg</span>
+                <span className="text-xs sm:text-sm font-bold font-tabular text-stone-800 dark:text-stone-200">{freshBatchKg} kg</span>
               </div>
             </div>
           )}
@@ -301,7 +301,7 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
                   onClick={() => setBagWeightKg(kg)}
                   className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
                     bagWeightKg === kg
-                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      ? 'bg-[#143826] text-white shadow-2xs'
                       : 'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-600 dark:text-stone-300'
                   }`}
                 >
@@ -319,7 +319,7 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
                   onClick={() => setFreshBatchKg(kg)}
                   className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer shrink-0 ${
                     freshBatchKg === kg
-                      ? 'bg-emerald-600 text-white shadow-2xs'
+                      ? 'bg-[#143826] text-white shadow-2xs'
                       : 'bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 text-stone-600 dark:text-stone-300'
                   }`}
                 >
@@ -332,7 +332,7 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
           {/* Tarjetas de Presupuesto */}
           <div className="grid grid-cols-3 gap-2">
             <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 text-center">
-              <span className="text-[9px] font-mono uppercase text-stone-500 block mb-0.5">Duración</span>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block mb-0.5">Duración</span>
               <span className="text-base font-bold text-stone-900 dark:text-stone-100 font-tabular block leading-tight">
                 <AnimatedCounter value={durationDaysInt} /> días
               </span>
@@ -340,7 +340,7 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
             </div>
 
             <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 text-center">
-              <span className="text-[9px] font-mono uppercase text-stone-500 block mb-0.5">Costo Diario</span>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block mb-0.5">Costo Diario</span>
               <span className="text-base font-bold text-stone-900 dark:text-stone-100 font-tabular block leading-tight">
                 {curr.symbol}<AnimatedCounter value={Math.round(costPerDay)} />
               </span>
@@ -348,7 +348,7 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
             </div>
 
             <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 text-center">
-              <span className="text-[9px] font-mono uppercase text-stone-500 block mb-0.5">Presupuesto Mes</span>
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block mb-0.5">Presupuesto Mes</span>
               <span className="text-base font-bold text-stone-900 dark:text-stone-100 font-tabular block leading-tight">
                 {curr.symbol}<AnimatedCounter value={Math.round(monthlyBudget)} />
               </span>
@@ -357,8 +357,8 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
           </div>
 
           {/* Fecha Estimada */}
-          <div className="p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-amber-600 shrink-0" />
+          <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-850 border border-stone-200/80 dark:border-stone-800 text-[11px] text-stone-700 dark:text-stone-300 flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
               {currentDiet === 'barf' ? `El lote de ${freshBatchKg}kg` : `El saco de ${bagWeightKg}kg`} se terminará aprox. el <strong>{formattedFinishDate}</strong>.
             </span>
@@ -466,7 +466,7 @@ export const UnifiedFoodCalculator: React.FC<Props> = ({
           <button
             type="button"
             onClick={() => setActiveView('report')}
-            className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+            className="w-full py-2.5 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white font-black text-xs shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <CheckCircle2 className="w-4 h-4" />
             <span>Aplicar Cambios y Ver Reporte</span>

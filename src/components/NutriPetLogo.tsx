@@ -9,25 +9,74 @@ export const NutriPetLogo: React.FC<NutriPetLogoProps> = ({
   className = "", 
   size = 'md'
 }) => {
-  // Tamaños aumentados para mayor visibilidad
   const sizeMap = {
-    xs: { height: "h-8", width: "w-auto" },           // Antes: h-6
-    sm: { height: "h-12 sm:h-14", width: "w-auto" },  // Antes: h-8 sm:h-9
-    md: { height: "h-16 sm:h-20", width: "w-auto" },  // Antes: h-10 sm:h-12
-    lg: { height: "h-20 sm:h-24", width: "w-auto" },  // Antes: h-14 sm:h-18
-    xl: { height: "h-24 sm:h-32", width: "w-auto" }   // Antes: h-20 sm:h-28
+    xs: {
+      dogBox: "h-8 w-[27px]",
+      gap: "gap-1.5",
+      text: "text-base",
+      otb: "text-[7px] tracking-[0.2em]",
+      line: "w-2",
+      otbGap: "gap-1",
+    },
+    sm: {
+      dogBox: "h-11 sm:h-12 w-[37px] sm:w-[40px]",
+      gap: "gap-2",
+      text: "text-xl sm:text-2xl",
+      otb: "text-[8px] sm:text-[9px] tracking-[0.22em]",
+      line: "w-2.5 sm:w-3",
+      otbGap: "gap-1.5",
+    },
+    md: {
+      dogBox: "h-14 sm:h-16 w-[47px] sm:w-[54px]",
+      gap: "gap-2.5",
+      text: "text-2xl sm:text-3xl",
+      otb: "text-[9.5px] sm:text-[10.5px] tracking-[0.22em]",
+      line: "w-3.5 sm:w-4",
+      otbGap: "gap-1.5",
+    },
+    lg: {
+      dogBox: "h-18 sm:h-20 w-[60px] sm:w-[67px]",
+      gap: "gap-3",
+      text: "text-3xl sm:text-4xl",
+      otb: "text-[11px] sm:text-xs tracking-[0.24em]",
+      line: "w-4 sm:w-5",
+      otbGap: "gap-2",
+    },
+    xl: {
+      dogBox: "h-22 sm:h-28 w-[74px] sm:w-[94px]",
+      gap: "gap-3.5",
+      text: "text-4xl sm:text-5xl",
+      otb: "text-xs sm:text-sm tracking-[0.25em]",
+      line: "w-5 sm:w-6",
+      otbGap: "gap-2",
+    },
   };
 
-  const selectedSize = sizeMap[size];
+  const s = sizeMap[size];
 
   return (
-    <div className={`flex items-center shrink-0 ${className}`}>
-      <img
-        src="/logo.png"
-        alt="NutriPet"
-        className={`${selectedSize.height} ${selectedSize.width} object-contain select-none drop-shadow-lg`}
-        loading="eager"
-      />
+    <div className={`inline-flex items-center shrink-0 select-none ${s.gap} ${className}`}>
+      <div className={`relative overflow-hidden shrink-0 ${s.dogBox}`}>
+        <img
+          src="/logo.png"
+          alt=""
+          aria-hidden="true"
+          className="h-full w-auto max-w-none -translate-x-[9.5%] select-none dark:invert dark:brightness-95"
+          loading="eager"
+        />
+      </div>
+
+      <div className="flex flex-col items-end leading-none">
+        <span className={`font-heading font-black tracking-tight leading-none ${s.text}`}>
+          <span className="text-stone-900 dark:text-stone-100">Nutri</span>
+          <span className="text-[#0c9964]">Pet</span>
+        </span>
+        <span className={`mt-0.5 inline-flex items-center font-mono font-bold uppercase text-stone-600 dark:text-stone-400 leading-none ${s.otbGap} ${s.otb}`}>
+          <span className={`h-px bg-stone-400 dark:bg-stone-500 shrink-0 ${s.line}`} aria-hidden="true" />
+          <span>OTB</span>
+          <span className={`h-px bg-stone-400 dark:bg-stone-500 shrink-0 ${s.line}`} aria-hidden="true" />
+        </span>
+      </div>
     </div>
   );
 };

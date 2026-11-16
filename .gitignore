@@ -11,6 +11,7 @@ firebase-applet-config.json
 
 # Documentación interna y reglas locales
 ROLES_AND_RULES.md
+PROJECT_CONTEXT.md
 
 # Dependencias
 node_modules/

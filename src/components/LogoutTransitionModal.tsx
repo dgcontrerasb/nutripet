@@ -175,7 +175,7 @@ export const LogoutTransitionModal: React.FC<LogoutTransitionModalProps> = ({
             <span>Sincronización completa</span>
           </p>
           <p className="text-xs text-stone-600 leading-relaxed max-w-[280px] sm:max-w-[320px] mx-auto">
-            Los expedientes y porciones de tus consentidos están guardados en la nube de <span className="font-bold text-stone-900">Nutri</span><span className="font-bold text-[#0c9964]">Pet</span>.
+            Los expedientes y porciones de tus consentidos están guardados en la nube de <span className="font-bold text-stone-900">Nutri</span><span className="font-bold text-[#0c9964]">Pet</span><span className="font-mono text-[9.5px] font-bold uppercase tracking-[0.2em] text-stone-500 ml-1">OTB</span>.
           </p>
         </div>
 

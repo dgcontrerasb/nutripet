@@ -392,13 +392,13 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                 >
                   {/* ANVERSO: CREDENCIAL MÉDICA VERTICAL (BLANCO SÓLIDO SIN BLUR) */}
                   <div
-                    className={`col-start-1 row-start-1 [backface-visibility:hidden] will-change-transform antialiased bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-3xl p-5 shadow-xs flex flex-col justify-between gap-4 ${
+                    className={`col-start-1 row-start-1 [backface-visibility:hidden] will-change-transform antialiased bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-3xl p-5 shadow-xs flex flex-col justify-between gap-3 h-full ${
                       isFlipped ? 'pointer-events-none' : 'pointer-events-auto'
                     }`}
                   >
                     {/* Badge Centrado */}
                     <div className="flex justify-center">
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 text-[9.5px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/80 dark:border-emerald-800/60 text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
                         <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                         <span>🏅 Credencial Clínica Oficial</span>
                       </span>
@@ -437,8 +437,8 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
 
                     {/* 4 Atributos Oficiales en Cuadrícula Compacta */}
                     <div className="grid grid-cols-2 gap-2 text-left pt-1">
-                      <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-stone-200/80 dark:border-stone-800">
-                        <span className="text-[9px] font-mono uppercase tracking-wider text-stone-400 block font-bold">
+                      <div className="p-2 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-stone-200/80 dark:border-stone-800">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block">
                           Edad
                         </span>
                         <span className="text-xs font-extrabold text-stone-900 dark:text-stone-100 block mt-0.5 truncate">
@@ -449,20 +449,20 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                         </span>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-stone-200/80 dark:border-stone-800">
-                        <span className="text-[9px] font-mono uppercase tracking-wider text-stone-400 block font-bold">
+                      <div className="p-2 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-stone-200/80 dark:border-stone-800">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block">
                           Peso / Meta
                         </span>
-                        <span className="text-xs font-extrabold text-stone-900 dark:text-stone-100 block mt-0.5 truncate">
-                          {formData.weightKg} kg <span className="text-emerald-700 dark:text-emerald-400 font-bold">/ {effectiveIdealWeight} kg</span>
+                        <span className="text-sm font-black font-tabular text-stone-900 dark:text-stone-100 block mt-0.5 truncate">
+                          {formData.weightKg} kg <span className="text-[11px] font-semibold text-stone-500 dark:text-stone-400">/ {effectiveIdealWeight} kg</span>
                         </span>
                         <span className="text-[9.5px] text-stone-400 block truncate">
                           {formData.neutered ? '✅ Esterilizado' : 'Entero'}
                         </span>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-stone-200/80 dark:border-stone-800">
-                        <span className="text-[9px] font-mono uppercase tracking-wider text-stone-400 block font-bold">
+                      <div className="p-2 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-stone-200/80 dark:border-stone-800">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block">
                           Microchip ISO
                         </span>
                         <span className="text-xs font-mono font-extrabold text-stone-900 dark:text-stone-100 block mt-0.5 truncate">
@@ -473,8 +473,8 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                         </span>
                       </div>
 
-                      <div className="p-2.5 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-stone-200/80 dark:border-stone-800">
-                        <span className="text-[9px] font-mono uppercase tracking-wider text-stone-400 block font-bold">
+                      <div className="p-2 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-stone-200/80 dark:border-stone-800">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block">
                           Veterinario
                         </span>
                         <span className="text-xs font-extrabold text-stone-900 dark:text-stone-100 block mt-0.5 truncate">
@@ -494,9 +494,9 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                       <button
                         type="button"
                         onClick={() => setIsFlipped(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 border border-amber-300/80 dark:border-amber-800 text-amber-900 dark:text-amber-200 font-bold text-[11px] transition-all cursor-pointer active:scale-95"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 border border-stone-200 dark:border-stone-700 text-stone-800 dark:text-stone-200 font-bold text-[11px] transition-all cursor-pointer active:scale-95"
                       >
-                        <RotateCw className="w-3 h-3 text-amber-600" />
+                        <RotateCw className="w-3 h-3 text-rose-600" />
                         <span>🔄 Girar Ficha SOS</span>
                       </button>
                     </div>
@@ -525,13 +525,13 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
 
                   {/* REVERSO: FICHA DE EMERGENCIA SOS (BLANCO SÓLIDO) */}
                   <div
-                    className={`col-start-1 row-start-1 [backface-visibility:hidden] will-change-transform antialiased [transform:rotateY(180deg)] bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-3xl p-5 shadow-xs flex flex-col justify-between gap-3.5 min-h-[460px] ${
+                    className={`col-start-1 row-start-1 [backface-visibility:hidden] will-change-transform antialiased [transform:rotateY(180deg)] bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-3xl p-5 shadow-xs flex flex-col justify-between gap-3.5 h-full ${
                       isFlipped ? 'pointer-events-auto' : 'pointer-events-none'
                     }`}
                   >
                     {/* Título Superior */}
                     <div className="text-center pb-1 border-b border-stone-100 dark:border-stone-800">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-900/60 text-[9.5px] font-mono font-black uppercase tracking-wider text-rose-800 dark:text-rose-300">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 border border-rose-200/80 dark:border-rose-900/60 text-[10px] font-mono font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
                         <AlertTriangle className="w-3 h-3 text-rose-600 shrink-0" />
                         <span>MODO FICHA SOS • {formData.name}</span>
                       </span>
@@ -540,7 +540,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                     {/* Llamada Directa Veterinario */}
                     <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-emerald-200/80 dark:border-emerald-800/60 space-y-1.5 text-left">
                       <div>
-                        <span className="text-[9px] font-mono font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-400 block">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 block">
                           🩺 Veterinario
                         </span>
                         <p className="text-xs font-extrabold text-stone-900 dark:text-stone-100 truncate">
@@ -549,7 +549,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                       </div>
                       <a
                         href={`tel:${vetPhone}`}
-                        className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all"
+                        className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-tabular font-extrabold text-xs sm:text-[13px] flex items-center justify-center gap-1.5 shadow-2xs transition-all"
                       >
                         <Phone className="w-3.5 h-3.5" />
                         <span>Llamar ({vetPhone})</span>
@@ -559,7 +559,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                     {/* Llamada Directa Tutor */}
                     <div className="p-3 rounded-xl bg-stone-50 dark:bg-stone-900/50 border border-emerald-200/80 dark:border-emerald-800/60 space-y-1.5 text-left">
                       <div>
-                        <span className="text-[9px] font-mono font-black uppercase tracking-wider text-emerald-800 dark:text-emerald-400 block">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 block">
                           👤 Tutor Responsable
                         </span>
                         <p className="text-xs font-extrabold text-stone-900 dark:text-stone-100 truncate">
@@ -568,10 +568,10 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                       </div>
                       <a
                         href={`tel:${ownerPhone}`}
-                        className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-2xs transition-all"
+                        className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-tabular font-extrabold text-xs sm:text-[13px] flex items-center justify-center gap-1.5 shadow-2xs transition-all"
                       >
                         <Phone className="w-3.5 h-3.5" />
-                        <span>Llamar Tutor</span>
+                        <span>Llamar Tutor ({ownerPhone})</span>
                       </a>
                     </div>
 
@@ -1001,8 +1001,8 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                   <AreaChart data={chartData} margin={{ top: 6, right: 10, left: -25, bottom: 0 }}>
                     <defs>
                       <linearGradient id="weightColorTechSparkline" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="#10b97d" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#10b97d" stopOpacity={0.0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
@@ -1058,11 +1058,11 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                     <Area
                       type="monotone"
                       dataKey="peso"
-                      stroke="#059669"
+                      stroke="#0c9964"
                       strokeWidth={2}
                       fillOpacity={1}
                       fill="url(#weightColorTechSparkline)"
-                      activeDot={{ r: 4, fill: '#047857', stroke: '#ffffff', strokeWidth: 1.5 }}
+                      activeDot={{ r: 4, fill: '#097a50', stroke: '#ffffff', strokeWidth: 1.5 }}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -1129,7 +1129,11 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
                             ↓ {Math.abs(log.diff)} kg
                           </span>
                         ) : log.diff > 0 ? (
-                          <span className="text-[9.5px] font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/60 dark:text-amber-300 px-1.5 py-0.5 rounded-md inline-flex items-center gap-0.5">
+                          <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md inline-flex items-center gap-0.5 ${
+                            log.weightKg > effectiveIdealWeight
+                              ? 'text-amber-700 bg-amber-50 dark:bg-amber-950/60 dark:text-amber-300'
+                              : 'text-stone-700 bg-stone-100 dark:bg-stone-800 dark:text-stone-300'
+                          }`}>
                             ↑ +{log.diff} kg
                           </span>
                         ) : (

@@ -144,16 +144,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const renderNavLinks = (onClickHandler: (tab: AppTab) => void, showText: boolean) => {
     return (
       <div className="space-y-4">
-        {MENU_SECTIONS.map((sec) => (
-          <div key={sec.title} className="space-y-1">
+        {MENU_SECTIONS.map((sec) => {
+          const isProSection = sec.title.includes('PRO');
+          return (
+          <div
+            key={sec.title}
+            className={`space-y-1 ${isProSection && showText ? 'border-t border-stone-200/80 dark:border-stone-800 pt-2.5 mt-1' : ''}`}
+          >
             {showText ? (
-              <div className="px-3 flex items-center justify-between select-none">
-                <span className={`text-[10px] font-black tracking-widest uppercase block ${
-                  sec.title.includes('PRO') ? 'text-amber-600 dark:text-amber-400' : 'text-stone-400'
-                }`}>
-                  {sec.title}
-                </span>
-              </div>
+              isProSection ? (
+                <div className="mx-1 px-2.5 py-1 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-800/50 flex items-center justify-between select-none">
+                  <span className="text-[10px] font-black tracking-widest uppercase block text-amber-700 dark:text-amber-300">
+                    {sec.title}
+                  </span>
+                </div>
+              ) : (
+                <div className="px-3 flex items-center justify-between select-none">
+                  <span className="text-[10px] font-black tracking-widest uppercase block text-stone-400">
+                    {sec.title}
+                  </span>
+                </div>
+              )
             ) : (
               <div className="h-px bg-stone-100 dark:bg-stone-800 my-2 mx-2" />
             )}
@@ -170,14 +181,14 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl font-bold text-xs transition-all relative cursor-pointer active:scale-97 group ${
                       isActive
                         ? item.isPro
-                          ? 'bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-md'
+                          ? 'bg-amber-50/90 text-amber-950 border-l-4 border-amber-500 dark:bg-amber-950/50 dark:text-amber-200'
                           : 'bg-emerald-50 text-emerald-950 border-l-4 border-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-200'
                         : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-stone-100/90 dark:hover:bg-stone-800/80'
                     } ${!showText ? 'justify-center px-2' : ''}`}
                   >
                     <IconComp className={`w-4 h-4 shrink-0 transition-transform group-hover:scale-110 ${
                       isActive 
-                        ? item.isPro ? 'text-amber-200' : 'text-emerald-700 dark:text-emerald-400' 
+                        ? item.isPro ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-700 dark:text-emerald-400' 
                         : item.isPro ? 'text-amber-500/80' : 'text-stone-400'
                     }`} />
                     
@@ -197,7 +208,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     );
   };
@@ -211,7 +223,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           isVisible ? 'translate-y-0' : 'translate-y-28 pointer-events-none'
         }`}
       >
-        <div className="flex items-center gap-1 px-2.5 py-1.5 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/90 dark:border-stone-800 rounded-full shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
+        <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md border border-stone-200/90 dark:border-stone-800 rounded-full shadow-2xl ring-1 ring-black/5 dark:ring-white/10">
           {[
             { id: 'calculator', label: 'Porciones', icon: Calculator },
             { id: 'foods', label: 'Alimentos', icon: AlertTriangle },
@@ -229,7 +241,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 aria-label={item.label}
                 className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-90 relative ${
                   isActive 
-                    ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
+                    ? item.isPro
+                      ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30'
+                      : 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30' 
                     : 'text-stone-500 dark:text-stone-400 hover:text-emerald-600 hover:bg-stone-100 dark:hover:bg-stone-800'
                 }`}
               >
@@ -240,8 +254,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             );
           })}
-
-          <div className="w-px h-5 bg-stone-200 dark:bg-stone-800 mx-0.5" />
 
           <button
             type="button"
@@ -257,12 +269,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* 💻 Menú lateral de escritorio: Sticky y respetando el contenedor sin tapar el footer */}
       <aside 
-        className={`hidden lg:flex flex-col border-r border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md shadow-xs shrink-0 select-none no-print transition-all duration-300 sticky top-[84px] sm:top-[90px] z-30 overflow-x-hidden ${
+        className={`hidden lg:flex flex-col border-r border-stone-200 dark:border-stone-800 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md shadow-xs shrink-0 select-none no-print transition-all duration-300 sticky top-[61px] z-30 overflow-x-hidden ${
           isCollapsed ? 'w-20' : 'w-64'
         }`}
         style={{
-          height: 'calc(100vh - 90px)',
-          maxHeight: 'calc(100vh - 90px)',
+          height: 'calc(100vh - 61px)',
+          maxHeight: 'calc(100vh - 61px)',
         }}
       >
         {/* Cabecera con Logo y Botón de Recoger/Desplegar sin solapar */}
@@ -336,7 +348,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={onOpenFeedbackModal}
-                className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400 flex items-center justify-center mx-auto border border-amber-200/80 dark:border-amber-800/80 cursor-pointer shadow-2xs transition-all active:scale-95"
+                className="w-8 h-8 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 flex items-center justify-center mx-auto border border-stone-200 dark:border-stone-750 cursor-pointer shadow-2xs transition-all active:scale-95"
                 title="Calificar y Opinión"
               >
                 <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
@@ -345,7 +357,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <button
                 type="button"
                 onClick={onOpenFeedbackModal}
-                className="w-full py-1.5 px-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                className="w-full py-1.5 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-750 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
               >
                 <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
                 <span>Calificar y Opinión</span>
@@ -566,7 +578,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       setIsMobileOpen(false);
                       onOpenFeedbackModal();
                     }}
-                    className="w-full py-2 px-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100/80 dark:hover:bg-amber-900/40 text-amber-800 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/80 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-95 cursor-pointer"
+                    className="w-full py-2 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-750 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-95 cursor-pointer"
                   >
                     <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
                     <span>Calificar y Opinión</span>

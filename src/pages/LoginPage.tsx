@@ -8,7 +8,6 @@ import {
   Loader2, 
   ShieldCheck, 
   Heart, 
-  X,
   Moon,
   Sun
 } from 'lucide-react';
@@ -75,7 +74,7 @@ export const LoginPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* COLUMNA IZQUIERDA (50% en PC): HERO EDITORIAL CON LA FOTO PROTAGONISTA     */}
       {/* ========================================================================= */}
-      <section className="relative w-full lg:w-1/2 min-h-[44vh] sm:min-h-[48vh] lg:h-full lg:min-h-0 overflow-hidden bg-gradient-to-b from-[#143826] via-[#0f2a1d] to-[#0a160f] flex items-center justify-center p-3 sm:p-5 lg:p-7 shrink-0">
+      <section className="relative w-full lg:w-1/2 min-h-[32vh] sm:min-h-[38vh] lg:h-full lg:min-h-0 overflow-hidden bg-gradient-to-b from-[#143826] via-[#0f2a1d] to-[#0a160f] flex items-center justify-center p-3 sm:p-5 lg:p-7 shrink-0">
         
         {/* Capa de aura ambiental desenfocada: expande los tonos dorados y celestes de la foto a todo el fondo */}
         <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none select-none">
@@ -90,21 +89,8 @@ export const LoginPage: React.FC = () => {
           <div className="hidden lg:block absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#faf8f5]/20 dark:to-[#0c140f]/70" />
         </div>
 
-        {/* Botón rápido para móvil: 'Explorar' sin registrarse */}
-        <div className="lg:hidden absolute top-4 right-4 z-30">
-          <button
-            type="button"
-            onClick={() => navigate('/')}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/25 text-white text-xs font-bold hover:bg-black/80 transition-all cursor-pointer active:scale-95 shadow-md"
-            aria-label="Explorar sin iniciar sesión"
-          >
-            <span>Explorar</span>
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
         {/* Tarjeta Visual Enmarcada: Los perritos son los protagonistas absolutos (Cero módulos/cápsulas) */}
-        <div className="relative z-10 w-full max-w-[390px] sm:max-w-[420px] lg:max-w-[440px] h-[38vh] sm:h-[42vh] lg:h-[90vh] max-h-[760px] rounded-3xl sm:rounded-[32px] overflow-hidden shadow-2xl border border-white/20 ring-1 ring-black/10 flex flex-col justify-end p-4 sm:p-6 group">
+        <div className="relative z-10 w-full max-w-[390px] sm:max-w-[420px] lg:max-w-[440px] h-[28vh] sm:h-[34vh] lg:h-[90vh] max-h-[760px] rounded-3xl overflow-hidden shadow-2xl border border-white/20 ring-1 ring-black/10 flex flex-col justify-end p-4 sm:p-6 group">
           
           {/* Fotografía principal nítida con ajuste perfecto */}
           <img
@@ -132,7 +118,7 @@ export const LoginPage: React.FC = () => {
       {/* ========================================================================= */}
       {/* COLUMNA DERECHA (50% en PC): FORMULARIO MODERNO, CENTRADO Y SIN SCROLL    */}
       {/* ========================================================================= */}
-      <main className="relative z-10 -mt-6 sm:-mt-8 lg:mt-0 flex-1 flex flex-col justify-between bg-[#faf8f5] dark:bg-[#0c140f] rounded-t-[32px] sm:rounded-t-[36px] lg:rounded-none shadow-2xl lg:shadow-none p-4 sm:p-6 lg:p-8 xl:p-10 min-h-[56vh] lg:h-full lg:overflow-hidden">
+      <main className="relative z-10 flex-1 flex flex-col justify-between bg-[#faf8f5] dark:bg-[#0c140f] p-4 sm:p-6 lg:p-8 xl:p-10 min-h-0 lg:h-full lg:overflow-hidden">
         
         {/* Barra superior de escritorio: Volver + Modo Oscuro */}
         <div className="hidden lg:flex items-center justify-between shrink-0">
@@ -160,14 +146,11 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Indicador táctil en móvil */}
-        <div className="lg:hidden w-12 h-1.5 bg-stone-300 dark:bg-stone-700 rounded-full mx-auto mb-2" />
-
         {/* Contenedor central con distribución simétrica y moderna */}
-        <div className="w-full max-w-[390px] mx-auto my-auto flex flex-col items-center text-center space-y-4">
+        <div className="w-full max-w-[390px] mx-auto my-auto flex flex-col items-center text-center space-y-3">
           
           {/* Logotipo centrado de NutriPet */}
-          <div className="flex flex-col items-center gap-2.5">
+          <div className="flex flex-col items-center gap-2">
             <div className="transform hover:scale-105 transition-transform">
               <NutriPetLogo size="md" />
             </div>
@@ -194,7 +177,7 @@ export const LoginPage: React.FC = () => {
           )}
 
           {/* Botón Principal: Inicio de Sesión con Google */}
-          <div className="w-full space-y-2.5 pt-1">
+          <div className="w-full space-y-2 pt-0.5">
             <button
               type="button"
               onClick={handleGoogleLogin}
@@ -202,7 +185,7 @@ export const LoginPage: React.FC = () => {
               className={`w-full h-12 rounded-2xl border-2 font-black text-xs sm:text-sm flex items-center justify-center gap-3 transition-all duration-300 active:scale-[0.99] disabled:cursor-wait cursor-pointer ${
                 isLoginSuccess
                   ? 'bg-emerald-600 border-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-[1.01]'
-                  : 'bg-white dark:bg-stone-850 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-100 border-stone-200 dark:border-stone-750 hover:border-emerald-500 dark:hover:border-emerald-500 shadow-sm hover:shadow-md'
+                  : 'bg-white dark:bg-stone-850 hover:bg-stone-50 dark:hover:bg-stone-800 text-stone-800 dark:text-stone-100 border-stone-300 dark:border-stone-700 hover:border-emerald-500 dark:hover:border-emerald-500 shadow-sm hover:shadow-md'
               }`}
             >
               {isLoginSuccess ? (
@@ -240,11 +223,11 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Botón Secundario: Modo Invitado */}
+            {/* Acción Terciaria: Modo Invitado */}
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="w-full h-10 rounded-xl bg-stone-100 hover:bg-stone-200/80 dark:bg-stone-850 dark:hover:bg-stone-800 text-stone-700 dark:text-stone-300 font-extrabold text-xs transition-colors cursor-pointer flex items-center justify-center gap-1.5 border border-stone-200/70 dark:border-stone-750 active:scale-[0.99] group shadow-2xs"
+              className="w-full py-1.5 px-3 text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200 font-semibold text-xs underline-offset-4 hover:underline transition-colors cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.99] group"
             >
               <span>Continuar como Invitado (Modo Exploración)</span>
               <ArrowRight className="w-3.5 h-3.5 text-stone-400 group-hover:translate-x-1 transition-transform" />
@@ -265,7 +248,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           {/* Redes Sociales Oficiales: Directo, sin cajas ni módulos */}
-          <div className="pt-2 border-t border-stone-200/60 dark:border-stone-800 w-full select-none flex items-center justify-between gap-2 px-1">
+          <div className="mt-3 pt-3.5 border-t border-stone-200/60 dark:border-stone-800 w-full select-none flex items-center justify-between gap-2 px-1">
             <div className="text-left min-w-0">
               <span className="text-[11px] font-bold text-stone-700 dark:text-stone-300 block truncate">
                 Visita nuestras redes sociales

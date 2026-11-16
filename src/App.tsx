@@ -538,17 +538,19 @@ export default function App() {
         darkMode={darkMode}
       />
 
-      {/* Cabecera Superior Fija Permanente */}
-      <header className="fixed top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
-        <div className="bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium">
-          <span className="inline-flex items-center gap-1.5 text-emerald-400">
-            <Sparkles className="w-3.5 h-3.5" /> Referencias generales de alimentación y bienestar para mascotas
-          </span>
-          <span className="mx-2 text-stone-600 hidden sm:inline">•</span>
-          <span className="hidden sm:inline text-stone-300">
-            Ficha con foto de tu mascota, porciones sugeridas y consejos prácticos
-          </span>
-        </div>
+      {/* Franja informativa a ancho completo en flujo normal (se oculta al hacer scroll) */}
+      <div className="w-full bg-stone-900 text-stone-300 text-xs py-1.5 px-4 text-center font-medium no-print">
+        <span className="inline-flex items-center gap-1.5 text-emerald-400">
+          <Sparkles className="w-3.5 h-3.5" /> Referencias generales de alimentación y bienestar para mascotas
+        </span>
+        <span className="mx-2 text-stone-600 hidden sm:inline">•</span>
+        <span className="hidden sm:inline text-stone-300">
+          Ficha con foto de tu mascota, porciones sugeridas y consejos prácticos
+        </span>
+      </div>
+
+      {/* Cabecera Superior Pegajosa Única (Barra de usuario pegada a 0px sobre el menú) */}
+      <header className="sticky top-0 left-0 right-0 z-40 w-full no-print shadow-xs bg-white dark:bg-stone-900">
         <PetHeaderBar
           onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
           onOpenAdminModal={() => setShowAdminModal(true)}
@@ -557,10 +559,10 @@ export default function App() {
         />
       </header>
 
-      {/* Contenedor Principal: 108px en móvil para librar los ~98px del header doble y dejar ver el borde superior completo */}
-      <div className="flex-grow flex flex-col lg:flex-row w-full items-start pt-[108px] sm:pt-[84px]">
-        {/* Barra Lateral estilo Workspace con scroll propio */}
-        <div className="w-full lg:w-auto shrink-0 lg:sticky lg:top-[82px] lg:h-[calc(100vh-82px)] overflow-y-auto no-scrollbar">
+      {/* Contenedor Principal sin padding artificial superior (0px de hueco bajo PetHeaderBar) */}
+      <div className="flex-grow flex flex-col lg:flex-row w-full items-start">
+        {/* Barra Lateral estilo Workspace */}
+        <div className="w-full lg:w-auto shrink-0 lg:self-stretch">
           <Sidebar
             activeTab={activeTab}
             onSelectTab={handleSelectTab}
@@ -696,7 +698,7 @@ export default function App() {
         )}
 
         {/* Contenido Principal con Respiro Armónico y Equilibrado */}
-        <main className="flex-grow flex-1 w-full px-3 sm:px-5 lg:pl-3 lg:pr-6 pt-1 sm:pt-4 pb-10 lg:pb-8 space-y-3 sm:space-y-4 overflow-x-hidden">
+        <main className="flex-grow flex-1 w-full px-3 sm:px-5 lg:pl-3 lg:pr-6 pt-2 sm:pt-3 pb-10 lg:pb-8 space-y-3 sm:space-y-4 overflow-x-hidden">
           {/* VISTA 1: CALCULADORA Y FICHA CLÍNICA OFICIAL */}
           {activeTab === 'calculator' && (
             <div className="w-full animate-fade-in flex flex-col xl:flex-row items-start gap-4 sm:gap-6">
@@ -908,7 +910,7 @@ export default function App() {
                             setTimeout(() => setSaveSuccessMessage(null), 3000);
                           }}
                           disabled={isSavingPet || isProfileEmpty}
-                          className="w-full py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[11px] sm:text-xs shadow-xs transition-all cursor-pointer"
+                          className="w-full py-2 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white font-black text-[11px] sm:text-xs shadow-xs transition-all cursor-pointer"
                         >
                           {isSavingPet ? 'Guardando...' : 'Guardar Datos Biométricos'}
                         </button>
@@ -1051,7 +1053,7 @@ export default function App() {
                                 className={`relative p-2.5 rounded-xl border flex flex-col justify-between shadow-2xs ${
                                   isSuper
                                     ? 'bg-gradient-to-br from-emerald-50/40 via-white to-stone-50/60 dark:from-emerald-950/25 dark:via-stone-900 dark:to-stone-900 border-emerald-500/25 dark:border-emerald-700/40'
-                                    : 'bg-gradient-to-br from-amber-50/40 via-white to-stone-50/60 dark:from-amber-950/25 dark:via-stone-900 dark:to-stone-900 border-amber-500/25 dark:border-amber-700/40'
+                                    : 'bg-gradient-to-br from-stone-100/60 via-white to-stone-50/60 dark:from-stone-800/60 dark:via-stone-900 dark:to-stone-900 border-stone-300/80 dark:border-stone-700'
                                 }`}
                               >
                                 <div className="space-y-1">
@@ -1060,7 +1062,7 @@ export default function App() {
                                       className={`text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded shadow-2xs ${
                                         isSuper
                                           ? 'bg-emerald-700 text-white'
-                                          : 'bg-amber-600 text-white'
+                                          : 'bg-stone-700 text-white'
                                       }`}
                                     >
                                       {isSuper ? '★ Súper Premium' : '⚖ Calidad-Precio'}
@@ -1268,7 +1270,7 @@ export default function App() {
       </div>
 
       {/* Footer */}
-      <footer className="mt-auto border-t border-stone-200/80 dark:border-stone-800/80 bg-white/70 dark:bg-stone-900/70 backdrop-blur-md pt-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:py-3.5 no-print transition-colors">
+      <footer className="mt-auto border-t border-stone-200/80 dark:border-stone-800/80 bg-white/95 dark:bg-stone-900/95 backdrop-blur-md pt-3 pb-[calc(5.25rem+env(safe-area-inset-bottom))] lg:py-3.5 no-print transition-colors">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-2.5 text-center md:text-left">
           {/* Marca y Propósito */}
           <div className="flex items-center gap-2 shrink-0">
@@ -1307,7 +1309,7 @@ export default function App() {
           </div>
 
           {/* Descargo Médico Compacto (Cero cajas toscas) */}
-          <p className="text-[9.5px] sm:text-[10px] text-stone-400 dark:text-stone-500 max-w-xl leading-tight">
+          <p className="text-[9.5px] sm:text-[10px] text-stone-600 dark:text-stone-400 max-w-xl leading-tight">
             <strong>Aviso Clínico:</strong> Recurso orientativo basado en pautas FEDIAF & NRC. No constituye diagnóstico ni prescripción. Ante cualquier anomalía, consulta a tu médico veterinario colegiado.
           </p>
 

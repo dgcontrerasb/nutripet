@@ -406,7 +406,7 @@ export const LoginDogTransitionModal: React.FC<LoginDogTransitionModalProps> = (
       <div className="space-y-1.5 mt-2 max-w-sm">
         <h2 className="font-editorial text-2xl sm:text-3xl text-stone-900 font-normal tracking-tight">
           ¡Bienvenido{userName ? `, ${userName.split(' ')[0]}` : ''} a{' '}
-          <span className="font-bold text-stone-900">Nutri</span><span className="font-bold text-[#0c9964]">Pet</span>!
+          <span className="font-bold text-stone-900">Nutri</span><span className="font-bold text-[#0c9964]">Pet</span><span className="font-mono text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.2em] text-stone-500 ml-1">OTB</span>!
         </h2>
         <p className="text-xs sm:text-sm text-stone-500 font-medium">
           Sincronizando los expedientes y dietas de tus consentidos...

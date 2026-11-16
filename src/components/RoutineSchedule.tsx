@@ -401,7 +401,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
               <button
                 type="button"
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="inline-flex items-center justify-center gap-1 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all cursor-pointer shadow-3xs active:scale-95 whitespace-nowrap"
+                className="inline-flex items-center justify-center gap-1 px-3.5 py-1.5 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white text-xs font-bold transition-all cursor-pointer shadow-3xs active:scale-95 whitespace-nowrap"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>{showAddForm ? 'Cerrar' : 'Añadir'}</span>
@@ -488,7 +488,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
                 </button>
                 <button
                   type="submit"
-                  className="px-3 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer shadow-3xs active:scale-95"
+                  className="px-3 py-1 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white text-xs font-bold cursor-pointer shadow-3xs active:scale-95"
                 >
                   Guardar hábito
                 </button>
@@ -498,16 +498,16 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
 
           {/* Modal / Formulario para editar rutina existente */}
           {editingItem && (
-            <form onSubmit={handleSaveEdit} className="bg-amber-50/90 dark:bg-amber-950/40 p-3 sm:p-4 rounded-xl border border-amber-300 dark:border-amber-700/70 space-y-2.5 no-print animate-fade-in shadow-xs print:hidden">
-              <div className="flex items-center justify-between border-b border-amber-200 dark:border-amber-800/80 pb-1.5">
-                <span className="text-xs font-black text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
-                  <Edit3 className="w-3.5 h-3.5 text-amber-600" />
+            <form onSubmit={handleSaveEdit} className="bg-stone-50 dark:bg-stone-800/60 p-3 sm:p-4 rounded-xl border border-stone-200 dark:border-stone-700 space-y-2.5 no-print animate-fade-in shadow-xs print:hidden">
+              <div className="flex items-center justify-between border-b border-stone-200 dark:border-stone-700 pb-1.5">
+                <span className="text-xs font-black text-stone-900 dark:text-stone-100 flex items-center gap-1.5">
+                  <Edit3 className="w-3.5 h-3.5 text-emerald-600" />
                   Editar Hábito de Rutina
                 </span>
                 <button
                   type="button"
                   onClick={() => setEditingItem(null)}
-                  className="text-amber-700 dark:text-amber-300 p-1 rounded-lg cursor-pointer"
+                  className="text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200 p-1 rounded-lg cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -515,11 +515,11 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
 
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-bold text-amber-900 dark:text-amber-200 block mb-1">Categoría</label>
+                  <label className="text-[10px] sm:text-[11px] font-bold text-stone-600 dark:text-stone-300 block mb-1">Categoría</label>
                   <select
                     value={editingItem.type}
                     onChange={(e) => setEditingItem({ ...editingItem, type: e.target.value as any })}
-                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-bold cursor-pointer focus:outline-hidden focus:ring-1 focus:ring-amber-500"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-bold cursor-pointer focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
                   >
                     <option value="food">🥣 Comida</option>
                     <option value="walk">🦮 Paseo / Ejercicio</option>
@@ -528,24 +528,24 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-bold text-amber-900 dark:text-amber-200 block mb-1">Hora</label>
+                  <label className="text-[10px] sm:text-[11px] font-bold text-stone-600 dark:text-stone-300 block mb-1">Hora</label>
                   <input
                     type="text"
                     value={editingItem.time}
                     onChange={(e) => setEditingItem({ ...editingItem, time: e.target.value })}
                     placeholder="ej. 08:00 AM"
-                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500 placeholder:text-stone-400"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-bold focus:outline-hidden focus:ring-1 focus:ring-emerald-500 placeholder:text-stone-400"
                     required
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-bold text-amber-900 dark:text-amber-200 block mb-1">Actividad o Toma *</label>
+                  <label className="text-[10px] sm:text-[11px] font-bold text-stone-600 dark:text-stone-300 block mb-1">Actividad o Toma *</label>
                   <input
                     type="text"
                     value={editingItem.activity}
                     onChange={(e) => setEditingItem({ ...editingItem, activity: e.target.value })}
                     placeholder="ej. Desayuno (150g)"
-                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-bold focus:outline-hidden focus:ring-1 focus:ring-amber-500 placeholder:text-stone-400"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-bold focus:outline-hidden focus:ring-1 focus:ring-emerald-500 placeholder:text-stone-400"
                     required
                   />
                   {editingItem.type === 'food' && (
@@ -561,22 +561,22 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
                           }
                           setEditingItem({ ...editingItem, activity: cur });
                         }}
-                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-200 text-[9.5px] font-bold cursor-pointer"
+                        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 text-[9.5px] font-bold cursor-pointer"
                       >
-                        <Sparkles className="w-3 h-3 text-amber-600" />
+                        <Sparkles className="w-3 h-3 text-emerald-600" />
                         <span>Insertar {result.gramsPerMeal}g</span>
                       </button>
                     </div>
                   )}
                 </div>
                 <div>
-                  <label className="text-[10px] sm:text-[11px] font-bold text-amber-900 dark:text-amber-200 block mb-1">Notas breves</label>
+                  <label className="text-[10px] sm:text-[11px] font-bold text-stone-600 dark:text-stone-300 block mb-1">Notas breves</label>
                   <input
                     type="text"
                     value={editingItem.notes}
                     onChange={(e) => setEditingItem({ ...editingItem, notes: e.target.value })}
                     placeholder="ej. Con agua tibia"
-                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-medium focus:outline-hidden focus:ring-1 focus:ring-amber-500 placeholder:text-stone-400"
+                    className="w-full px-2.5 py-1.5 text-xs rounded-xl border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 text-stone-900 dark:text-stone-100 font-medium focus:outline-hidden focus:ring-1 focus:ring-emerald-500 placeholder:text-stone-400"
                   />
                 </div>
               </div>
@@ -591,7 +591,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
                 </button>
                 <button
                   type="submit"
-                  className="px-3.5 py-1 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold cursor-pointer shadow-3xs active:scale-95 flex items-center gap-1"
+                  className="px-3.5 py-1 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white text-xs font-bold cursor-pointer shadow-3xs active:scale-95 flex items-center gap-1"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Guardar</span>
@@ -637,7 +637,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
                   key={item.id}
                   className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border transition-all print:border-stone-400 print:bg-white print:text-black print:p-2 ${
                     isEditingThis
-                      ? 'border-amber-400 bg-amber-50/50 dark:bg-amber-950/30'
+                      ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/30'
                       : 'border-stone-200/90 dark:border-stone-800 hover:border-emerald-300 dark:hover:border-emerald-700 bg-stone-50/50 dark:bg-stone-900/60'
                   }`}
                 >
@@ -648,7 +648,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
                         <span className="text-xs font-extrabold text-stone-900 dark:text-stone-100 truncate">
                           {item.activity}
                         </span>
-                        <span className="text-[9.5px] font-bold px-1.5 py-0.2 rounded bg-stone-200/70 dark:bg-stone-800 text-stone-600 dark:text-stone-300 shrink-0">
+                        <span className="text-[10px] font-tabular font-bold px-1.5 py-0.5 rounded bg-stone-200/70 dark:bg-stone-800 text-stone-600 dark:text-stone-300 shrink-0">
                           {item.time}
                         </span>
                       </div>
@@ -735,7 +735,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
                 Guía Clínica & Pautas
               </h4>
             </div>
-            <span className="text-[9.5px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/60">
               FEDIAF / NRC
             </span>
           </div>
@@ -754,7 +754,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
 
             <div className="grid grid-cols-2 gap-2">
               <div className="p-2 rounded-xl bg-white dark:bg-stone-850 border border-stone-200/80 dark:border-stone-800 text-center">
-                <span className="text-[8.5px] font-mono uppercase text-stone-400 block">Ración / Toma</span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block">Ración / Toma</span>
                 <span className="text-base font-black text-stone-900 dark:text-stone-100 font-tabular">
                   {result.gramsPerMeal} <span className="text-[10px] font-normal text-stone-400">g</span>
                 </span>
@@ -764,7 +764,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
               </div>
 
               <div className="p-2 rounded-xl bg-white dark:bg-stone-850 border border-stone-200/80 dark:border-stone-800 text-center">
-                <span className="text-[8.5px] font-mono uppercase text-stone-400 block">Meta Hidratación</span>
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500 block">Meta Hidratación</span>
                 <span className="text-base font-black text-stone-900 dark:text-stone-100 font-tabular">
                   {result.waterDailyMl.min}-{result.waterDailyMl.max} <span className="text-[10px] font-normal text-stone-400">ml</span>
                 </span>
