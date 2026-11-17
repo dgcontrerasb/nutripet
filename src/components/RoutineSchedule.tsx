@@ -4,6 +4,7 @@ import {
   Sparkles, Utensils, Droplets, ShieldAlert, Sparkle, BookOpen
 } from 'lucide-react';
 import { PetProfile, CalculationResult } from '../types';
+import { DEMO_ROUTINES } from '../data/demoPet';
 
 interface RoutineScheduleProps {
   profile: PetProfile;
@@ -105,7 +106,16 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
         ];
   }, [profile.type, result.gramsPerMeal, result.mealsPerDay, result.waterDailyMl]);
 
+  const isDemo = profile.id === 'demo_pet_otb';
+
   const [routines, setRoutines] = useState<RoutineItem[]>(() => {
+    if (isDemo) {
+      return DEMO_ROUTINES.map(r => ({
+        ...r,
+        activity: r.type === 'food' ? (r.time.includes('07:45') ? `Desayuno (${result.gramsPerMeal}g)` : `Cena (${result.gramsPerMeal}g)`) : r.activity,
+        notes: r.type === 'water' ? `Meta de hidratación: ${result.waterDailyMl.min}-${result.waterDailyMl.max} ml/día` : r.notes
+      }));
+    }
     try {
       const saved = localStorage.getItem(`nutripet_routines_${profile.id}`);
       if (saved) return JSON.parse(saved);
@@ -116,6 +126,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
   });
 
   useEffect(() => {
+    if (isDemo) return;
     try {
       const saved = localStorage.getItem(`nutripet_routines_${profile.id}`);
       if (saved) {
@@ -126,15 +137,16 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
       console.warn('Error al sincronizar rutinas:', e);
     }
     setRoutines(getInitialRoutines());
-  }, [profile.id, getInitialRoutines]);
+  }, [profile.id, getInitialRoutines, isDemo]);
 
   useEffect(() => {
+    if (isDemo) return;
     try {
       localStorage.setItem(`nutripet_routines_${profile.id}`, JSON.stringify(routines));
     } catch (e) {
       console.warn('Error al guardar rutinas:', e);
     }
-  }, [routines, profile.id]);
+  }, [routines, profile.id, isDemo]);
 
   const [newTime, setNewTime] = useState<string>('');
   const [newActivity, setNewActivity] = useState<string>('');
@@ -621,7 +633,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
           )}
 
           {/* Lista de Eventos */}
-          <div className="space-y-2">
+          <div id="routine-schedule-events-box" className="space-y-2">
             {routines.map((item, index) => {
               const typeIcons = {
                 food: '🥣',
@@ -635,6 +647,7 @@ export const RoutineSchedule: React.FC<RoutineScheduleProps> = ({ profile, resul
               return (
                 <div
                   key={item.id}
+                  id={index === 0 ? "first-routine-event-card" : undefined}
                   className={`flex items-center justify-between p-2.5 sm:p-3 rounded-xl border transition-all print:border-stone-400 print:bg-white print:text-black print:p-2 ${
                     isEditingThis
                       ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/30'

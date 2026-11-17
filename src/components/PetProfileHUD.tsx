@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PetProfile, CalculationResult, AppTab, DietType } from '../types';
+import { usePets } from '../context/PetContext';
 import { POPULAR_BREEDS, getSuggestedIdealWeight } from '../data';
 import {
   Scale,
@@ -34,6 +35,8 @@ export const PetProfileHUD: React.FC<Props> = ({
   className = ''
 }) => {
   const isDog = profile.type === 'dog';
+  const { activePet } = usePets();
+  const isDemoPet = !activePet || profile.id === 'demo_pet_otb' || profile.id === 'defaultpet';
   const [hudDiet, setHudDiet] = useState<DietType>(
     profile.diet === 'barf' ? 'barf' : profile.diet === 'mixed' ? 'mixed' : 'kibble'
   );
@@ -86,10 +89,10 @@ export const PetProfileHUD: React.FC<Props> = ({
 
   return (
     <aside className={`w-full space-y-4 no-print select-none ${className}`}>
-      <div className="bg-white/95 dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-3xl p-5 shadow-sm space-y-4 transition-all">
+      <div id="pet-profile-hud-card" className="bg-white/95 dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-3xl p-5 shadow-sm space-y-4 transition-all">
 
         {/* 1. CABECERA: PASAPORTE CLÍNICO CON FOTO, STATUS Y MICROCHIP */}
-        <div className="relative pb-4 border-b border-stone-100 dark:border-stone-800 flex items-start gap-3.5">
+        <div id="pet-hud-identity-header" className="relative pb-4 border-b border-stone-100 dark:border-stone-800 flex items-start gap-3.5">
           <div className="relative">
             <div className="w-16 h-16 sm:w-18 sm:h-18 rounded-2xl bg-stone-100 dark:bg-stone-800 border-2 border-emerald-500/30 overflow-hidden flex items-center justify-center shrink-0 shadow-md">
               {profile.photoUrl ? (
@@ -105,9 +108,16 @@ export const PetProfileHUD: React.FC<Props> = ({
 
           <div className="min-w-0 flex-1 space-y-1">
             <div className="flex items-center justify-between gap-1">
-              <h2 className="font-heading font-black text-lg text-stone-900 dark:text-stone-100 truncate leading-tight">
-                {profile.name || 'Mi Mascota'}
-              </h2>
+              <div className="flex items-center gap-1.5 min-w-0">
+                <h2 className="font-heading font-black text-lg text-stone-900 dark:text-stone-100 truncate leading-tight">
+                  {profile.name || 'Mi Mascota'}
+                </h2>
+                {isDemoPet && (
+                  <span className="text-[9px] font-mono font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60 shrink-0">
+                    Vista de ejemplo
+                  </span>
+                )}
+              </div>
               <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 shrink-0">
                 {isDog ? 'Canino' : 'Felino'}
               </span>
@@ -181,7 +191,7 @@ export const PetProfileHUD: React.FC<Props> = ({
         </div>
 
         {/* 3. DOSIS NUTRICIONAL DIARIA CON TABS TRIPARTITAS INTERACTIVAS */}
-        <div className="space-y-2.5">
+        <div id="pet-hud-ration-card" className="space-y-2.5">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-stone-500 dark:text-stone-400">
               Ración Diaria Oficial

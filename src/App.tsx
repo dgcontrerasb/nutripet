@@ -21,10 +21,11 @@ import {
 } from 'lucide-react';
 import { PetProfile, CalculationResult, BreedInfo, AppTab } from './types';
 import { calculatePetNutrition, POPULAR_BREEDS } from './data';
+import { DEMO_PET_PROFILE } from './data/demoPet';
 import { UnifiedFoodCalculator } from './components/UnifiedFoodCalculator';
 import { FoodTransitionGuide } from './components/FoodTransitionGuide';
 import { PetHeaderBar } from './components/PetHeaderBar';
-import { PetPhotoReelWidget } from './components/PetPhotoReelWidget';
+import { PetHealthTimeline } from './components/PetHealthTimeline';
 import { ProFeatureLock } from './components/ProFeatureLock';
 import { RegistrationLockModal } from './components/RegistrationLockModal';
 import { PetProfileHUD } from './components/PetProfileHUD';
@@ -47,6 +48,7 @@ const ShareModal = React.lazy(() => import('./components/ShareModal').then(m => 
 const SubscriptionModal = React.lazy(() => import('./components/SubscriptionModal').then(m => ({ default: m.SubscriptionModal })));
 const AdminDashboardModal = React.lazy(() => import('./components/AdminDashboardModal').then(m => ({ default: m.AdminDashboardModal })));
 const FeedbackModal = React.lazy(() => import('./components/FeedbackModal').then(m => ({ default: m.FeedbackModal })));
+const SpotlightTour = React.lazy(() => import('./components/SpotlightTour').then(m => ({ default: m.SpotlightTour })));
 import { usePets } from './context/PetContext';
 import { useBgPreferences } from './hooks/useBgPreferences';
 
@@ -254,41 +256,25 @@ export default function App() {
     }
   }, [updateSubscription]);
 
-  const [localDraftProfile, setLocalDraftProfile] = useState<PetProfile>({
-    id: 'defaultpet',
-    name: 'Oslo',
-    type: 'dog',
-    breedId: 'pomeranian',
-    weightKg: 15,
-    stage: 'adult',
-    ageMonths: 36,
-    neutered: true,
-    activity: 'moderate',
-    condition: 'ideal',
-    diet: 'kibble',
-    kibbleKcalPer100g: 360,
-    photoUrl: undefined,
-  });
-
   const isProfileEmpty = activePet == null;
-  const profile: PetProfile = activePet || localDraftProfile;
+  const profile: PetProfile = activePet || DEMO_PET_PROFILE;
 
   const setProfile = (updater: React.SetStateAction<PetProfile> | ((prev: PetProfile) => PetProfile)) => {
     if (activePet) {
       const updated = typeof updater === 'function' ? updater(profile) : updater;
       const lowerId = String(updated?.id || '').toLowerCase();
       if (
+        lowerId === 'demo_pet_otb' ||
         lowerId === 'defaultpet' ||
         lowerId === 'tempemptypet' ||
+        lowerId.includes('demo') ||
         lowerId.includes('default') ||
         lowerId.includes('temp')
       ) {
-        console.warn('✖ Escritura bloqueada por ID temporal/default en setProfile:', updated?.id);
+        console.warn('✖ Escritura bloqueada por ID temporal/demo en setProfile:', updated?.id);
         return;
       }
       updatePetLocal(updated);
-    } else {
-      setLocalDraftProfile(updater);
     }
   };
 
@@ -361,12 +347,13 @@ export default function App() {
         console.warn('Error limpiando caché local al cerrar sesión:', e);
       }
 
-      const timer = setTimeout(() => {
+      // Timer de respaldo de seguridad si la animación concluye
+      const fallbackTimer = setTimeout(() => {
         setIsLoggingOut(false);
         navigate('/sign-in');
-      }, 2500);
+      }, 7500);
 
-      return () => clearTimeout(timer);
+      return () => clearTimeout(fallbackTimer);
     }
     prevUserRef.current = user;
   }, [user]);
@@ -572,9 +559,10 @@ export default function App() {
             onOpenBgModal={() => setShowBgModal(true)}
             onOpenAdminModal={isAdminUser ? () => setShowAdminModal(true) : undefined}
             onOpenFeedbackModal={() => setShowFeedbackModal(true)}
-            petName={profile.name}
+            petName={activePet ? activePet.name : 'Vista de ejemplo'}
             petType={profile.type}
-            petPhotoUrl={profile.photoUrl}
+            petPhotoUrl={activePet?.photoUrl}
+            hasActivePet={Boolean(activePet)}
             darkMode={darkMode}
             onToggleDarkMode={handleToggleDarkMode}
           />
@@ -726,7 +714,7 @@ export default function App() {
                 <div className="lg:col-span-5 space-y-3 sm:space-y-4">
 
                   {/* 1.1 Biométricos Puros */}
-                  <div className="glass-card dark:bg-stone-900/90 dark:border-stone-800 rounded-2xl p-3 sm:p-5 shadow-2xs space-y-2.5 sm:space-y-3.5 no-print transition-all">
+                  <div id="calculator-biometrics-box" className="glass-card dark:bg-stone-900/90 dark:border-stone-800 rounded-2xl p-3 sm:p-5 shadow-2xs space-y-2.5 sm:space-y-3.5 no-print transition-all">
                     <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-2 sm:pb-2.5">
                       <div>
                         <h2 className="font-heading font-extrabold text-xs sm:text-base text-stone-900 dark:text-stone-100 flex items-center gap-1.5 sm:gap-2">
@@ -900,26 +888,29 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Botón Guardar */}
+                        {/* Botón Guardar o Registrar Mascota */}
                         <button
                           type="button"
                           onClick={async () => {
-                            if (isProfileEmpty || !activePet) return;
+                            if (isProfileEmpty || !activePet) {
+                              window.dispatchEvent(new Event('nutripet_open_add_pet'));
+                              return;
+                            }
                             await savePet(profile);
                             setSaveSuccessMessage(`¡Perfil guardado!`);
                             setTimeout(() => setSaveSuccessMessage(null), 3000);
                           }}
-                          disabled={isSavingPet || isProfileEmpty}
+                          disabled={isSavingPet}
                           className="w-full py-2 rounded-xl bg-[#143826] hover:bg-[#1a4a32] text-white font-black text-[11px] sm:text-xs shadow-xs transition-all cursor-pointer"
                         >
-                          {isSavingPet ? 'Guardando...' : 'Guardar Datos Biométricos'}
+                          {isProfileEmpty ? '+ Registrar mi mascota real' : (isSavingPet ? 'Guardando...' : 'Guardar Datos Biométricos')}
                         </button>
                       </div>
                     )}
                   </div>
 
                   {/* 1.2 Calculadora Unificada y Diagnóstico Nutricional */}
-                  <div className="no-print">
+                  <div id="unified-food-calculator-section" className="no-print">
                     <UnifiedFoodCalculator
                       kibbleDailyGrams={result.kibbleDailyGrams}
                       barfDailyGrams={result.barfBreakdown?.totalGrams || Math.round(result.kibbleDailyGrams * 2.1)}
@@ -1103,9 +1094,9 @@ export default function App() {
 
               </div>
 
-              {/* 📷 WIDGET FOTOGRÁFICO DE OSLO */}
+              {/* MEDIDOR DE SALUD + LÍNEA DE TIEMPO CLÍNICA */}
               <div className="hidden xl:block w-72 shrink-0 xl:sticky xl:top-0">
-                <PetPhotoReelWidget profile={profile} />
+                <PetHealthTimeline profile={profile} onSelectTab={handleSelectTab} />
               </div>
 
             </div>
@@ -1125,7 +1116,7 @@ export default function App() {
               <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
                 <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="w-full lg:col-span-8 space-y-4">
+              <div id="routine-schedule-container" className="w-full lg:col-span-8 space-y-4">
                 <RoutineSchedule profile={profile} result={result} />
               </div>
             </div>
@@ -1144,20 +1135,21 @@ export default function App() {
           )}
 
           {activeTab === 'sheet' && (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-              <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
-                <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
-              </div>
-              <div className="w-full lg:col-span-8 space-y-4">
-                {isProOrTrial ? (
-                  <PetTechSheet onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
-                ) : (
-                  <ProFeatureLock
-                    featureName="Ficha Médica Imprimible & Código QR de Emergencia"
-                    onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
-                  />
-                )}
-              </div>
+            <div id="pettechsheet-container" className="w-full space-y-4">
+              {isProOrTrial ? (
+                <PetTechSheet onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+              ) : (
+                <ProFeatureLock
+                  featureName="Ficha Médica Imprimible & Código QR de Emergencia"
+                  description="Genera la credencial médica digital de tu mascota, reverso SOS de emergencia y un código QR único para rescate en caso de extravío."
+                  benefits={[
+                    "Código QR único con perfil de emergencia y rescate",
+                    "Exportación a PDF clínico e impresión tamaño carnet",
+                    "Datos de contacto veterinario y microchip siempre a mano"
+                  ]}
+                  onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
+                />
+              )}
             </div>
           )}
 
@@ -1166,12 +1158,18 @@ export default function App() {
               <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
                 <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="w-full lg:col-span-8 space-y-4">
+              <div id="medical-history-container" className="w-full lg:col-span-8 space-y-4">
                 {isProOrTrial ? (
                   <MedicalHistory />
                 ) : (
                   <ProFeatureLock
                     featureName="Expediente Clínico Digital & Control de Curva de Peso"
+                    description="Centraliza consultas veterinarias, fórmulas médicas, cirugías y monitorea la curva de peso histórica con rangos oficiales FEDIAF."
+                    benefits={[
+                      "Historial médico ilimitado con fórmulas y diagnósticos",
+                      "Control gráfico de curva de peso vs. meta de raza",
+                      "Sincronización multi-dispositivo protegida en la nube"
+                    ]}
                     onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
                   />
                 )}
@@ -1184,12 +1182,18 @@ export default function App() {
               <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
                 <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="w-full lg:col-span-8 space-y-4">
+              <div id="reminders-module-container" className="w-full lg:col-span-8 space-y-4">
                 {isProOrTrial ? (
                   <RemindersModule />
                 ) : (
                   <ProFeatureLock
                     featureName="Sistema Inteligente de Vacunas y Notificaciones"
+                    description="Automatiza el calendario sanitario de tu mascota con esquemas de vacunación, ciclos antiparasitarios y recordatorios de medicación."
+                    benefits={[
+                      "Calendario de vacunación y desparasitación con alertas",
+                      "Recordatorios de chequeos periódicos y medicación",
+                      "Bitácora integrada con historial de higiene y baños"
+                    ]}
                     onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
                   />
                 )}
@@ -1202,8 +1206,21 @@ export default function App() {
               <div className="hidden lg:block lg:col-span-4 lg:sticky lg:top-0">
                 <PetProfileHUD profile={profile} result={result} onSelectTab={handleSelectTab} />
               </div>
-              <div className="w-full lg:col-span-8 space-y-4">
-                <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+              <div id="barf-recipe-generator-container" className="w-full lg:col-span-8 space-y-4">
+                {isProOrTrial ? (
+                  <BarfRecipeGenerator onOpenSubscriptionModal={() => setShowSubscriptionModal(true)} />
+                ) : (
+                  <ProFeatureLock
+                    featureName="Dietas BARF & Recetas Caseras"
+                    description="Diseña menús crudos (BARF) y recetas caseras balanceadas gramo a gramo según especie, peso y pautas nutricionales oficiales FEDIAF/NRC."
+                    benefits={[
+                      "Desglose exacto en gramos de músculo, huesos carnosos y vísceras",
+                      "Recetas balanceadas para dietas crudas BARF, cocinadas y mixtas",
+                      "Generador inteligente según los ingredientes disponibles en casa"
+                    ]}
+                    onOpenSubscriptionModal={() => setShowSubscriptionModal(true)}
+                  />
+                )}
               </div>
             </div>
           )}
@@ -1243,7 +1260,7 @@ export default function App() {
                 </div>
 
                 {/* Columna Derecha: Hero Verde idéntico + Primeras 4 Tarjetas */}
-                <div className="lg:col-span-8 space-y-4">
+                <div id="food-traffic-light-container" className="lg:col-span-8 space-y-4">
                   <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#143826] via-[#1a4a32] to-[#123020] text-[#faf8f5] px-4 py-3.5 sm:px-6 sm:py-4 border border-[#2a5940] shadow-xs text-center flex flex-col items-center justify-center no-print">
                     <div className="relative z-10 space-y-1 max-w-lg mx-auto">
                       <div className="inline-flex items-center justify-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-emerald-200/90 bg-emerald-950/40 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
@@ -1332,6 +1349,11 @@ export default function App() {
 
       {/* Modales bajo demanda */}
       <React.Suspense fallback={null}>
+        <SpotlightTour
+          activeTab={activeTab}
+          onNavigateTab={handleSelectTab}
+          hasActivePet={activePet != null}
+        />
         {showShareModal && (
           <ShareModal
             isOpen={showShareModal}
@@ -1361,7 +1383,14 @@ export default function App() {
         )}
       </React.Suspense>
       <RegistrationLockModal />
-      <LogoutTransitionModal isOpen={isLoggingOut} userName={user?.displayName} />
+      <LogoutTransitionModal
+        isOpen={isLoggingOut}
+        userName={user?.displayName}
+        onComplete={() => {
+          setIsLoggingOut(false);
+          navigate('/sign-in');
+        }}
+      />
       <BackToTopButton />
     </div>
   );

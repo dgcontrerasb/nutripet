@@ -231,7 +231,7 @@ export const FoodTrafficLight: React.FC = () => {
       {/* 2. PRIMERAS 4 TARJETAS EN 2 COLUMNAS (ALINEADAS CON OSLO) */}
       {filteredFoods.length > 0 ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+          <div id="toxic-foods-preview-grid" className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
             {initialCards.map(food => renderFoodCard(food))}
           </div>
 

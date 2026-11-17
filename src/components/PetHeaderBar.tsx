@@ -83,6 +83,12 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
     };
   }, [showAddModal, petToDelete, showAuthModal]);
 
+  useEffect(() => {
+    const handleOpenAdd = () => setShowAddModal(true);
+    window.addEventListener('nutripet_open_add_pet', handleOpenAdd);
+    return () => window.removeEventListener('nutripet_open_add_pet', handleOpenAdd);
+  }, []);
+
   const activePet = pets.find(p => p.id === activePetId) || (pets.length > 0 ? pets[0] : null);
   const activeBreedName = activePet 
     ? POPULAR_BREEDS.find(b => b.id === activePet.breedId)?.name || (activePet.type === 'dog' ? 'Perro' : 'Gato')

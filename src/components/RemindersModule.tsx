@@ -23,6 +23,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 import { Reminder, BathLog } from '../types';
+import { DEMO_PET_PROFILE, DEMO_REMINDERS } from '../data/demoPet';
 import { RemindersCalendar } from './RemindersCalendar';
 
 /**
@@ -62,6 +63,10 @@ export const RemindersModule: React.FC = () => {
     addBathLog,
     deleteBathLog
   } = usePets();
+
+  const pet = activePet || DEMO_PET_PROFILE;
+  const isDemo = !activePet;
+  const effectiveReminders = isDemo ? DEMO_REMINDERS : reminders;
 
   const [activeTab, setActiveTab] = useState<'vaccines' | 'bath' | 'calendar'>('vaccines');
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
@@ -221,12 +226,12 @@ export const RemindersModule: React.FC = () => {
   }, [lastBath, todayStr]);
 
   const nextBathReminder = useMemo(() => {
-    return reminders.find(r => r.type === 'bath' && !r.completed);
-  }, [reminders]);
+    return effectiveReminders.find(r => r.type === 'bath' && !r.completed);
+  }, [effectiveReminders]);
 
   const healthReminders = useMemo(() => {
-    return reminders.filter(r => r.type !== 'bath');
-  }, [reminders]);
+    return effectiveReminders.filter(r => r.type !== 'bath');
+  }, [effectiveReminders]);
 
   const filteredHealthReminders = useMemo(() => {
     return healthReminders.filter(r => {
@@ -237,8 +242,8 @@ export const RemindersModule: React.FC = () => {
   }, [healthReminders, filter]);
 
   const bathRemindersList = useMemo(() => {
-    return reminders.filter(r => r.type === 'bath');
-  }, [reminders]);
+    return effectiveReminders.filter(r => r.type === 'bath');
+  }, [effectiveReminders]);
 
   const filteredBathReminders = useMemo(() => {
     return bathRemindersList.filter(r => {
@@ -250,12 +255,12 @@ export const RemindersModule: React.FC = () => {
 
   // Conteo total de recordatorios vencidos memoizado
   const totalOverdue = useMemo(() => {
-    return reminders.filter(r => !r.completed && r.dueDate < todayStr).length;
-  }, [reminders, todayStr]);
+    return effectiveReminders.filter(r => !r.completed && r.dueDate < todayStr).length;
+  }, [effectiveReminders, todayStr]);
 
   // Datos dinámicos para los 3 Pilares del Radar de Blindaje Biológico 360°
   const shieldPillars = useMemo(() => {
-    const pendingAll = reminders
+    const pendingAll = effectiveReminders
       .filter(r => !r.completed)
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
 
@@ -287,22 +292,20 @@ export const RemindersModule: React.FC = () => {
       nextDeworm,
       dewormDays
     };
-  }, [reminders, todayStr]);
+  }, [effectiveReminders, todayStr]);
 
   // Agrupación por fecha para el Mini-Calendario
   const remindersByDate = useMemo(() => {
-    return reminders.reduce((acc, rem) => {
+    return effectiveReminders.reduce((acc, rem) => {
       const d = rem.dueDate;
       if (!acc[d]) acc[d] = [];
       acc[d].push(rem);
       return acc;
     }, {} as Record<string, Reminder[]>);
-  }, [reminders]);
-
-  if (!activePet) return null;
+  }, [effectiveReminders]);
 
   const getPetAgeInfo = () => {
-    const ageMonths = activePet.ageMonths || 24;
+    const ageMonths = pet.ageMonths || 24;
     const ageYears = Math.floor(ageMonths / 12);
 
     if (ageMonths < 12) {
@@ -317,6 +320,10 @@ export const RemindersModule: React.FC = () => {
   const petAgeInfo = getPetAgeInfo();
 
   const handleOpenAddModalWithDate = (dateStr: string) => {
+    if (isDemo) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+      return;
+    }
     setForm(prev => ({ ...prev, dueDate: dateStr }));
     setShowAddModal(true);
   };
@@ -329,13 +336,13 @@ export const RemindersModule: React.FC = () => {
     const message =
 `🐾 *NUTRIPET CLINICAL CARE • RECORDATORIO DE SALUD*
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🩺 *Paciente:* ${activePet.name} (${activePet.type === 'dog' ? 'Canino' : 'Felino'})
+🩺 *Paciente:* ${pet.name} (${pet.type === 'dog' ? 'Canino' : 'Felino'})
 💉 *Tratamiento:* ${reminder.name}
 🗓️ *Fecha Programada:* ${reminder.dueDate}
 ⚖️ *Dosis / Pauta:* ${reminder.dosage || reminder.notes || '1 aplicación de refuerzo'}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🛡️ *Pautas de Cuidado:*
-• Mantén a ${activePet.name} en reposo y evita ejercicio intenso durante el día.
+• Mantén a ${pet.name} en reposo y evita ejercicio intenso durante el día.
 • En caso de vacunas, evitar baños las siguientes 48 horas.
 
 📲 _Gestionado desde el Expediente Digital NutriPet_`;
@@ -347,8 +354,8 @@ export const RemindersModule: React.FC = () => {
   const shareViaWhatsApp = handleSendWhatsAppReminder;
 
   const exportToCalendar = (rem: Reminder) => {
-    const title = `[NutriPet] ${rem.name} - ${activePet.name}`;
-    const details = `Recordatorio para ${activePet.name}. Dosis: ${rem.dosage || 'N/A'}. ${rem.notes || ''}`;
+    const title = `[NutriPet] ${rem.name} - ${pet.name}`;
+    const details = `Recordatorio para ${pet.name}. Dosis: ${rem.dosage || 'N/A'}. ${rem.notes || ''}`;
     const dateFormatted = rem.dueDate.replace(/-/g, '');
 
     const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//NutriPet//ES\nBEGIN:VEVENT\nSUMMARY:${title}\nDESCRIPTION:${details}\nDTSTART;VALUE=DATE:${dateFormatted}\nDTEND;VALUE=DATE:${dateFormatted}\nEND:VEVENT\nEND:VCALENDAR`;
@@ -365,12 +372,12 @@ export const RemindersModule: React.FC = () => {
   };
 
   const exportAllToCalendar = () => {
-    const pendingReminders = reminders.filter(r => !r.completed);
+    const pendingReminders = effectiveReminders.filter(r => !r.completed);
     if (pendingReminders.length === 0) return;
 
     const events = pendingReminders.map(rem => {
-      const title = `[NutriPet] ${rem.name} - ${activePet.name}`;
-      const details = `Recordatorio de salud para ${activePet.name}. Dosis: ${rem.dosage || 'N/A'}. ${rem.notes || ''}`;
+      const title = `[NutriPet] ${rem.name} - ${pet.name}`;
+      const details = `Recordatorio de salud para ${pet.name}. Dosis: ${rem.dosage || 'N/A'}. ${rem.notes || ''}`;
       const dateFormatted = rem.dueDate.replace(/-/g, '');
       return `BEGIN:VEVENT\nSUMMARY:${title}\nDESCRIPTION:${details}\nDTSTART;VALUE=DATE:${dateFormatted}\nDTEND;VALUE=DATE:${dateFormatted}\nEND:VEVENT`;
     }).join('\n');
@@ -380,7 +387,7 @@ export const RemindersModule: React.FC = () => {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', `nutripet_calendario_${activePet.name.toLowerCase().replace(/\s+/g, '_')}.ics`);
+    link.setAttribute('download', `nutripet_calendario_${pet.name.toLowerCase().replace(/\s+/g, '_')}.ics`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -446,6 +453,11 @@ export const RemindersModule: React.FC = () => {
   };
 
   const handleAttemptToggle = (rem: Reminder) => {
+    if (isDemo) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+      return;
+    }
+
     if (rem.completed) {
       toggleReminder(rem.id, true);
       return;
@@ -570,6 +582,11 @@ export const RemindersModule: React.FC = () => {
   };
 
   const addQuickTemplate = (name: string, type: Reminder['type'], defaultDays: number, dosage?: string) => {
+    if (isDemo) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+      return;
+    }
+
     const targetDate = addDaysToDate(todayStr, defaultDays);
 
     setConfirmQuickTemplate({
@@ -695,8 +712,13 @@ export const RemindersModule: React.FC = () => {
                 Vacunas & Notificaciones
               </h3>
               <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 border border-stone-200 dark:border-stone-700">
-                {activePet.name}
+                {pet.name}
               </span>
+              {isDemo && (
+                <span className="text-[9.5px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60">
+                  Vista de ejemplo
+                </span>
+              )}
               <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800">
                 {healthReminders.filter(r => !r.completed).length} pendiente{healthReminders.filter(r => !r.completed).length === 1 ? '' : 's'}
               </span>
@@ -772,13 +794,13 @@ export const RemindersModule: React.FC = () => {
 
           <button
             type="button"
-            onClick={() => setShowAddModal(true)}
+            onClick={() => isDemo ? window.dispatchEvent(new Event('nutripet_open_add_pet')) : setShowAddModal(true)}
             className="w-full sm:w-auto justify-center bg-[#143826] hover:bg-[#1a4a32] text-white px-2.5 sm:px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 shrink-0 active:scale-95 cursor-pointer min-w-0"
           >
             <Plus className="w-4 h-4 shrink-0" />
             <span className="truncate">
               <span className="sm:hidden">+ Recordatorio</span>
-              <span className="hidden sm:inline">Crear Recordatorio</span>
+              <span className="hidden sm:inline">{isDemo ? '+ Registrar mi mascota' : 'Crear Recordatorio'}</span>
             </span>
           </button>
         </div>
@@ -855,6 +877,7 @@ export const RemindersModule: React.FC = () => {
           {/* Carrusel Deslizable */}
           <div className="relative">
             <div
+              id="vaccine-radar-pillars"
               ref={shieldScrollRef}
               onScroll={checkShieldScroll}
               className="flex gap-2.5 overflow-x-auto pb-1 scrollbar-none snap-x snap-mandatory flex-nowrap sm:grid sm:grid-cols-3 sm:gap-3.5 scroll-smooth"
@@ -1019,7 +1042,7 @@ export const RemindersModule: React.FC = () => {
                         DERMATOLOGÍA & MANTO
                       </span>
                       <h4 className="font-heading font-extrabold text-base sm:text-lg text-white">
-                        Control de Baño e Higiene de {activePet.name}
+                        Control de Baño e Higiene de {pet.name}
                       </h4>
                     </div>
                   </div>
@@ -1043,11 +1066,11 @@ export const RemindersModule: React.FC = () => {
 
                 <button
                   type="button"
-                  onClick={() => setShowBathModal(true)}
+                  onClick={() => isDemo ? window.dispatchEvent(new Event('nutripet_open_add_pet')) : setShowBathModal(true)}
                   className="px-4 py-2.5 bg-white text-[#143826] hover:bg-emerald-50 font-extrabold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2 shrink-0"
                 >
                   <Droplets className="w-4 h-4 text-emerald-700" />
-                  <span>Registrar Baño Realizado Hoy</span>
+                  <span>{isDemo ? '+ Registrar mi mascota' : 'Registrar Baño Realizado Hoy'}</span>
                 </button>
               </div>
             </div>
@@ -1219,7 +1242,7 @@ export const RemindersModule: React.FC = () => {
                       BITÁCORA DERMATOLÓGICA
                     </span>
                     <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-sm">
-                      Historial de Baños de {activePet.name}
+                      Historial de Baños de {pet.name}
                     </h5>
                   </div>
                   <span className="text-xs font-bold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-950/60 px-2.5 py-0.5 rounded-full border border-teal-200 dark:border-teal-800">
@@ -1651,7 +1674,7 @@ export const RemindersModule: React.FC = () => {
                     PLAN PREVENTIVO RECOMENDADO
                   </span>
                   <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs sm:text-sm">
-                    Esquema Preventivo Oficial ({activePet.type === 'dog' ? 'Caninos' : 'Felinos'})
+                    Esquema Preventivo Oficial ({pet.type === 'dog' ? 'Caninos' : 'Felinos'})
                   </h4>
                 </div>
               </div>
@@ -1671,17 +1694,17 @@ export const RemindersModule: React.FC = () => {
                     <span className="text-[10px] font-mono font-bold text-stone-500">Anual</span>
                   </div>
                   <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs">
-                    {activePet.type === 'dog' ? 'Antirrábica & Polivalente' : 'Triple Felina & Antirrábica'}
+                    {pet.type === 'dog' ? 'Antirrábica & Polivalente' : 'Triple Felina & Antirrábica'}
                   </h5>
                   <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-snug">
-                    {activePet.type === 'dog'
+                    {pet.type === 'dog'
                       ? 'Protección contra rabia, parvovirus, moquillo, adenovirus y leptospirosis.'
                       : 'Protección contra panleucopenia, rinotraqueitis, calicivirus y rabia.'}
                   </p>
                 </div>
 
                 <div className="space-y-1.5 pt-1">
-                  {activePet.type === 'dog' ? (
+                  {pet.type === 'dog' ? (
                     <>
                       <button
                         type="button"
@@ -1739,14 +1762,14 @@ export const RemindersModule: React.FC = () => {
                 <div className="space-y-1.5 pt-1">
                   <button
                     type="button"
-                    onClick={() => addQuickTemplate(activePet.type === 'dog' ? 'Pipeta o Pastilla Antipulgas / Garrapatas' : 'Pipeta Antipulgas Felina', 'deworming', 30, activePet.type === 'dog' ? '1 dosis mensual' : '1 pipeta en cuello')}
+                    onClick={() => addQuickTemplate(pet.type === 'dog' ? 'Pipeta o Pastilla Antipulgas / Garrapatas' : 'Pipeta Antipulgas Felina', 'deworming', 30, pet.type === 'dog' ? '1 dosis mensual' : '1 pipeta en cuello')}
                     className="w-full py-1.5 px-2 bg-amber-50 hover:bg-amber-100/90 text-amber-900 border border-amber-200/80 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-800/80 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
                   >
                     <span>+ Antipulgas (30 días)</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => addQuickTemplate(activePet.type === 'dog' ? 'Desparasitante Interno Oral' : 'Desparasitante Interno Felino', 'deworming', 90, '1 dosis según peso')}
+                    onClick={() => addQuickTemplate(pet.type === 'dog' ? 'Desparasitante Interno Oral' : 'Desparasitante Interno Felino', 'deworming', 90, '1 dosis según peso')}
                     className="w-full py-1.5 px-2 bg-stone-100 hover:bg-stone-200/90 text-stone-800 border border-stone-200 dark:bg-stone-700/60 dark:text-stone-200 dark:border-stone-600 rounded-lg text-[11px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1 active:scale-98 shadow-2xs"
                   >
                     <span>+ Desparasitación (90 días)</span>
@@ -1764,10 +1787,10 @@ export const RemindersModule: React.FC = () => {
                     <span className="text-[10px] font-mono font-bold text-stone-500">Semestral</span>
                   </div>
                   <h5 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs">
-                    {activePet.type === 'dog' ? 'Tos de Perreras & Chequeo' : 'Leucemia & Chequeo'}
+                    {pet.type === 'dog' ? 'Tos de Perreras & Chequeo' : 'Leucemia & Chequeo'}
                   </h5>
                   <p className="text-[11px] text-stone-600 dark:text-stone-300 mt-1 leading-snug">
-                    {activePet.type === 'dog'
+                    {pet.type === 'dog'
                       ? 'Evaluación semestral del bienestar y refuerzo respiratorio.'
                       : 'Chequeo veterinario preventivo y control de bolas de pelo.'}
                   </p>
@@ -1781,7 +1804,7 @@ export const RemindersModule: React.FC = () => {
                   >
                     <span>+ Control Veterinario (180d)</span>
                   </button>
-                  {activePet.type === 'dog' ? (
+                  {pet.type === 'dog' ? (
                     <button
                       type="button"
                       onClick={() => addQuickTemplate('Vacuna Contra Tos de Perreras', 'vaccine', 180, '1 dosis semestral')}
@@ -1812,7 +1835,7 @@ export const RemindersModule: React.FC = () => {
           <Info className="w-4 h-4" />
         </div>
         <div className="text-xs text-stone-600 dark:text-stone-300 leading-relaxed">
-          <strong className="font-bold text-stone-900 dark:text-stone-100">Nota Clínica Preventiva:</strong> Este cronograma es una guía de acompañamiento. Nunca mediques ni vacunes a {activePet.name} sin prescripción de un médico veterinario colegiado.
+          <strong className="font-bold text-stone-900 dark:text-stone-100">Nota Clínica Preventiva:</strong> Este cronograma es una guía de acompañamiento. Nunca mediques ni vacunes a {pet.name} sin prescripción de un médico veterinario colegiado.
         </div>
       </div>
 
@@ -1830,7 +1853,7 @@ export const RemindersModule: React.FC = () => {
                     ¿Vaciar todos los recordatorios?
                   </h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400">
-                    Se eliminarán todos los recordatorios actuales de {activePet.name}.
+                    Se eliminarán todos los recordatorios actuales de {pet.name}.
                   </p>
                 </div>
               </div>
@@ -2052,7 +2075,7 @@ export const RemindersModule: React.FC = () => {
                   <Droplets className="w-5 h-5" />
                 </span>
                 <h3 className="font-heading font-extrabold text-base text-stone-900 dark:text-stone-100">
-                  Registrar Baño de {activePet.name}
+                  Registrar Baño de {pet.name}
                 </h3>
               </div>
               <button
@@ -2259,7 +2282,7 @@ export const RemindersModule: React.FC = () => {
                     Confirmar Realización de Tratamiento
                   </h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400">
-                    {activePet.name} • {completingReminderState.reminder.name}
+                    {pet.name} • {completingReminderState.reminder.name}
                   </p>
                 </div>
               </div>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { usePets } from '../context/PetContext';
+import { DEMO_PET_PROFILE } from '../data/demoPet';
 import { ProFeatureLock } from './ProFeatureLock';
 import {
   Utensils,
@@ -144,22 +145,23 @@ const PRESET_RECIPES: PresetRecipe[] = [
 
 export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
   const { activePet, isProOrTrial } = usePets();
+  const pet = activePet || DEMO_PET_PROFILE;
+  const isDemo = !activePet;
+
   const [selectedRecipeId, setSelectedRecipeId] = useState<string>(PRESET_RECIPES[0].id);
   const [customIngredients, setCustomIngredients] = useState<string>('');
   const [aiGenerating, setAiGenerating] = useState<boolean>(false);
   const [aiRecipeResult, setAiRecipeResult] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
 
-  if (!activePet) return null;
-
   const isPro = isProOrTrial;
   const currentRecipe = PRESET_RECIPES.find(r => r.id === selectedRecipeId) || PRESET_RECIPES[0];
 
   // Cálculo de ración diaria estimada (aprox 2.5% a 3% del peso corporal para adultos)
-  const estimatedDailyGrams = Math.round(activePet.weightKg * (activePet.type === 'cat' ? 35 : 28));
+  const estimatedDailyGrams = Math.round(pet.weightKg * (pet.type === 'cat' ? 35 : 28));
 
   // Filtrar recetas válidas para el tipo de mascota (dog/cat)
-  const availableRecipes = PRESET_RECIPES.filter(r => r.petType === 'both' || r.petType === activePet.type);
+  const availableRecipes = PRESET_RECIPES.filter(r => r.petType === 'both' || r.petType === pet.type);
 
   const handleCopyRecipe = () => {
     if (aiRecipeResult) {
@@ -169,11 +171,11 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }
       return;
     }
 
-    let text = `🥩 *RECETA CASERA BALANCEDA PARA ${activePet.name.toUpperCase()}*\n`;
+    let text = `🥩 *RECETA CASERA BALANCEDA PARA ${pet.name.toUpperCase()}*\n`;
     text += `📌 *Platillo:* ${currentRecipe.name}\n`;
     text += `🥣 *Ración Diaria Total:* ${estimatedDailyGrams} g/día\n`;
     text += `━━━━━━━━━━━━━━━━━━━━━\n`;
-    text += `📊 *INGREDIENTES EXACTOS POR PESO (${activePet.weightKg} kg):*\n`;
+    text += `📊 *INGREDIENTES EXACTOS POR PESO (${pet.weightKg} kg):*\n`;
     currentRecipe.ingredientBreakdown.forEach(ing => {
       const grams = Math.round((estimatedDailyGrams * ing.percentage) / 100);
       text += `• ${ing.name}: *${grams} g* (${ing.percentage}%)\n`;
@@ -193,7 +195,7 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }
       return;
     }
 
-    let text = `🥩 *RECETA NUTRIPET PARA ${activePet.name.toUpperCase()}*\n`;
+    let text = `🥩 *RECETA NUTRIPET PARA ${pet.name.toUpperCase()}*\n`;
     text += `📌 *Platillo:* ${currentRecipe.name}\n`;
     text += `🥣 *Ración Diaria:* ${estimatedDailyGrams} g/día\n\n`;
     text += `📊 *Ingredientes:* \n`;
@@ -220,9 +222,9 @@ export const BarfRecipeGenerator: React.FC<Props> = ({ onOpenSubscriptionModal }
 
     setTimeout(() => {
       const primaryIng = customIngredients.split(',')[0]?.trim() || 'Carne magra / Pechuga';
-      setAiRecipeResult(`👨‍🍳 RECETA CASERA PERSONALIZADA PARA ${activePet.name.toUpperCase()} (${estimatedDailyGrams}g totales):
+      setAiRecipeResult(`👨‍🍳 RECETA CASERA PERSONALIZADA PARA ${pet.name.toUpperCase()} (${estimatedDailyGrams}g totales):
 
-Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC para ${activePet.type === 'dog' ? 'caninos' : 'felinos'} de ${activePet.weightKg}kg:
+Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC para ${pet.type === 'dog' ? 'caninos' : 'felinos'} de ${pet.weightKg}kg:
 
 1. Base de proteína magra (${primaryIng}): ${Math.round(estimatedDailyGrams * 0.65)}g (Cocinar al vapor o agua sin sal)
 2. Fibra y vegetales aptos: ${Math.round(estimatedDailyGrams * 0.25)}g (Hervir y triturar en puré)
@@ -261,7 +263,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
             Dietas BARF & <span className="font-editorial italic font-normal text-amber-300">Recetas Caseras</span>
           </h1>
           <p className="text-[10px] sm:text-xs text-emerald-100/80 leading-relaxed font-normal">
-            Formulaciones balanceadas calculadas gramo a gramo para {activePet.name} ({activePet.weightKg} kg).
+            Formulaciones balanceadas calculadas gramo a gramo para {pet.name} ({pet.weightKg} kg).
           </p>
         </div>
       </div>
@@ -271,7 +273,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
         <div className="flex items-start sm:items-center gap-2.5 text-[11px] sm:text-xs text-stone-600 dark:text-stone-300 leading-snug">
           <Droplets className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5 sm:mt-0" />
           <p>
-            <strong className="text-stone-900 dark:text-stone-100 font-bold">Humedad Biológica (~{estimatedDailyGrams} g/día):</strong> La croqueta seca concentra calorías con solo <strong>8-10% de humedad</strong>, mientras la comida fresca/BARF aporta un <strong>70-75% de agua natural</strong>, dando mayor volumen y gramos con el mismo aporte calórico para {activePet.name}.
+            <strong className="text-stone-900 dark:text-stone-100 font-bold">Humedad Biológica (~{estimatedDailyGrams} g/día):</strong> La croqueta seca concentra calorías con solo <strong>8-10% de humedad</strong>, mientras la comida fresca/BARF aporta un <strong>70-75% de agua natural</strong>, dando mayor volumen y gramos con el mismo aporte calórico para {pet.name}.
           </p>
         </div>
         <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono font-bold text-emerald-800 dark:text-emerald-300 shrink-0 self-start sm:self-center">
@@ -283,7 +285,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
       {!isPro ? (
         <ProFeatureLock
           featureName="Generador de Dietas BARF & Recetas Caseras"
-          description={`Diseña menús crudos (BARF) y cocinados balanceados con proporciones exactas de hueso carnoso, carne magra, vísceras y suplementos adaptados a ${activePet.name}.`}
+          description={`Diseña menús crudos (BARF) y cocinados balanceados con proporciones exactas de hueso carnoso, carne magra, vísceras y suplementos adaptados a ${pet.name}.`}
           benefits={[
             "Desglose exacto en gramos de músculo, huesos y vísceras",
             "Soporte para dietas crudas BARF, cocidas y mixtas",
@@ -308,6 +310,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                 return (
                   <div
                     key={recipe.id}
+                    id={recipe.id === availableRecipes[0]?.id ? "barf-first-recipe-card" : undefined}
                     onClick={() => {
                       setSelectedRecipeId(recipe.id);
                       setAiRecipeResult(null);
@@ -353,7 +356,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                 </h4>
               </div>
               <p className="text-[11px] text-stone-600 dark:text-stone-400 leading-snug">
-                Escribe qué alimentos tienes en casa y calcularemos la proporción balanceada para {activePet.name}:
+                Escribe qué alimentos tienes en casa y calcularemos la proporción balanceada para {pet.name}:
               </p>
               <form onSubmit={handleGenerateCustomRecipe} className="space-y-2">
                 <input
@@ -419,8 +422,8 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                   <div className="space-y-1.5 flex-1 min-w-0">
                     <div className="flex items-center flex-wrap gap-2">
                       <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white dark:bg-stone-800 border border-emerald-200 dark:border-emerald-800 text-[10px] font-black text-emerald-900 dark:text-emerald-200 shadow-3xs">
-                        <span>{activePet.type === 'dog' ? '🐶' : '🐱'}</span>
-                        <span>{activePet.name} • {activePet.weightKg} kg</span>
+                        <span>{pet.type === 'dog' ? '🐶' : '🐱'}</span>
+                        <span>{pet.name} • {pet.weightKg} kg</span>
                       </span>
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100/90 dark:bg-amber-950/70 border border-amber-300/70 dark:border-amber-800 text-[9.5px] font-mono font-black uppercase tracking-wider text-amber-900 dark:text-amber-300">
                         <ShieldCheck className="w-3 h-3 text-amber-600 dark:text-amber-400 shrink-0" />
@@ -602,7 +605,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                   <div className="flex items-center justify-between">
                     <h4 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
                       <Scale className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                      <span>Ingredientes Exactos para {activePet.name} ({estimatedDailyGrams}g totales / día):</span>
+                      <span>Ingredientes Exactos para {pet.name} ({estimatedDailyGrams}g totales / día):</span>
                     </h4>
                   </div>
 
@@ -675,7 +678,7 @@ Basado en tus ingredientes (${customIngredients}) y en las pautas FEDIAF/NRC par
                 <div className="p-3 bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60 rounded-xl text-[11px] text-amber-950 dark:text-amber-200 flex items-start gap-2">
                   <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                   <p className="leading-snug">
-                    <strong>Aviso de Salud NutriPet:</strong> Estas recetas son guías caseras complementarias orientativas. Si vas a alimentar a {activePet.name} 100% con comida casera a largo plazo, consulta con un nutricionista veterinario para adicionar suplementación de calcio, taurina o multivitamínico.
+                    <strong>Aviso de Salud NutriPet:</strong> Estas recetas son guías caseras complementarias orientativas. Si vas a alimentar a {pet.name} 100% con comida casera a largo plazo, consulta con un nutricionista veterinario para adicionar suplementación de calcio, taurina o multivitamínico.
                   </p>
                 </div>
 

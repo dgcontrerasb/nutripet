@@ -22,9 +22,14 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { MedicalRecord, WeightLog } from '../types';
+import { DEMO_PET_PROFILE, DEMO_WEIGHT_LOGS, DEMO_MEDICAL_RECORDS } from '../data/demoPet';
 
 export const MedicalHistory: React.FC = () => {
   const { activePet, medicalRecords, weightLogs, addMedicalRecord, deleteMedicalRecord, addWeightLog, deleteWeightLog } = usePets();
+  const pet = activePet || DEMO_PET_PROFILE;
+  const isDemo = !activePet;
+  const effectiveMedicalRecords = isDemo ? DEMO_MEDICAL_RECORDS : medicalRecords;
+  const effectiveWeightLogs = isDemo ? DEMO_WEIGHT_LOGS : weightLogs;
 
   const [activeSubTab, setActiveSubTab] = useState<'records' | 'weights'>('records');
   const [filterType, setFilterType] = useState<string>('all');
@@ -56,7 +61,7 @@ export const MedicalHistory: React.FC = () => {
       clearTimeout(timer);
       window.removeEventListener('resize', checkFilterScroll);
     };
-  }, [checkFilterScroll, medicalRecords.length]);
+  }, [checkFilterScroll, effectiveMedicalRecords.length]);
 
   const scrollFilters = (direction: 'left' | 'right') => {
     const el = filterScrollRef.current;
@@ -82,7 +87,7 @@ export const MedicalHistory: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     type: 'consultation',
     title: '',
-    veterinarian: activePet?.veterinarian || '',
+    veterinarian: pet?.veterinarian || '',
     diagnosis: '',
     notes: ''
   });
@@ -93,33 +98,39 @@ export const MedicalHistory: React.FC = () => {
     notes: string;
   }>({
     date: new Date().toISOString().split('T')[0],
-    weightKg: activePet?.weightKg || 0,
+    weightKg: pet?.weightKg || 0,
     notes: ''
   });
 
-  if (!activePet) return null;
-
   // Sincronización inteligente al abrir el modal con el tipo activo
   const handleOpenAddModal = (customType?: MedicalRecord['type']) => {
+    if (isDemo) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+      return;
+    }
     const targetType: MedicalRecord['type'] = customType || (filterType !== 'all' ? (filterType as MedicalRecord['type']) : 'consultation');
     setRecordForm({
       date: new Date().toISOString().split('T')[0],
       type: targetType,
       title: '',
-      veterinarian: activePet?.veterinarian || '',
+      veterinarian: pet?.veterinarian || '',
       diagnosis: '',
       notes: ''
     });
     setShowAddModal(true);
   };
 
-  const filteredRecords = medicalRecords.filter(r => {
+  const filteredRecords = effectiveMedicalRecords.filter(r => {
     if (filterType === 'all') return true;
     return r.type === filterType;
   });
 
   const handleCreateRecord = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDemo) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+      return;
+    }
     if (!recordForm.title.trim()) return;
 
     await addMedicalRecord({
@@ -136,7 +147,7 @@ export const MedicalHistory: React.FC = () => {
       date: new Date().toISOString().split('T')[0],
       type: 'consultation',
       title: '',
-      veterinarian: activePet?.veterinarian || '',
+      veterinarian: pet?.veterinarian || '',
       diagnosis: '',
       notes: ''
     });
@@ -144,6 +155,10 @@ export const MedicalHistory: React.FC = () => {
 
   const handleCreateWeight = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDemo) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+      return;
+    }
     if (!weightForm.weightKg || weightForm.weightKg <= 0) return;
 
     await addWeightLog({
@@ -263,14 +278,14 @@ export const MedicalHistory: React.FC = () => {
   ];
 
   const getCategoryCount = (catId: string) => {
-    if (catId === 'all') return medicalRecords.length;
-    return medicalRecords.filter(r => r.type === catId).length;
+    if (catId === 'all') return effectiveMedicalRecords.length;
+    return effectiveMedicalRecords.filter(r => r.type === catId).length;
   };
 
   return (
     <div className="space-y-6">
       {/* Selector de subpestañas y Botón de Acción */}
-      <div className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-3 sm:p-4.5 shadow-bento flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-fade-in">
+      <div id="medical-subtabs-cockpit" className="bg-white dark:bg-[#1a231d] border border-stone-200/80 dark:border-stone-800 rounded-2xl p-3 sm:p-4.5 shadow-bento flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 animate-fade-in">
         <div className="grid grid-cols-2 gap-1.5 bg-stone-100 dark:bg-stone-800/80 p-1 rounded-xl w-full sm:w-auto">
           <button
             type="button"
@@ -282,7 +297,7 @@ export const MedicalHistory: React.FC = () => {
             }`}
           >
             <Stethoscope className="w-3.5 h-3.5 text-[#143826] dark:text-emerald-400 shrink-0" />
-            <span className="truncate">Consultas ({medicalRecords.length})</span>
+            <span className="truncate">Consultas ({effectiveMedicalRecords.length})</span>
           </button>
 
           <button
@@ -295,7 +310,7 @@ export const MedicalHistory: React.FC = () => {
             }`}
           >
             <Scale className="w-3.5 h-3.5 text-[#143826] dark:text-emerald-400 shrink-0" />
-            <span className="truncate">Pesos ({weightLogs.length})</span>
+            <span className="truncate">Pesos ({effectiveWeightLogs.length})</span>
           </button>
         </div>
 
@@ -307,15 +322,15 @@ export const MedicalHistory: React.FC = () => {
               className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1b4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
             >
               {addButtonContent.icon}
-              <span>{addButtonContent.label}</span>
+              <span>{isDemo ? '+ Registrar mi mascota' : addButtonContent.label}</span>
             </button>
           ) : (
             <button
               type="button"
-              onClick={() => setShowWeightModal(true)}
+              onClick={() => isDemo ? window.dispatchEvent(new Event('nutripet_open_add_pet')) : setShowWeightModal(true)}
               className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#143826] hover:bg-[#1b4d34] dark:bg-[#3f6e58] dark:hover:bg-[#4d856b] text-white font-bold text-xs flex items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer active:scale-95 shrink-0"
             >
-              <Plus className="w-4 h-4" /> Registrar Peso
+              <Plus className="w-4 h-4" /> {isDemo ? '+ Registrar mi mascota' : 'Registrar Peso'}
             </button>
           )}
         </div>
@@ -408,7 +423,7 @@ export const MedicalHistory: React.FC = () => {
                     : `Sin registros en ${filterCategories.find(c => c.id === filterType)?.label || 'esta categoría'}`}
                 </h3>
                 <p className="text-xs text-stone-500 dark:text-stone-400 max-w-sm mx-auto">
-                  Lleva el historial de consultas, cirugías, diagnósticos y fórmulas médicas de {activePet.name} en un solo lugar.
+                  Lleva el historial de consultas, cirugías, diagnósticos y fórmulas médicas de {pet.name} en un solo lugar.
                 </p>
                 <button
                   type="button"
@@ -457,36 +472,38 @@ export const MedicalHistory: React.FC = () => {
                                 {formatDisplayDate(record.date)}
                               </span>
 
-                              {confirmDeleteRecordId === record.id ? (
-                                <div className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/50 px-2 py-1 rounded-xl border border-rose-200 dark:border-rose-800">
-                                  <span className="text-[11px] font-bold text-rose-700 dark:text-rose-300">¿Eliminar?</span>
+                              {!isDemo && (
+                                confirmDeleteRecordId === record.id ? (
+                                  <div className="flex items-center gap-1.5 bg-rose-50 dark:bg-rose-950/50 px-2 py-1 rounded-xl border border-rose-200 dark:border-rose-800">
+                                    <span className="text-[11px] font-bold text-rose-700 dark:text-rose-300">¿Eliminar?</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        deleteMedicalRecord(record.id);
+                                        setConfirmDeleteRecordId(null);
+                                      }}
+                                      className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                                    >
+                                      Sí
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteRecordId(null)}
+                                      className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                ) : (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      deleteMedicalRecord(record.id);
-                                      setConfirmDeleteRecordId(null);
-                                    }}
-                                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                                    onClick={() => setConfirmDeleteRecordId(record.id)}
+                                    className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
+                                    title="Eliminar esta entrada"
                                   >
-                                    Sí
+                                    <Trash2 className="w-4 h-4" />
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setConfirmDeleteRecordId(null)}
-                                    className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                                  >
-                                    No
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmDeleteRecordId(record.id)}
-                                  className="text-stone-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-                                  title="Eliminar esta entrada"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                )
                               )}
                             </div>
                           </div>
@@ -566,8 +583,13 @@ export const MedicalHistory: React.FC = () => {
             <div className="bg-white dark:bg-[#1a231d] border border-stone-200/90 dark:border-stone-800 rounded-3xl p-5 sm:p-7 shadow-xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
-                  <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-lg">
-                    Evolución del Peso de {activePet.name}
+                  <h3 className="font-heading font-extrabold text-stone-900 dark:text-stone-100 text-lg flex items-center gap-2">
+                    <span>Evolución del Peso de {pet.name}</span>
+                    {isDemo && (
+                      <span className="text-[9.5px] font-mono font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200/80 dark:border-amber-800/60">
+                        Vista de ejemplo
+                      </span>
+                    )}
                   </h3>
                   <p className="text-xs text-stone-500 dark:text-stone-400">
                     Controla si se mantiene en su rango saludable o presenta fluctuaciones.
@@ -577,12 +599,12 @@ export const MedicalHistory: React.FC = () => {
                   <Scale className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                   <div>
                     <span className="text-[10px] uppercase font-bold text-emerald-800 dark:text-emerald-300 block">Peso Actual:</span>
-                    <span className="text-base font-black text-stone-900 dark:text-stone-100 font-heading">{activePet.weightKg} kg</span>
+                    <span className="text-base font-black text-stone-900 dark:text-stone-100 font-heading">{pet.weightKg} kg</span>
                   </div>
                 </div>
               </div>
 
-              {weightLogs.length === 0 ? (
+              {effectiveWeightLogs.length === 0 ? (
                 <div className="py-8 text-center text-xs text-stone-500 dark:text-stone-400">
                   No hay pesajes registrados. Agrega el primero para graficar la evolución.
                 </div>
@@ -599,8 +621,8 @@ export const MedicalHistory: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
-                      {weightLogs.map((log, index) => {
-                        const prevLog = index > 0 ? weightLogs[index - 1] : null;
+                      {effectiveWeightLogs.map((log, index) => {
+                        const prevLog = index > 0 ? effectiveWeightLogs[index - 1] : null;
                         const diff = prevLog ? (log.weightKg - prevLog.weightKg) : 0;
 
                         return (
@@ -632,36 +654,38 @@ export const MedicalHistory: React.FC = () => {
                               {log.notes || '—'}
                             </td>
                             <td className="py-3 px-3 text-right">
-                              {confirmDeleteWeightId === log.id ? (
-                                <div className="flex items-center justify-end gap-1.5 bg-rose-50 dark:bg-rose-950/50 px-2 py-1 rounded-xl border border-rose-200 dark:border-rose-800 inline-flex">
-                                  <span className="text-[11px] font-bold text-rose-700 dark:text-rose-300">¿Borrar?</span>
+                              {!isDemo && (
+                                confirmDeleteWeightId === log.id ? (
+                                  <div className="flex items-center justify-end gap-1.5 bg-rose-50 dark:bg-rose-950/50 px-2 py-1 rounded-xl border border-rose-200 dark:border-rose-800 inline-flex">
+                                    <span className="text-[11px] font-bold text-rose-700 dark:text-rose-300">¿Borrar?</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        deleteWeightLog(log.id);
+                                        setConfirmDeleteWeightId(null);
+                                      }}
+                                      className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                                    >
+                                      Sí
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => setConfirmDeleteWeightId(null)}
+                                      className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                                    >
+                                      No
+                                    </button>
+                                  </div>
+                                ) : (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      deleteWeightLog(log.id);
-                                      setConfirmDeleteWeightId(null);
-                                    }}
-                                    className="px-2 py-0.5 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors"
+                                    onClick={() => setConfirmDeleteWeightId(log.id)}
+                                    className="text-stone-400 hover:text-rose-600 transition-colors p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
+                                    title="Eliminar este pesaje"
                                   >
-                                    Sí
+                                    <Trash2 className="w-3.5 h-3.5" />
                                   </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setConfirmDeleteWeightId(null)}
-                                    className="px-2 py-0.5 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300 dark:hover:bg-stone-600 text-stone-700 dark:text-stone-300 rounded-lg text-xs font-bold cursor-pointer transition-colors"
-                                  >
-                                    No
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmDeleteWeightId(log.id)}
-                                  className="text-stone-400 hover:text-rose-600 transition-colors p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer"
-                                  title="Eliminar este pesaje"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
+                                )
                               )}
                             </td>
                           </tr>
@@ -794,7 +818,7 @@ export const MedicalHistory: React.FC = () => {
           <div className="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-stone-100 dark:border-stone-800 pb-3">
               <h3 className="font-heading font-extrabold text-base text-stone-900 dark:text-stone-100">
-                Registrar Pesaje de {activePet.name}
+                Registrar Pesaje de {pet.name}
               </h3>
               <button
                 type="button"

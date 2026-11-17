@@ -48,6 +48,7 @@ import { PetProfile, PetType, ActivityLevel, Gender } from '../types';
 import { POPULAR_BREEDS, getSuggestedIdealWeight } from '../data';
 import { ExportPetCardModal } from './ExportPetCardModal';
 import { ProFeatureLock } from './ProFeatureLock';
+import { DEMO_PET_PROFILE, DEMO_WEIGHT_LOGS } from '../data/demoPet';
 
 interface Props {
   onOpenSubscriptionModal?: () => void;
@@ -57,9 +58,12 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
   const { activePet, savePet, isSavingPet, weightLogs, addWeightLog, deleteWeightLog, isProOrTrial } = usePets();
   const handleOpenSub = onOpenSubscriptionModal || (() => {});
 
+  const isDemo = !activePet;
+  const targetPet = activePet || DEMO_PET_PROFILE;
+
   const [isEditing, setIsEditing] = useState(false);
   const [isFlipped, setIsFlipped] = useState(false);
-  const [formData, setFormData] = useState<PetProfile | null>(activePet);
+  const [formData, setFormData] = useState<PetProfile | null>(targetPet);
   const [showExportModal, setShowExportModal] = useState(false);
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [qrThumbUrl, setQrThumbUrl] = useState<string | null>(null);
@@ -75,27 +79,26 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
   // Estados para Ritmo de Peso FEDIAF y Registro de Peso
   const [weeklyLossRate, setWeeklyLossRate] = useState<0.8 | 1.0 | 1.5>(1.0);
   const [showAddWeightForm, setShowAddWeightForm] = useState<boolean>(false);
-  const [newWeight, setNewWeight] = useState<number>(activePet?.weightKg || 10);
+  const [newWeight, setNewWeight] = useState<number>(targetPet?.weightKg || 13.5);
   const [newDate, setNewDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [newNotes, setNewNotes] = useState<string>('');
 
   // Sincronizar estado cuando cambia la mascota activa
   useEffect(() => {
-    setFormData(activePet);
+    setFormData(targetPet);
     setIsEditing(false);
     setIsFlipped(false);
-    if (activePet?.weightKg) {
-      setNewWeight(activePet.weightKg);
+    if (targetPet?.weightKg) {
+      setNewWeight(targetPet.weightKg);
     }
   }, [activePet?.id]);
 
   // Generar miniatura QR 100% en memoria local del cliente (Cero costo / Cero red)
   useEffect(() => {
-    if (!activePet) return;
     let isMounted = true;
-    const targetUrl = activePet.publicId
-      ? `${window.location.origin}/?pet=${activePet.publicId}`
-      : `${window.location.origin}/?sos=${encodeURIComponent(activePet.name)}`;
+    const targetUrl = targetPet.publicId
+      ? `${window.location.origin}/?pet=${targetPet.publicId}`
+      : `${window.location.origin}/?sos=${encodeURIComponent(targetPet.name)}`;
 
     QRCode.toDataURL(targetUrl, {
       width: 140,
@@ -115,9 +118,9 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
     return () => {
       isMounted = false;
     };
-  }, [activePet?.id, activePet?.publicId, activePet?.name]);
+  }, [targetPet.id, targetPet.publicId, targetPet.name]);
 
-  if (!activePet || !formData) {
+  if (!formData) {
     return (
       <div className="p-8 text-center bg-white rounded-3xl border border-stone-200">
         <p className="text-stone-500 font-medium">No hay ninguna mascota seleccionada.</p>
@@ -202,6 +205,10 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDemo) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+      return;
+    }
     if (!formData) return;
 
     const cleanName = formData.name.trim() || activePet?.name || 'Mi Mascota';
@@ -216,6 +223,10 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
 
   const handleAddWeight = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isDemo) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+      return;
+    }
     if (!newWeight || newWeight <= 0) return;
 
     await addWeightLog({
@@ -242,13 +253,14 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
   const effectiveIdealWeight = formData.idealWeightKg || suggestedIdealWeight || formData.weightKg;
 
   // Datos de curva de peso e historial
-  const sortedWeightLogs = weightLogs.length > 0
-    ? [...weightLogs].sort((a, b) => a.date.localeCompare(b.date))
+  const activeWeightLogs = isDemo ? DEMO_WEIGHT_LOGS : weightLogs.filter(w => w.petId === targetPet.id);
+  const sortedWeightLogs = activeWeightLogs.length > 0
+    ? [...activeWeightLogs].sort((a, b) => a.date.localeCompare(b.date))
     : [{
         id: 'init',
-        petId: activePet.id,
-        date: activePet.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
-        weightKg: activePet.weightKg
+        petId: targetPet.id,
+        date: targetPet.createdAt?.split('T')[0] || new Date().toISOString().split('T')[0],
+        weightKg: targetPet.weightKg
       }];
 
   const currentWeight = sortedWeightLogs[sortedWeightLogs.length - 1].weightKg;
@@ -362,7 +374,7 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
             {/* SUB-COLUMNA 1: PASAPORTE VERTICAL DE OSLO (lg:col-span-5 xl:col-span-4) */}
             {/* ----------------------------------------------------------------------- */}
             <div className="lg:col-span-5 xl:col-span-4 w-full flex justify-center">
-              <div className="relative [perspective:1000px] w-full max-w-[340px]">
+              <div id="pet-card-3d-flipper" className="relative [perspective:1000px] w-full max-w-[340px]">
                 
                 {/* Botón Flotante Lateral Izquierdo de Giro */}
                 <button
@@ -514,11 +526,11 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
 
                       <button
                         type="button"
-                        onClick={() => setIsEditing(true)}
+                        onClick={() => isDemo ? window.dispatchEvent(new Event('nutripet_open_add_pet')) : setIsEditing(true)}
                         className="bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-200 py-2 px-3 rounded-xl text-xs font-bold border border-stone-200 dark:border-stone-700 flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-95 shrink-0"
                       >
                         <Edit3 className="w-3.5 h-3.5 shrink-0" />
-                        <span>Editar</span>
+                        <span>{isDemo ? 'Registrar mi mascota' : 'Editar'}</span>
                       </button>
                     </div>
                   </div>
@@ -829,11 +841,11 @@ export const PetTechSheet: React.FC<Props> = ({ onOpenSubscriptionModal }) => {
 
               <button
                 type="button"
-                onClick={() => setShowAddWeightForm(!showAddWeightForm)}
+                onClick={() => isDemo ? window.dispatchEvent(new Event('nutripet_open_add_pet')) : setShowAddWeightForm(!showAddWeightForm)}
                 className="bg-[#143826] hover:bg-[#1a4a32] text-white px-3.5 py-1.5 rounded-xl text-xs font-bold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Registrar Peso</span>
+                <span>{isDemo ? '+ Registrar mi mascota' : 'Registrar Peso'}</span>
               </button>
             </div>
 

@@ -120,11 +120,14 @@ export const isValidPersistablePet = (pet: any): boolean => {
   if (!id) return false;
   const lowerId = id.toLowerCase();
   if (
+    lowerId === 'demo_pet_otb' ||
     lowerId === 'defaultpet' ||
     lowerId === 'default_pet' ||
     lowerId === 'pet_default' ||
     lowerId === 'tempemptypet' ||
     lowerId === 'temp_empty_pet' ||
+    lowerId.includes('demo') ||
+    lowerId.includes('sample') ||
     lowerId.includes('default') ||
     lowerId.includes('temp')
   ) {

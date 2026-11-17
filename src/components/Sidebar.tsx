@@ -20,7 +20,8 @@ import {
   Moon,
   Clock,
   Utensils,
-  Star
+  Star,
+  Compass
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { NutriPetLogo } from './NutriPetLogo';
@@ -37,6 +38,7 @@ interface SidebarProps {
   petName: string;
   petType: 'dog' | 'cat';
   petPhotoUrl?: string;
+  hasActivePet?: boolean;
   darkMode?: boolean;
   onToggleDarkMode?: () => void;
 }
@@ -92,6 +94,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   petName,
   petType,
   petPhotoUrl,
+  hasActivePet = true,
   darkMode = false,
   onToggleDarkMode
 }) => {
@@ -315,20 +318,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Mascota Activa */}
+        {/* Mascota Activa o Estado Sin Mascota */}
         <div className={`p-3 bg-stone-50/80 dark:bg-stone-850/80 border-b border-stone-100 dark:border-stone-800 shrink-0 ${isCollapsed ? 'text-center' : ''}`}>
           <div className={`flex items-center gap-2 ${isCollapsed ? 'justify-center' : ''}`}>
             <div className="w-8 h-8 rounded-full bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 flex items-center justify-center overflow-hidden shrink-0 shadow-2xs">
-              {petPhotoUrl ? (
+              {hasActivePet && petPhotoUrl ? (
                 <img src={petPhotoUrl} alt={petName} className="w-full h-full object-cover" />
-              ) : (
+              ) : hasActivePet ? (
                 <span className="text-sm">{petType === 'dog' ? '🐶' : '🐱'}</span>
+              ) : (
+                <span className="text-xs text-stone-400">🐾</span>
               )}
             </div>
             {!isCollapsed && (
               <div className="truncate">
-                <span className="text-[10px] font-bold text-stone-400 block uppercase tracking-wide">Mascota Activa</span>
-                <span className="text-xs font-black text-stone-800 dark:text-stone-100 leading-tight block truncate">{petName}</span>
+                <span className="text-[10px] font-bold text-stone-400 block uppercase tracking-wide">
+                  {hasActivePet ? 'Mascota Activa' : 'Sin Mascota'}
+                </span>
+                <span className={`text-xs font-black leading-tight block truncate ${hasActivePet ? 'text-stone-800 dark:text-stone-100' : 'text-amber-600 dark:text-amber-400 font-bold'}`}>
+                  {hasActivePet ? petName : 'Vista de ejemplo'}
+                </span>
               </div>
             )}
           </div>
@@ -363,6 +372,27 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <span>Calificar y Opinión</span>
               </button>
             )
+          )}
+
+          {/* Botón Tour Interactivo NutriPet */}
+          {isCollapsed ? (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('nutripet_start_tour'))}
+              className="w-8 h-8 rounded-xl bg-white dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mx-auto border border-stone-200 dark:border-stone-750 cursor-pointer shadow-2xs transition-all active:scale-95"
+              title="Ver Tour Interactivo de NutriPet"
+            >
+              <Compass className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('nutripet_start_tour'))}
+              className="w-full py-1.5 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+            >
+              <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span>Tour Interactivo</span>
+            </button>
           )}
 
           {/* Selector de Fondo y Modo Oscuro (Compacto) */}
@@ -584,6 +614,19 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <span>Calificar y Opinión</span>
                   </button>
                 )}
+
+                {/* Botón Tour Interactivo Móvil */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMobileOpen(false);
+                    window.dispatchEvent(new Event('nutripet_start_tour'));
+                  }}
+                  className="w-full py-2 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-95 cursor-pointer"
+                >
+                  <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <span>Ver Tour Interactivo</span>
+                </button>
 
                 <div className="grid grid-cols-2 gap-2">
                   <button
