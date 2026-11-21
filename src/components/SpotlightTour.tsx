@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Sparkles,
   ChevronRight,
@@ -6,14 +6,14 @@ import {
   X,
   Compass,
   CheckCircle2,
-  ShieldCheck,
   Scale,
   Clock,
   QrCode,
   Utensils,
   Stethoscope,
   Bell,
-  AlertTriangle
+  AlertTriangle,
+  Crown
 } from 'lucide-react';
 import { AppTab } from '../types';
 
@@ -139,27 +139,223 @@ interface Props {
   activeTab: AppTab;
   onNavigateTab: (tab: AppTab) => void;
   hasActivePet: boolean;
+  isAuthenticated: boolean;
+  isLoading: boolean;
+  isProOrTrial: boolean;
+  petName?: string;
+  onGoToSignIn: () => void;
 }
 
 export const SpotlightTour: React.FC<Props> = ({
   onNavigateTab,
-  hasActivePet
+  hasActivePet,
+  isAuthenticated,
+  isLoading,
+  isProOrTrial,
+  petName,
+  onGoToSignIn
 }) => {
-  const [isOpen, setIsOpen] = useState<boolean>(() => {
-    // Si el usuario ya tiene una mascota real, no autoiniciar el tour de Boby
-    if (hasActivePet) return false;
-    const completed = localStorage.getItem('nutripet_spotlight_completed');
-    return completed !== 'true';
-  });
-
+  const [isOpen, setIsOpen] = useState<boolean>(false);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
   const [isCrossFading, setIsCrossFading] = useState<boolean>(false);
 
+  const hasAutoCheckedRef = useRef<boolean>(false);
   const prevTabRef = useRef<AppTab | null>(null);
-  const step = TOUR_STEPS[currentStepIndex] || TOUR_STEPS[0];
-  const isFirstStep = currentStepIndex === 0;
-  const isLastStep = currentStepIndex === TOUR_STEPS.length - 1;
+
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const visibleSteps = useMemo<TourStep[]>(() => {
+    const displayPetName = hasActivePet && petName?.trim() ? petName.trim() : 'Boby';
+
+    const baseSteps: Array<Omit<TourStep, 'badge'> & { category: string }> = [
+      {
+        id: 'welcome-step',
+        targetTab: 'calculator',
+        targetSelector: '#calculator-biometrics-box',
+        category: 'BIENVENIDA',
+        title: hasActivePet
+          ? `Perfil biométrico de ${displayPetName}`
+          : 'Te presentamos el perfil clínico de Boby',
+        description: hasActivePet
+          ? `Aquí ajustas los datos fisiológicos de ${displayPetName} (foto, especie, raza y peso) para recalcular automáticamente sus pautas nutricionales y médicas.`
+          : 'Estás explorando NutriPet con nuestra mascota de ejemplo oficial (Boby, Cocker Spaniel, 13.5 kg). Aquí verás cómo toda la app calcula sus pautas nutricionales, médicas y preventivas en tiempo real.',
+        icon: <Compass className="w-5 h-5 text-emerald-400" />,
+        highlights: hasActivePet
+          ? [
+              'Edición rápida de peso, raza y fotografía oficial en vivo.',
+              'Los cambios se reflejan al instante en toda la ficha clínica.'
+            ]
+          : [
+              'Datos biométricos y curva de peso oficial FEDIAF calculados en vivo.',
+              'Modo de ejemplo seguro en memoria: cero riesgo de modificar tu base de datos.'
+            ]
+      },
+      {
+        id: 'calculator-step',
+        targetTab: 'calculator',
+        targetSelector: '#print-pet-sheet',
+        category: 'NUTRICIÓN FEDIAF',
+        title: 'Porciones y raciones exactas al gramo',
+        description: hasActivePet
+          ? `Calculamos las calorías base (RER), de mantenimiento (MER) y la ración diaria de ${displayPetName} en croquetas, BARF o mixta, junto con su hidratación recomendada.`
+          : 'Calculamos las calorías de mantenimiento (MER: 670 kcal/d) y la ración oficial (179 g/día de croquetas o equivalente en BARF), divididas en 2 tomas exactas de 90g con hidratación diaria recomendada.',
+        icon: <Scale className="w-5 h-5 text-emerald-400" />,
+        highlights: hasActivePet
+          ? [
+              'Cálculo metabólico adaptado al peso, etapa de vida y actividad.',
+              'Comparte la ficha nutricional de forma rápida cuando lo necesites.'
+            ]
+          : [
+              'Ajuste para sobrepeso (+1.5 kg) hacia la meta ideal de 12.0 kg.',
+              'Rango hídrico sugerido: 743 a 1013 ml de agua fresca por día.'
+            ]
+      },
+      {
+        id: 'foods-step',
+        targetTab: 'foods',
+        targetSelector: '#toxic-foods-preview-grid',
+        category: 'SEGURIDAD ALIMENTARIA',
+        title: 'Semáforo de toxicidad y superalimentos',
+        description: hasActivePet
+          ? `Consulta con certeza qué alimentos son letales, de precaución o aptos para cuidar la alimentación diaria de ${displayPetName} y prevenir reacciones adversas.`
+          : 'Conoce con certeza qué alimentos son letales, peligrosos o aptos. Dado que Boby presenta sensibilidad a la proteína de pollo y cereales con gluten, el semáforo te alerta para prevenir reacciones alérgicas.',
+        icon: <AlertTriangle className="w-5 h-5 text-amber-400" />,
+        highlights: [
+          'Alimentos letales: Cebolla, chocolate, uvas y aguacate.',
+          'Superalimentos digestivos: Manzana sin semillas, calabaza y arándanos.'
+        ]
+      },
+      {
+        id: 'routine-step',
+        targetTab: 'routine',
+        targetSelector: '#first-routine-event-card',
+        category: 'HORARIOS & RUTINA',
+        title: 'Cronograma diario inteligente sincronizado',
+        description: hasActivePet
+          ? `Organiza los momentos clave del día de ${displayPetName}: paseos, tomas de alimento reguladas, hidratación y reposo digestivo.`
+          : 'Organiza los 5 momentos clave del día de Boby: paseo matutino, desayuno regulado de 89g, revisión de agua fresca, cena y caminata nocturna para evitar estrés digestivo y torsión gástrica.',
+        icon: <Clock className="w-5 h-5 text-emerald-400" />,
+        highlights: hasActivePet
+          ? [
+              'Distribución horaria clara de comidas y paseos diarios.',
+              'Ventanas de reposo post-ingesta para prevenir estrés digestivo.'
+            ]
+          : [
+              '07:00 AM: Paseo matutino y activación muscular (30 min).',
+              '07:45 AM y 07:00 PM: Tomas medidas con reposo post-ingesta obligatorio.'
+            ]
+      }
+    ];
+
+    const proOrFallbackSteps: Array<Omit<TourStep, 'badge'> & { category: string }> = isProOrTrial
+      ? [
+          {
+            id: 'sheet-step',
+            targetTab: 'sheet',
+            targetSelector: '#pet-card-3d-flipper',
+            category: 'CREDENCIAL & QR SOS',
+            title: 'Ficha médica oficial y pasaporte de rescate',
+            description: hasActivePet
+              ? `Credencial 3D interactiva de ${displayPetName} con giro anverso/reverso, microchip ISO, contacto veterinario y un código QR único para rescate inmediato.`
+              : 'Credencial 3D interactiva con giro anverso/reverso. Contiene el número de microchip ISO, contacto de la veterinaria Dra. Camila Morales y un código QR único para rescate inmediato en caso de pérdida.',
+            icon: <QrCode className="w-5 h-5 text-emerald-400" />,
+            highlights: [
+              'Giro a Ficha SOS: Llamada con un toque a veterinario y tutor responsable.',
+              'Exportación en PDF clínico para imprimir tamaño carnet de billetera.'
+            ]
+          },
+          {
+            id: 'medical-step',
+            targetTab: 'medical',
+            targetSelector: '#medical-subtabs-cockpit',
+            category: 'EXPEDIENTE & PESO',
+            title: 'Historial clínico y curva de reducción',
+            description: hasActivePet
+              ? `Lleva la bitácora de consultas, fórmulas y cirugías de ${displayPetName}, y visualiza su curva histórica de peso frente a los rangos ideales.`
+              : 'Lleva la bitácora de consultas, fórmulas y cirugías. Visualiza la curva histórica de peso de Boby, desde su diagnóstico inicial en 14.8 kg hasta los 13.5 kg de hoy, rumbo a su meta óptima.',
+            icon: <Stethoscope className="w-5 h-5 text-teal-400" />,
+            highlights: [
+              hasActivePet
+                ? 'Registro organizado de consultas, exámenes, cirugías y fórmulas.'
+                : 'Consultas documentadas: Chequeo preventivo y control otológico.',
+              'Gráfica de pesajes FEDIAF con cálculo automático de variación (kg).'
+            ]
+          },
+          {
+            id: 'reminders-step',
+            targetTab: 'reminders',
+            targetSelector: '#vaccine-radar-pillars',
+            category: 'BLINDAJE BIOLÓGICO',
+            title: 'Radar sanitario 360° y calendario preventivo',
+            description: hasActivePet
+              ? `Automatiza alertas para vacunas, antiparasitarios, chequeos y baños de ${displayPetName}, con exportación a calendario y recordatorios directos.`
+              : 'Automatiza alertas para pipetas antipulgas, vacuna séxtuple anual y baños hipoalergénicos. Sincroniza con Google/Apple Calendar y envía recordatorios directos por WhatsApp.',
+            icon: <Bell className="w-5 h-5 text-emerald-400" />,
+            highlights: [
+              'Radar 360°: Vacunas, antiparasitario externo e interno.',
+              'Alertas automáticas exportables con periodicidad programada.'
+            ]
+          },
+          {
+            id: 'recipes-step',
+            targetTab: 'recipes',
+            targetSelector: '#barf-first-recipe-card',
+            category: 'DIETAS BARF & CASERAS',
+            title: 'Generador de recetas caseras al gramo',
+            description: hasActivePet
+              ? `Diseña dietas naturales crudas o cocinadas con las proporciones exactas según especie y peso de ${displayPetName}, o crea recetas con los ingredientes de tu hogar.`
+              : 'Diseña dietas naturales crudas o cocinadas con las proporciones exactas según especie y peso de Boby (hueso carnoso, músculo, vísceras y fibra), o crea recetas con lo que tengas en tu despensa.',
+            icon: <Utensils className="w-5 h-5 text-amber-400" />,
+            highlights: [
+              'Fórmulas naturales equilibradas según pautas nutricionales NRC/FEDIAF.',
+              'Calculadora inteligente adaptada a los ingredientes de tu hogar.'
+            ]
+          }
+        ]
+      : [
+          {
+            id: 'pro-overview-step',
+            targetTab: 'sheet',
+            targetSelector: '#pettechsheet-container',
+            category: 'FUNCIONES PRO',
+            title: 'Funciones PRO disponibles con tu cuenta',
+            description: isAuthenticated
+              ? 'NutriPet Pro desbloquea la credencial 3D con código QR SOS, expediente clínico con curva de peso, calendario de vacunas y recetas BARF al gramo.'
+              : 'NutriPet Pro desbloquea la credencial 3D con código QR SOS, expediente clínico con curva de peso, calendario de vacunas y recetas BARF al gramo. Al iniciar sesión con Google recibes 15 días de prueba gratuita sin tarjeta.',
+            icon: <Crown className="w-5 h-5 text-amber-500" />,
+            highlights: [
+              'Credencial QR SOS imprimible + expediente clínico completo.',
+              'Radar de vacunas, antiparasitarios y generador de dietas BARF.'
+            ]
+          }
+        ];
+
+    const combined = [...baseSteps, ...proOrFallbackSteps];
+    return combined.map(({ category, ...rest }, index) => ({
+      ...rest,
+      badge: `PASO ${index + 1} DE ${combined.length} • ${category}`
+    }));
+  }, [hasActivePet, petName, isProOrTrial, isAuthenticated]);
+
+  const safeStepIndex = Math.min(currentStepIndex, Math.max(0, visibleSteps.length - 1));
+  const step = visibleSteps[safeStepIndex] || visibleSteps[0];
+  const isFirstStep = safeStepIndex === 0;
+  const isLastStep = safeStepIndex === visibleSteps.length - 1;
+
+  // Autoiniciar una única vez solo para usuarios autenticados sin mascota tras finalizar la carga
+  useEffect(() => {
+    if (isLoading || !isAuthenticated || hasAutoCheckedRef.current) return;
+    hasAutoCheckedRef.current = true;
+
+    const completed = localStorage.getItem('nutripet_spotlight_completed');
+    if (!hasActivePet && completed !== 'true') {
+      setCurrentStepIndex(0);
+      setIsOpen(true);
+    }
+  }, [isAuthenticated, isLoading, hasActivePet]);
 
   // Escuchar evento global para reactivar el tour manualmente en cualquier momento
   useEffect(() => {
@@ -178,11 +374,21 @@ export const SpotlightTour: React.FC<Props> = ({
     localStorage.setItem('nutripet_spotlight_completed', 'true');
   }, []);
 
-  // Finalizar tour y abrir modal de registro de mascota real
-  const handleFinishAndRegister = () => {
+  // Acción contextual al finalizar el tour según sesión y mascota registrada
+  const handleFinishAction = () => {
     handleCloseTour();
-    window.dispatchEvent(new Event('nutripet_open_add_pet'));
+    if (!isAuthenticated) {
+      onGoToSignIn();
+    } else if (!hasActivePet) {
+      window.dispatchEvent(new Event('nutripet_open_add_pet'));
+    }
   };
+
+  const finalButtonLabel = !isAuthenticated
+    ? 'Iniciar sesión y guardar'
+    : !hasActivePet
+      ? '¡Registrar mi mascota!'
+      : 'Finalizar tour';
 
   // Sincronización delicada por fases (Cross-fade en cambio de pestaña, morph en misma pestaña)
   useEffect(() => {
@@ -198,6 +404,12 @@ export const SpotlightTour: React.FC<Props> = ({
 
     if (step.targetTab) {
       onNavigateTab(step.targetTab);
+    }
+
+    if (!step.targetSelector) {
+      setTargetRect(null);
+      setIsCrossFading(false);
+      return;
     }
 
     let isCancelled = false;
@@ -222,14 +434,14 @@ export const SpotlightTour: React.FC<Props> = ({
           setIsCrossFading(false);
 
           if (Math.abs(diff) > 35) {
-            window.scrollBy({ top: diff, behavior: 'smooth' });
-            // Re-medir tras el scroll suave para asentar la posición final con exactitud milimétrica
+            window.scrollBy({ top: diff, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+            // Re-medir tras el scroll para asentar la posición final con exactitud milimétrica
             setTimeout(() => {
               if (!isCancelled) {
                 const refreshed = el.getBoundingClientRect();
                 setTargetRect(refreshed);
               }
-            }, 350);
+            }, prefersReducedMotion ? 50 : 350);
           }
 
           return true;
@@ -244,8 +456,15 @@ export const SpotlightTour: React.FC<Props> = ({
       let attempts = 0;
       intervalId = setInterval(() => {
         attempts++;
-        if (measureAndCenter() || attempts > 50) {
+        if (measureAndCenter()) {
           if (intervalId) clearInterval(intervalId);
+        } else if (attempts > 50) {
+          if (intervalId) clearInterval(intervalId);
+          observer?.disconnect();
+          if (!isCancelled) {
+            setTargetRect(null);
+            setIsCrossFading(false);
+          }
         }
       }, 40);
 
@@ -264,7 +483,7 @@ export const SpotlightTour: React.FC<Props> = ({
       if (intervalId) clearInterval(intervalId);
       if (observer) observer.disconnect();
     };
-  }, [isOpen, currentStepIndex, step.targetTab, step.targetSelector, onNavigateTab]);
+  }, [isOpen, safeStepIndex, step.targetTab, step.targetSelector, onNavigateTab, prefersReducedMotion]);
 
   // Actualizar rect continuamente en scroll y resize sin retrasos
   useEffect(() => {
@@ -296,15 +515,15 @@ export const SpotlightTour: React.FC<Props> = ({
 
   const handleNext = () => {
     if (isLastStep) {
-      handleFinishAndRegister();
+      handleFinishAction();
     } else {
-      setCurrentStepIndex(prev => prev + 1);
+      setCurrentStepIndex(prev => Math.min(prev + 1, visibleSteps.length - 1));
     }
   };
 
   const handlePrev = () => {
     if (!isFirstStep) {
-      setCurrentStepIndex(prev => prev - 1);
+      setCurrentStepIndex(prev => Math.max(0, prev - 1));
     }
   };
 
@@ -329,7 +548,9 @@ export const SpotlightTour: React.FC<Props> = ({
             height: `${targetRect.height + 16}px`,
             opacity: isCrossFading ? 0 : 1,
             transform: isCrossFading ? 'scale(0.97)' : 'scale(1)',
-            transition: 'opacity 220ms ease, transform 220ms ease, top 350ms cubic-bezier(0.16, 1, 0.3, 1), left 350ms cubic-bezier(0.16, 1, 0.3, 1), width 350ms cubic-bezier(0.16, 1, 0.3, 1), height 350ms cubic-bezier(0.16, 1, 0.3, 1)'
+            transition: prefersReducedMotion
+              ? 'none'
+              : 'opacity 220ms ease, transform 220ms ease, top 350ms cubic-bezier(0.16, 1, 0.3, 1), left 350ms cubic-bezier(0.16, 1, 0.3, 1), width 350ms cubic-bezier(0.16, 1, 0.3, 1), height 350ms cubic-bezier(0.16, 1, 0.3, 1)'
           }}
           className="fixed rounded-2xl border-2 border-emerald-500 shadow-[0_0_0_9999px_rgba(15,23,42,0.45),0_0_20px_rgba(16,185,129,0.35)] pointer-events-none z-[151]"
         />
@@ -393,13 +614,13 @@ export const SpotlightTour: React.FC<Props> = ({
           <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-stone-100 dark:border-stone-800">
             {/* Paginador con barras o puntos */}
             <div className="flex items-center gap-1.5">
-              {TOUR_STEPS.map((_, idx) => (
+              {visibleSteps.map((_, idx) => (
                 <button
                   key={idx}
                   type="button"
                   onClick={() => setCurrentStepIndex(idx)}
                   className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                    idx === currentStepIndex
+                    idx === safeStepIndex
                       ? 'w-5 bg-emerald-600 dark:bg-emerald-400'
                       : 'w-1.5 bg-stone-200 dark:bg-stone-700 hover:bg-stone-300'
                   }`}
@@ -407,7 +628,7 @@ export const SpotlightTour: React.FC<Props> = ({
                 />
               ))}
               <span className="text-[9.5px] font-mono font-bold text-stone-400 dark:text-stone-500 ml-1">
-                {currentStepIndex + 1}/{TOUR_STEPS.length}
+                {safeStepIndex + 1}/{visibleSteps.length}
               </span>
             </div>
 
@@ -427,10 +648,10 @@ export const SpotlightTour: React.FC<Props> = ({
               {isLastStep ? (
                 <button
                   type="button"
-                  onClick={handleFinishAndRegister}
+                  onClick={handleFinishAction}
                   className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600 via-emerald-700 to-teal-700 hover:brightness-105 text-white text-[11px] sm:text-xs font-bold shadow-md flex items-center gap-1.5 transition-all cursor-pointer active:scale-95"
                 >
-                  <span>¡Registrar mi mascota!</span>
+                  <span>{finalButtonLabel}</span>
                   <Sparkles className="w-3.5 h-3.5" />
                 </button>
               ) : (

@@ -13,15 +13,10 @@ import {
   ChevronRight,
   Menu,
   X,
-  Crown,
-  Settings,
   Palette,
-  Sun,
-  Moon,
   Clock,
   Utensils,
-  Star,
-  Compass
+  Star
 } from 'lucide-react';
 import { AppTab } from '../types';
 import { NutriPetLogo } from './NutriPetLogo';
@@ -85,18 +80,12 @@ const MENU_SECTIONS: MenuSection[] = [
 export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   onSelectTab,
-  isProOrTrial,
-  trialDaysRemaining,
-  onOpenSubscriptionModal,
   onOpenBgModal,
-  onOpenAdminModal,
   onOpenFeedbackModal,
   petName,
   petType,
   petPhotoUrl,
-  hasActivePet = true,
-  darkMode = false,
-  onToggleDarkMode
+  hasActivePet = true
 }) => {
   const [isCollapsed, setIsCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('nutripet_sidebar_collapsed') === 'true';
@@ -348,205 +337,52 @@ export const Sidebar: React.FC<SidebarProps> = ({
           {renderNavLinks(handleSelectTab, !isCollapsed)}
         </nav>
 
-        {/* Panel Inferior Optimizado: Calificación, Fondo, Tema, Redes y Pro */}
-        <div className="p-2 border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-850/50 space-y-1.5 shrink-0 select-none">
-          
-          {/* Calificar y Opinión (Compacto) */}
-          {onOpenFeedbackModal && (
-            isCollapsed ? (
-              <button
-                type="button"
-                onClick={onOpenFeedbackModal}
-                className="w-8 h-8 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 flex items-center justify-center mx-auto border border-stone-200 dark:border-stone-750 cursor-pointer shadow-2xs transition-all active:scale-95"
-                title="Calificar y Opinión"
-              >
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onOpenFeedbackModal}
-                className="w-full py-1.5 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-750 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-              >
-                <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
-                <span>Calificar y Opinión</span>
-              </button>
-            )
-          )}
-
-          {/* Botón Tour Interactivo NutriPet */}
-          {isCollapsed ? (
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event('nutripet_start_tour'))}
-              className="w-8 h-8 rounded-xl bg-white dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 flex items-center justify-center mx-auto border border-stone-200 dark:border-stone-750 cursor-pointer shadow-2xs transition-all active:scale-95"
-              title="Ver Tour Interactivo de NutriPet"
-            >
-              <Compass className="w-3.5 h-3.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => window.dispatchEvent(new Event('nutripet_start_tour'))}
-              className="w-full py-1.5 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-emerald-50/70 dark:hover:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-[11px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-            >
-              <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-              <span>Tour Interactivo</span>
-            </button>
-          )}
-
-          {/* Selector de Fondo y Modo Oscuro (Compacto) */}
-          {!isCollapsed && (
-            <div className="grid grid-cols-2 gap-1.5">
+        {/* Panel Inferior Compacto: únicamente acciones propias del sidebar (Opinión y Fondo) */}
+        <div className="p-2 border-t border-stone-100 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-850/50 shrink-0 select-none">
+          {!isCollapsed ? (
+            <div className={`grid gap-1.5 ${onOpenFeedbackModal ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              {onOpenFeedbackModal && (
+                <button
+                  type="button"
+                  onClick={onOpenFeedbackModal}
+                  className="py-1.5 px-2 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-750 text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="Calificar y Opinión"
+                >
+                  <Star className="w-3 h-3 fill-amber-400 text-amber-400 shrink-0" />
+                  <span className="truncate">Opinión</span>
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onOpenBgModal}
-                className="py-1 px-1.5 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
+                className="py-1.5 px-2 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 text-[10.5px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
                 title="Cambiar fondo o subir tu foto"
               >
                 <Palette className="w-3 h-3 text-emerald-600 dark:text-emerald-400 shrink-0" />
                 <span className="truncate">Fondo</span>
               </button>
-              {onToggleDarkMode && (
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-1.5">
+              {onOpenFeedbackModal && (
                 <button
                   type="button"
-                  onClick={onToggleDarkMode}
-                  className="py-1 px-1.5 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs active:scale-95"
-                  title={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                  onClick={onOpenFeedbackModal}
+                  className="w-8 h-8 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 flex items-center justify-center mx-auto border border-stone-200 dark:border-stone-750 cursor-pointer shadow-2xs transition-all active:scale-95"
+                  title="Calificar y Opinión"
                 >
-                  {darkMode ? <Sun className="w-3 h-3 text-amber-400 shrink-0" /> : <Moon className="w-3 h-3 text-stone-500 dark:text-stone-400 shrink-0" />}
-                  <span className="truncate">{darkMode ? 'Claro' : 'Oscuro'}</span>
+                  <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
                 </button>
               )}
-            </div>
-          )}
-
-          {/* Redes Sociales Oficiales Desktop (Sin @nutripet.v2, muy compacto) */}
-          {!isCollapsed ? (
-            <div className="pt-1 border-t border-stone-200/60 dark:border-stone-800">
-              <div className="grid grid-cols-2 gap-1.5">
-                <a
-                  href="https://www.facebook.com/NutriPet.v2"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-1 px-1.5 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-stone-700 dark:text-stone-200 text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs active:scale-95 group hover:border-blue-400"
-                  title="Facebook NutriPet"
-                >
-                  <img src="/facebook-logo.png" alt="Facebook" className="w-3 h-3 object-contain" />
-                  <span className="truncate">Facebook</span>
-                </a>
-                <a
-                  href="https://www.tiktok.com/@nutripetv2"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-1 px-1.5 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-2xs active:scale-95 group hover:border-stone-400"
-                  title="TikTok NutriPet"
-                >
-                  <img src="/tiktok-logo.png" alt="TikTok" className="w-3 h-3 object-contain" />
-                  <span className="truncate">TikTok</span>
-                </a>
-              </div>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-1 pt-1 border-t border-stone-200/60 dark:border-stone-800">
-              <a
-                href="https://www.facebook.com/NutriPet.v2"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-7 h-7 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-750 flex items-center justify-center p-1.5 hover:scale-110 active:scale-95 transition-all shadow-2xs hover:border-blue-400"
-                title="Facebook NutriPet"
-              >
-                <img src="/facebook-logo.png" alt="Facebook" className="w-full h-full object-contain" />
-              </a>
-              <a
-                href="https://www.tiktok.com/@nutripetv2"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-7 h-7 rounded-lg bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-750 flex items-center justify-center p-1.5 hover:scale-110 active:scale-95 transition-all shadow-2xs hover:border-stone-400"
-                title="TikTok NutriPet"
-              >
-                <img src="/tiktok-logo.png" alt="TikTok" className="w-full h-full object-contain" />
-              </a>
-            </div>
-          )}
-
-          {/* Acceso Administrador en PC (si aplica) */}
-          {onOpenAdminModal && (
-            isCollapsed ? (
               <button
                 type="button"
-                onClick={onOpenAdminModal}
-                className="w-8 h-8 rounded-xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-100 flex items-center justify-center mx-auto shadow-2xs active:scale-95 cursor-pointer transition-colors"
-                title="Panel Administrador"
+                onClick={onOpenBgModal}
+                className="w-8 h-8 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 flex items-center justify-center mx-auto cursor-pointer shadow-2xs transition-all active:scale-95"
+                title="Cambiar fondo o subir tu foto"
               >
-                <Settings className="w-4 h-4 text-stone-200" />
+                <Palette className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
               </button>
-            ) : (
-              <button
-                type="button"
-                onClick={onOpenAdminModal}
-                className="w-full py-1.5 px-2 rounded-xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-100 font-extrabold text-[10.5px] flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer transition-colors active:scale-95"
-              >
-                <Settings className="w-3.5 h-3.5 text-stone-300 shrink-0" />
-                <span>Panel Admin</span>
-              </button>
-            )
-          )}
-
-          {/* Tarjeta Pro Optimizada: Botón Naranja Compacto y Profesional */}
-          {!isCollapsed ? (
-            isProOrTrial ? (
-              <div 
-                onClick={onOpenSubscriptionModal}
-                className="w-full py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 text-white border border-amber-300/40 shadow-2xs flex items-center justify-between cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
-                title="Ver detalles de tu suscripción NutriPet Pro"
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-xs shrink-0">👑</span>
-                  <span className="text-[10.5px] font-black uppercase font-heading tracking-wide leading-none text-white truncate">
-                    NutriPet Pro
-                  </span>
-                  <span className="text-[8px] font-mono font-bold bg-white/20 text-white px-1.5 py-0.5 rounded-full leading-none">
-                    ACTIVO
-                  </span>
-                </div>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 border border-white/60 shadow-xs animate-pulse shrink-0" />
-              </div>
-            ) : (
-              <div
-                onClick={onOpenSubscriptionModal}
-                className="w-full py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 text-white border border-amber-300/40 shadow-2xs flex items-center justify-between cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
-                title="Activar NutriPet Pro"
-              >
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-xs shrink-0">👑</span>
-                  <span className="text-[10.5px] font-black uppercase font-heading tracking-wide leading-none text-white truncate">
-                    Activar Pro
-                  </span>
-                </div>
-                <span className="text-[8.5px] font-bold bg-white/25 text-white border border-white/30 px-2 py-0.5 rounded-full shrink-0 shadow-2xs">
-                  Ver planes
-                </span>
-              </div>
-            )
-          ) : (
-            isProOrTrial ? (
-              <div 
-                onClick={onOpenSubscriptionModal} 
-                className="w-8 h-8 mx-auto rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white border border-amber-300/40 flex items-center justify-center cursor-pointer shadow-xs hover:brightness-105 active:scale-95 transition-all text-xs" 
-                title="NutriPet Pro Activo"
-              >
-                👑
-              </div>
-            ) : (
-              <div 
-                onClick={onOpenSubscriptionModal} 
-                className="w-8 h-8 mx-auto rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white border border-amber-300/30 flex items-center justify-center cursor-pointer shadow-xs hover:brightness-105 active:scale-95 transition-all" 
-                title="Activar NutriPet Pro"
-              >
-                <Crown className="w-3.5 h-3.5 text-amber-100" />
-              </div>
-            )
+            </div>
           )}
         </div>
       </aside>
@@ -599,36 +435,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {renderNavLinks(handleSelectTab, true)}
               </nav>
 
-              <div className="px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/90 space-y-2 shrink-0">
-                {/* Botón Calificar en Menú Móvil */}
-                {onOpenFeedbackModal && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileOpen(false);
-                      onOpenFeedbackModal();
-                    }}
-                    className="w-full py-2 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-750 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-95 cursor-pointer"
-                  >
-                    <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
-                    <span>Calificar y Opinión</span>
-                  </button>
-                )}
+              <div className="px-3 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-stone-100 dark:border-stone-800 bg-stone-50/70 dark:bg-stone-900/90 shrink-0">
+                <div className={`grid gap-2 ${onOpenFeedbackModal ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                  {onOpenFeedbackModal && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileOpen(false);
+                        onOpenFeedbackModal();
+                      }}
+                      className="py-2 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-stone-50 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-stone-750 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
+                    >
+                      <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 shrink-0" />
+                      <span className="truncate">Opinión</span>
+                    </button>
+                  )}
 
-                {/* Botón Tour Interactivo Móvil */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsMobileOpen(false);
-                    window.dispatchEvent(new Event('nutripet_start_tour'));
-                  }}
-                  className="w-full py-2 px-2.5 rounded-xl bg-white dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-500/20 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-95 cursor-pointer"
-                >
-                  <Compass className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <span>Ver Tour Interactivo</span>
-                </button>
-
-                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -640,102 +462,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     <Palette className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <span className="truncate">Fondo</span>
                   </button>
-
-                  {onToggleDarkMode && (
-                    <button
-                      type="button"
-                      onClick={onToggleDarkMode}
-                      className="py-2 px-2.5 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 text-stone-700 dark:text-stone-200 text-xs font-bold flex items-center justify-center gap-1.5 shadow-2xs active:scale-95 cursor-pointer"
-                    >
-                      {darkMode ? <Sun className="w-3.5 h-3.5 text-amber-400 shrink-0" /> : <Moon className="w-3.5 h-3.5 text-stone-600 shrink-0" />}
-                      <span className="truncate">{darkMode ? 'Claro' : 'Oscuro'}</span>
-                    </button>
-                  )}
                 </div>
-
-                {/* Redes Sociales Oficiales Mobile */}
-                <div className="pt-2 border-t border-stone-100 dark:border-stone-800 select-none">
-                  <div className="flex items-center justify-between mb-1.5 px-0.5">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-stone-400 dark:text-stone-500">
-                      Comunidad Oficial
-                    </span>
-                    
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <a
-                      href="https://www.facebook.com/NutriPet.v2"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-2 px-2.5 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 hover:bg-blue-50/80 dark:hover:bg-blue-950/30 text-stone-700 dark:text-stone-200 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-95 group hover:border-blue-400"
-                    >
-                      <img src="/facebook-logo.png" alt="Facebook" className="w-4 h-4 object-contain" />
-                      <span>Facebook</span>
-                    </a>
-                    <a
-                      href="https://www.tiktok.com/@nutripetv2"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="py-2 px-2.5 rounded-xl border border-stone-200 dark:border-stone-750 bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-750 text-stone-700 dark:text-stone-200 text-xs font-bold flex items-center justify-center gap-2 shadow-2xs active:scale-95 group hover:border-stone-400"
-                    >
-                      <img src="/tiktok-logo.png" alt="TikTok" className="w-4 h-4 object-contain" />
-                      <span>TikTok</span>
-                    </a>
-                  </div>
-                </div>
-
-                {onOpenAdminModal && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileOpen(false);
-                      onOpenAdminModal();
-                    }}
-                    className="w-full py-2 px-3 rounded-xl bg-stone-800 hover:bg-stone-900 dark:bg-stone-700 dark:hover:bg-stone-600 text-stone-100 font-extrabold text-xs flex items-center justify-center gap-2 shadow-xs cursor-pointer transition-colors active:scale-95"
-                  >
-                    <Settings className="w-4 h-4 text-stone-300" />
-                    <span>Panel Administrador</span>
-                  </button>
-                )}
-
-                {isProOrTrial ? (
-                  <div 
-                    onClick={() => {
-                      setIsMobileOpen(false);
-                      onOpenSubscriptionModal();
-                    }}
-                    className="w-full py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 text-white border border-amber-300/40 shadow-2xs flex items-center justify-between cursor-pointer hover:brightness-105 active:scale-98 transition-all select-none"
-                    title="Ver detalles de tu suscripción NutriPet Pro"
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-xs shrink-0">👑</span>
-                      <span className="text-[11px] font-black uppercase font-heading tracking-wide leading-none text-white truncate">
-                        NutriPet Pro
-                      </span>
-                      <span className="text-[8px] font-mono font-bold bg-white/20 text-white px-1.5 py-0.5 rounded-full leading-none">
-                        ACTIVO
-                      </span>
-                    </div>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 border border-white/60 shadow-xs animate-pulse shrink-0" />
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => {
-                      setIsMobileOpen(false);
-                      onOpenSubscriptionModal();
-                    }}
-                    className="w-full py-1.5 px-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-500 to-orange-500 text-white border border-amber-300/40 shadow-2xs flex items-center justify-between cursor-pointer active:scale-98 transition-all select-none"
-                  >
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <span className="text-xs shrink-0">👑</span>
-                      <span className="text-[11px] font-black uppercase font-heading tracking-wide leading-none text-white truncate">
-                        Activar Pro
-                      </span>
-                    </div>
-                    <span className="text-[8.5px] font-bold bg-white/25 text-white border border-white/30 px-2 py-0.5 rounded-full shrink-0 shadow-2xs">
-                      Ver planes
-                    </span>
-                  </div>
-                )}
               </div>
             </motion.div>
           </div>

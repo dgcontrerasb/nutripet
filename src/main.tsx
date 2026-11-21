@@ -1,7 +1,7 @@
 import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext.tsx';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext.tsx';
 import { PetProvider } from './context/PetContext.tsx';
 import './index.css';
 
@@ -17,6 +17,24 @@ const RouteFallback = () => (
   </div>
 );
 
+const AuthLayout = () => (
+  <AuthProvider>
+    <Outlet />
+  </AuthProvider>
+);
+
+const RootRedirect = () => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return <RouteFallback />;
+  }
+
+  const target = user ? '/porciones' : '/sign-in';
+  return <Navigate to={`${target}${location.search}`} replace />;
+};
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
@@ -27,43 +45,25 @@ createRoot(document.getElementById('root')!).render(
           <Route path="/pet/:publicToken" element={<PublicPetProfile />} />
           <Route path="/public/:publicToken" element={<PublicPetProfile />} />
 
-          {/* Rutas dedicadas de autenticación y bienvenida oficial */}
-          <Route
-            path="/sign-in"
-            element={
-              <AuthProvider>
-                <LoginPage />
-              </AuthProvider>
-            }
-          />
-          <Route
-            path="/sing-in"
-            element={
-              <AuthProvider>
-                <LoginPage />
-              </AuthProvider>
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              <AuthProvider>
-                <LoginPage />
-              </AuthProvider>
-            }
-          />
+          {/* Rutas autenticables y de la aplicación interna con una sola instancia de AuthProvider */}
+          <Route element={<AuthLayout />}>
+            <Route path="/" element={<RootRedirect />} />
 
-          {/* Todas las demás rutas de la app interna cargan App con sus proveedores */}
-          <Route
-            path="/*"
-            element={
-              <AuthProvider>
+            {/* Rutas dedicadas de autenticación y bienvenida oficial */}
+            <Route path="/sign-in" element={<LoginPage />} />
+            <Route path="/sing-in" element={<LoginPage />} />
+            <Route path="/login" element={<LoginPage />} />
+
+            {/* Todas las demás rutas de la app interna cargan App con PetProvider */}
+            <Route
+              path="/*"
+              element={
                 <PetProvider>
                   <App />
                 </PetProvider>
-              </AuthProvider>
-            }
-          />
+              }
+            />
+          </Route>
         </Routes>
       </Suspense>
     </BrowserRouter>

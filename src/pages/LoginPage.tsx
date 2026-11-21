@@ -42,7 +42,7 @@ export const LoginPage: React.FC = () => {
   // Si el usuario ya está autenticado y no hay animación en curso, redirigir al inicio
   useEffect(() => {
     if (!loading && user && !showDogTransition && !isLoggingIn) {
-      navigate('/', { replace: true });
+      navigate('/porciones', { replace: true });
     }
   }, [user, loading, navigate, showDogTransition, isLoggingIn]);
 
@@ -65,7 +65,7 @@ export const LoginPage: React.FC = () => {
   };
 
   const handleTransitionComplete = () => {
-    navigate('/', { replace: true });
+    navigate('/porciones', { replace: true });
   };
 
   return (
@@ -124,7 +124,7 @@ export const LoginPage: React.FC = () => {
         <div className="hidden lg:flex items-center justify-between shrink-0">
           <button
             type="button"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/porciones')}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-stone-200/70 hover:bg-stone-300/80 dark:bg-stone-800 dark:hover:bg-stone-750 text-xs font-bold text-stone-600 dark:text-stone-300 transition-all cursor-pointer group active:scale-95 shadow-2xs"
           >
             <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" />
@@ -226,7 +226,7 @@ export const LoginPage: React.FC = () => {
             {/* Acción Terciaria: Modo Invitado */}
             <button
               type="button"
-              onClick={() => navigate('/')}
+              onClick={() => navigate('/porciones')}
               className="w-full py-1.5 px-3 text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-200 font-semibold text-xs underline-offset-4 hover:underline transition-colors cursor-pointer flex items-center justify-center gap-1.5 active:scale-[0.99] group"
             >
               <span>Continuar como Invitado (Modo Exploración)</span>

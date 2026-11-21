@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { usePets } from '../context/PetContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, X, LogIn, LogOut, Check, ShieldCheck, Sparkles, Crown, ChevronDown, Trash2, AlertTriangle, Loader2 } from 'lucide-react';
+import { Plus, X, LogIn, LogOut, Check, ShieldCheck, Sparkles, Crown, ChevronDown, Trash2, AlertTriangle, Loader2, Compass } from 'lucide-react';
 import { PetProfile, PetType } from '../types';
 import { POPULAR_BREEDS } from '../data';
 
@@ -417,6 +417,16 @@ export const PetHeaderBar: React.FC<PetHeaderBarProps> = ({
                 </span>
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event('nutripet_start_tour'))}
+              title="Ver Tour Interactivo"
+              aria-label="Ver Tour Interactivo"
+              className="w-8 h-8 rounded-xl border border-stone-200 dark:border-stone-700 bg-stone-50 dark:bg-stone-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 hover:border-emerald-300 dark:hover:border-emerald-700 flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-2xs shrink-0"
+            >
+              <Compass className="w-4 h-4" />
+            </button>
 
             {onToggleDarkMode && (
               <button

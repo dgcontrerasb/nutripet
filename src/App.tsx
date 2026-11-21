@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { auth } from './lib/firebase';
 import {
   Calculator,
@@ -157,9 +157,23 @@ const PATH_TO_TAB: Record<string, AppTab> = {
   '/tips': 'guides',
 };
 
+const TAB_TITLES: Record<AppTab, string> = {
+  calculator: 'Porciones & Dieta',
+  routine: 'Horarios & Rutina',
+  foods: 'Semáforo de Alimentos',
+  recipes: 'Dietas BARF & Recetas',
+  sheet: 'Ficha & QR Emergencia',
+  medical: 'Expediente & Peso',
+  reminders: 'Vacunas y Notificaciones',
+  advisor: 'Marcas por País & Transición',
+  breeds: 'Razas & Susceptibilidad',
+  guides: 'Tips & Emergencias',
+};
+
 export default function App() {
   const navigate = useNavigate();
-  const { activePet, updatePetLocal, savePet, updateSubscription, isProOrTrial, trialDaysRemaining, user, isSavingPet } = usePets();
+  const location = useLocation();
+  const { activePet, updatePetLocal, savePet, updateSubscription, isProOrTrial, trialDaysRemaining, user, isSavingPet, loading: isPetsLoading } = usePets();
   const isAdminUser = user?.email?.toLowerCase() === 'dgcontrerasb@gmail.com';
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -278,47 +292,33 @@ export default function App() {
     }
   };
 
-  // Inicialización ultra segura basada en la URL actual
-  const [activeTab, setActiveTabRaw] = useState<AppTab>(() => {
-    const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
-    return PATH_TO_TAB[currentPath] || 'calculator';
-  });
+  // Enrutamiento nativo con React Router sincronizado con la URL actual
+  const normalizedPath = location.pathname.toLowerCase().replace(/\/$/, '') || '/';
+  const activeTab: AppTab = PATH_TO_TAB[normalizedPath] || 'calculator';
 
-  // Reemplazar la entrada inicial en el historial para que nunca quede vacía
+  // Normalizar alias o rutas desconocidas a su ruta canónica preservando query params (ej. Wompi/PayPal)
   useEffect(() => {
-    const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
-    const initialTab = PATH_TO_TAB[currentPath] || 'calculator';
-    const targetPath = TAB_TO_PATH[initialTab] || '/porciones';
-    window.history.replaceState({ tab: initialTab }, '', window.location.pathname === '/' ? '/' : targetPath);
-  }, []);
-
-  // Función de navegación con pushState enriquecido
-  const setActiveTab = (tab: AppTab) => {
-    const safeTab = tab || 'calculator';
-    setActiveTabRaw(safeTab);
-    const targetPath = TAB_TO_PATH[safeTab] || '/porciones';
-    if (window.location.pathname !== targetPath) {
-      window.history.pushState({ tab: safeTab }, '', targetPath);
+    const canonicalPath = TAB_TO_PATH[activeTab] || '/porciones';
+    if (location.pathname !== canonicalPath) {
+      navigate(`${canonicalPath}${location.search}`, { replace: true });
     }
-  };
+  }, [activeTab, location.pathname, location.search, navigate]);
+
+  // Actualizar el título del documento según la sección activa
+  useEffect(() => {
+    document.title = `${TAB_TITLES[activeTab]} | NutriPet OTB`;
+  }, [activeTab]);
+
+  // Navegación por sección usando React Router
+  const setActiveTab = useCallback((tab: AppTab) => {
+    const safeTab = tab || 'calculator';
+    const targetPath = TAB_TO_PATH[safeTab] || '/porciones';
+    if (location.pathname !== targetPath) {
+      navigate(targetPath);
+    }
+  }, [location.pathname, navigate]);
 
   const handleSelectTab = setActiveTab;
-
-  // Escuchar botón "Atrás" y "Adelante" con fallback garantizado a 'calculator'
-  useEffect(() => {
-    const handlePopState = (e: PopStateEvent) => {
-      if (e.state && e.state.tab && PATH_TO_TAB[TAB_TO_PATH[e.state.tab as AppTab]]) {
-        setActiveTabRaw(e.state.tab as AppTab);
-        return;
-      }
-      const currentPath = window.location.pathname.toLowerCase().replace(/\/$/, '') || '/';
-      const matchedTab = PATH_TO_TAB[currentPath] || 'calculator';
-      setActiveTabRaw(matchedTab);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
 
   const [isBiometricsExpanded, setIsBiometricsExpanded] = useState<boolean>(() => !activePet);
 
@@ -335,7 +335,6 @@ export default function App() {
   useEffect(() => {
     if (prevUserRef.current && !user) {
       setIsLoggingOut(true);
-      setActiveTab('calculator');
       try {
         localStorage.removeItem('nutripet_local_pets_v2');
         localStorage.removeItem('nutripet_active_pet_v2');
@@ -1353,6 +1352,11 @@ export default function App() {
           activeTab={activeTab}
           onNavigateTab={handleSelectTab}
           hasActivePet={activePet != null}
+          isAuthenticated={Boolean(user)}
+          isLoading={isPetsLoading}
+          isProOrTrial={isProOrTrial}
+          petName={activePet?.name}
+          onGoToSignIn={() => navigate('/sign-in')}
         />
         {showShareModal && (
           <ShareModal
