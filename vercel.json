@@ -34,7 +34,7 @@
   ],
   "rewrites": [
     {
-      "source": "/((?!api/|terms\\.html|privacy\\.html|tiktok-callback\\.html).*)",
+      "source": "/((?!api/|terms\\.html|privacy\\.html|tiktok-callback\\.html|tiktokhXnznJoqqitvbFaMVL4SgpCgUF4OVFUO\\.txt).*)",
       "destination": "/index.html"
     }
   ]
