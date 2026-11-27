@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Privacy Policy — NutriPet OTB</title>
+  <meta name="description" content="Official Privacy Policy for NutriPet OTB and NutriPet TikTok Publisher." />
+  <link rel="icon" type="image/png" href="/logo-icon.png" />
+  <style>
+    :root {
+      --bg: #faf8f5;
+      --surface: #ffffff;
+      --text: #1c1917;
+      --muted: #57534e;
+      --brand: #143826;
+      --accent: #0c9964;
+      --border: #e7e5e4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 40px 20px 64px;
+    }
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 32px;
+    }
+    .brand {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--brand);
+      text-decoration: none;
+    }
+    .brand span { color: var(--accent); }
+    .badge {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    main {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px 28px;
+    }
+    h1 {
+      margin: 0 0 8px;
+      font-size: 1.9rem;
+      color: var(--brand);
+    }
+    .meta {
+      margin: 0 0 28px;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    h2 {
+      margin: 28px 0 10px;
+      font-size: 1.15rem;
+      color: var(--brand);
+    }
+    p, li { color: var(--text); }
+    ul { padding-left: 20px; }
+    a { color: var(--accent); }
+    footer {
+      margin-top: 28px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="brand" href="https://nutripet-v2.vercel.app">Nutri<span>Pet</span> <span class="badge">OTB</span></a>
+      <nav>
+        <a href="/terms.html">Terms of Service</a>
+      </nav>
+    </header>
+
+    <main>
+      <h1>Privacy Policy</h1>
+      <p class="meta">Last updated: November 26, 2026 &middot; Applies to NutriPet OTB (<code>nutripet-v2.vercel.app</code>) and NutriPet TikTok Publisher</p>
+
+      <h2>1. Information We Collect</h2>
+      <ul>
+        <li><strong>NutriPet Web Application:</strong> Account authentication details (such as email and display name via Firebase Authentication) and pet profile data voluntarily entered by the user (pet name, breed, weight, reminders, and optional emergency contact info).</li>
+        <li><strong>NutriPet TikTok Publisher Integration:</strong> When an authorized NutriPet administrator connects our official TikTok account via TikTok Login Kit, we receive only the minimum OAuth tokens and basic profile information (<code>user.info.basic</code>) required to identify the connected account and publish educational videos using the Content Posting API (<code>video.publish</code>).</li>
+      </ul>
+
+      <h2>2. How We Use Information</h2>
+      <ul>
+        <li>To provide pet nutrition estimation, health tracking, and emergency QR card features in NutriPet.</li>
+        <li>To authenticate our authorized TikTok account and publish finalized educational pet care videos directly from NutriPet's internal publishing panel.</li>
+        <li>We do <strong>not</strong> sell, rent, or share user data or TikTok account data with third-party advertisers or data brokers.</li>
+      </ul>
+
+      <h2>3. Data Storage &amp; Security</h2>
+      <p>Application data is stored securely using Google Firebase (Firestore and Firebase Authentication) with per-user access isolation. TikTok OAuth credentials and tokens are stored exclusively in protected server/local environment storage and are never exposed in client-side code or public repositories.</p>
+
+      <h2>4. Data Retention &amp; Deletion</h2>
+      <p>You may delete your NutriPet account and associated pet records at any time from within the application or by contacting us. TikTok OAuth access can be revoked at any time from your TikTok account settings (<em>Manage app permissions</em>), after which stored tokens are invalidated and deleted.</p>
+
+      <h2>5. Third-Party Services</h2>
+      <p>NutriPet integrates with Google Firebase (authentication and database), Vercel (hosting), and TikTok APIs (for internal video publishing). Each service operates under its own privacy policy.</p>
+
+      <h2>6. Children's Privacy</h2>
+      <p>NutriPet is not directed to children under 13 years of age, and we do not knowingly collect personal information from children.</p>
+
+      <h2>7. Contact &amp; Privacy Requests</h2>
+      <p>For privacy questions, data access, or deletion requests, contact us at <a href="mailto:nutripet.v2@gmail.com">nutripet.v2@gmail.com</a> or via WhatsApp at <a href="https://wa.me/dgcontrerasb" target="_blank" rel="noopener noreferrer">@dgcontrerasb</a>.</p>
+    </main>
+
+    <footer>
+      &copy; 2026 NutriPet OTB &middot; <a href="https://nutripet-v2.vercel.app">nutripet-v2.vercel.app</a> &middot; <a href="/terms.html">Terms of Service</a>
+    </footer>
+  </div>
+</body>
+</html>

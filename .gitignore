@@ -45,3 +45,9 @@ firestore-debug.log
 
 # Testing
 coverage/
+
+# YouTube, Meta y TikTok Automation local (credenciales OAuth, tokens y scripts locales — NUNCA subir a GitHub)
+youtube-automation/
+youtube-branding/
+meta-automation/
+tiktok-automation/
